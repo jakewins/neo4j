@@ -19,35 +19,39 @@
  */
 package org.neo4j.cypher.javacompat;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.neo4j.kernel.logging.BufferingLogger;
-import org.neo4j.test.ImpermanentGraphDatabase;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.Before;
+import org.junit.Test;
+import org.neo4j.kernel.info.Monitors;
+import org.neo4j.kernel.logging.BufferingLogger;
+import org.neo4j.test.ImpermanentGraphDatabase;
 
-public class CypherLoggingTest {
+public class CypherLoggingTest
+{
 
     private ExecutionEngine engine;
     private BufferingLogger logger = new BufferingLogger();
-    private static final String LINE_SEPARATOR = System.getProperty("line.separator");
+    private static final String LINE_SEPARATOR = System.getProperty( "line.separator" );
 
     @Test
-    public void logging() throws Exception {
-        engine.execute("START n=node(0) CREATE (foo {test:'me'}) RETURN n");
-        engine.execute("START n=node(*) RETURN n");
+    public void logging() throws Exception
+    {
+        engine.execute( "START n=node(0) CREATE (foo {test:'me'}) RETURN n" );
+        engine.execute( "START n=node(*) RETURN n" );
 
         assertEquals(
                 "START n=node(0) CREATE (foo {test:'me'}) RETURN n" + LINE_SEPARATOR +
                         "START n=node(*) RETURN n" + LINE_SEPARATOR,
-                logger.toString());
+                logger.toString() );
 
     }
 
     @Before
-    public void setup() throws IOException {
-        engine = new ExecutionEngine(new ImpermanentGraphDatabase(), logger);
+    public void setup() throws IOException
+    {
+        engine = new ExecutionEngine( new ImpermanentGraphDatabase(), logger, new Monitors() );
     }
 }

@@ -20,8 +20,17 @@
 package org.neo4j.cypher.internal
 
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap
+import org.neo4j.cypher.internal.LRUCache.Monitor
 
-class LRUCache[K, V](cacheSize: Int) {
+
+object LRUCache {
+  trait Monitor {
+    def usedCachedQuery(q:String)
+    def parsedQuery(q:String, timeTaken:Long)
+  }
+}
+
+class LRUCache[K, V](cacheSize: Int, monitor: Monitor) {
 
   class LazyValue(f: => V) {
     lazy val value = f
@@ -34,9 +43,17 @@ class LRUCache[K, V](cacheSize: Int) {
   def getOrElseUpdate(key: K, f: => V): V = {
     val oldValue = inner.putIfAbsent(key, new LazyValue(f))
     if (oldValue == null) {
-      f
+      // Parse the query and report the result
+      val now = System.currentTimeMillis()
+      val result = f
+      monitor.parsedQuery(key.toString, System.currentTimeMillis()-now)
+
+      result
     } else {
+      //Use the cached value
+      monitor.usedCachedQuery(key.toString)
       oldValue.value
+
     }
   }
 

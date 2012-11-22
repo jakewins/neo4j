@@ -23,15 +23,16 @@ import internal.commands._
 import internal.executionplan.ExecutionPlanImpl
 import internal.LRUCache
 import scala.collection.JavaConverters._
-import java.lang.Error
 import java.util.{Map => JavaMap}
-import scala.{Int, deprecated}
 import org.neo4j.kernel.InternalAbstractGraphDatabase
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.kernel.impl.util.StringLogger
+import org.neo4j.kernel.info.Monitors
 
-class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = StringLogger.DEV_NULL) {
+class ExecutionEngine(graph: GraphDatabaseService,
+                      logger: StringLogger = StringLogger.DEV_NULL,
+                      monitors: Monitors = new Monitors()) {
   checkScalaVersion()
 
   require(graph != null, "Can't work with a null graph database")
@@ -41,8 +42,8 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
   private def createCorrectParser() = if (graph.isInstanceOf[InternalAbstractGraphDatabase]) {
     val database = graph.asInstanceOf[InternalAbstractGraphDatabase]
     database.getConfig.get(GraphDatabaseSettings.cypher_parser_version) match {
-      case v:String => new CypherParser(v)
-      case _ => new CypherParser()
+      case v: String => new CypherParser(v)
+      case _         => new CypherParser()
     }
   }
   else {
@@ -66,7 +67,7 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
   def prepare(query: String): ExecutionPlan =
     executionPlanCache.getOrElseUpdate(query, new ExecutionPlanImpl(parser.parse(query), graph))
 
-  def isPrepared(query : String) : Boolean =
+  def isPrepared(query: String): Boolean =
     executionPlanCache.containsKey(query)
 
   @throws(classOf[SyntaxException])
@@ -79,7 +80,8 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
 
   @throws(classOf[SyntaxException])
   @deprecated(message = "You should not parse queries manually any more. Use the execute(String) instead")
-  def execute(query: Query, params: Map[String, Any]): ExecutionResult = new ExecutionPlanImpl(query, graph).execute(params)
+  def execute(query: Query, params: Map[String, Any]): ExecutionResult = new ExecutionPlanImpl(query,
+    graph).execute(params)
 
   private def checkScalaVersion() {
     if (util.Properties.versionString.matches("^version 2.9.0")) {
@@ -88,13 +90,14 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
     }
   }
 
-  private val executionPlanCache = new LRUCache[String, ExecutionPlan]( getQueryCacheSize() ) {}
+  private val executionPlanCache = new LRUCache[String, ExecutionPlan](getQueryCacheSize(),
+    monitors.newMonitor(classOf[LRUCache.Monitor])) {}
 
-  private def getQueryCacheSize() : Int = if (graph.isInstanceOf[InternalAbstractGraphDatabase]) {
+  private def getQueryCacheSize(): Int = if (graph.isInstanceOf[InternalAbstractGraphDatabase]) {
     val database = graph.asInstanceOf[InternalAbstractGraphDatabase]
     database.getConfig.get(GraphDatabaseSettings.query_cache_size) match {
-      case v:java.lang.Integer => v
-      case _ => 100
+      case v: Number => v.intValue()
+      case _         => 100
     }
   } else {
     100

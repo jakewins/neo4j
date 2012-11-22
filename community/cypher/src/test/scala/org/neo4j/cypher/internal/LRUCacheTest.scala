@@ -22,10 +22,15 @@ package org.neo4j.cypher.internal
 import org.scalatest.Assertions
 import org.junit.Test
 import org.junit.Assert._
+import org.neo4j.kernel.info.Monitors
+import org.neo4j.cypher.internal.LRUCache.Monitor
 
 class LRUCacheTest extends Assertions {
+
+  val monitor = new Monitors().newMonitor(classOf[Monitor])
+
   @Test def shouldStoreSingleValue() {
-    val cache = new LRUCache[String, String](5)
+    val cache = new LRUCache[String, String](5, monitor)
     cache.getOrElseUpdate("hello", "world")
 
     assert(cache.get("hello") === Some("world"))
@@ -40,16 +45,16 @@ class LRUCacheTest extends Assertions {
   }
 
   @Test def shouldLooseTheFirstOne() {
-    val cache = new LRUCache[String, String](5)
+    val cache = new LRUCache[String, String](5, monitor)
     fillWithOneToFive(cache)
 
     cache.getOrElseUpdate("6", "6")
 
-    assertFalse(cache.containsKey("1"));
+    assertFalse(cache.containsKey("1"))
   }
 
   @Test def shouldLooseTheLeastUsedItem() {
-    val cache = new LRUCache[String, String](5)
+    val cache = new LRUCache[String, String](5, monitor)
     fillWithOneToFive(cache)
 
     cache.get("1")
@@ -59,7 +64,7 @@ class LRUCacheTest extends Assertions {
 
     cache.put("6", "6")
 
-    assertFalse(cache.containsKey("2"));
+    assertFalse(cache.containsKey("2"))
   }
 
 }

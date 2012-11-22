@@ -23,6 +23,7 @@ import org.neo4j.cypher.SyntaxException;
 import org.neo4j.cypher.internal.commands.Query;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.info.Monitors;
 
 import java.util.Map;
 
@@ -41,7 +42,7 @@ public class ExecutionEngine
      */
     public ExecutionEngine( GraphDatabaseService database )
     {
-        this( database, DEV_NULL );
+        this( database, DEV_NULL, new Monitors() );
     }
 
     /**
@@ -49,9 +50,9 @@ public class ExecutionEngine
      * @param database The database to wrap
      * @param logger A logger for cypher-statements
      */
-    public ExecutionEngine( GraphDatabaseService database, StringLogger logger )
+    public ExecutionEngine( GraphDatabaseService database, StringLogger logger, Monitors monitors )
     {
-        inner = new org.neo4j.cypher.ExecutionEngine( database, logger );
+        inner = new org.neo4j.cypher.ExecutionEngine( database, logger, monitors );
     }
 
     /**
