@@ -30,6 +30,7 @@ import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.info.DiagnosticsManager;
+import org.neo4j.kernel.info.Monitors;
 import org.neo4j.kernel.logging.Logging;
 import org.neo4j.server.configuration.ConfigurationProvider;
 import org.neo4j.server.configuration.Configurator;
@@ -44,7 +45,6 @@ import org.neo4j.server.modules.RESTApiModule;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.plugins.PluginInvocatorProvider;
 import org.neo4j.server.plugins.PluginManager;
-import org.neo4j.server.plugins.TypedInjectable;
 import org.neo4j.server.preflight.PreFlightTasks;
 import org.neo4j.server.preflight.PreflightFailedException;
 import org.neo4j.server.rest.paging.LeaseManager;
@@ -58,10 +58,11 @@ import org.neo4j.server.security.KeyStoreFactory;
 import org.neo4j.server.security.KeyStoreInformation;
 import org.neo4j.server.security.SslCertificateFactory;
 import org.neo4j.server.statistic.StatisticCollector;
-import org.neo4j.server.web.InjectableWrapper;
 import org.neo4j.server.web.SimpleUriBuilder;
 import org.neo4j.server.web.WebServer;
 import org.neo4j.server.web.WebServerProvider;
+import org.neo4j.server.webadmin.profiler.Profiler;
+import org.neo4j.server.webadmin.profiler.ProfilerProvider;
 
 public abstract class AbstractNeoServer implements NeoServer
 {
@@ -109,6 +110,7 @@ public abstract class AbstractNeoServer implements NeoServer
             }
         }
     };
+    private Monitors monitors;
 
     protected abstract PreFlightTasks createPreflightTasks();
 
@@ -162,7 +164,9 @@ public abstract class AbstractNeoServer implements NeoServer
 
             databaseActions = createDatabaseActions();
 
-            cypherExecutor = new CypherExecutor( database, getLogging().getLogger( CypherExecutor.class ) );
+            monitors = new Monitors();
+
+            cypherExecutor = new CypherExecutor( database, getLogging().getLogger( CypherExecutor.class ), monitors );
 
             configureWebServer();
 
@@ -573,12 +577,8 @@ public abstract class AbstractNeoServer implements NeoServer
         singletons.add( new InputFormatProvider( repository ) );
         singletons.add( new OutputFormatProvider( repository ) );
         singletons.add( new CypherExecutorProvider( cypherExecutor ) );
+        singletons.add( new ProfilerProvider( new Profiler( monitors ) ) );
         return singletons;
-    }
-
-    private InjectableWrapper toInjectableProvider( Object service )
-    {
-        return new InjectableWrapper( TypedInjectable.injectable( service ) );
     }
 
     private boolean hasModule( Class<? extends ServerModule> clazz )

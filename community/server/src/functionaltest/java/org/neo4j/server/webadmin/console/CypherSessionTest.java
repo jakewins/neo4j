@@ -39,16 +39,17 @@
 
 package org.neo4j.server.webadmin.console;
 
+import static org.hamcrest.text.StringContains.containsString;
+import static org.junit.Assert.assertThat;
+
 import org.junit.Test;
 import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.info.Monitors;
 import org.neo4j.server.database.CypherExecutor;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.database.WrappingDatabase;
 import org.neo4j.test.ImpermanentGraphDatabase;
-
-import static org.hamcrest.text.StringContains.containsString;
-import static org.junit.Assert.assertThat;
 
 public class CypherSessionTest
 {
@@ -57,7 +58,7 @@ public class CypherSessionTest
     {
         ImpermanentGraphDatabase graphdb = new ImpermanentGraphDatabase();
         Database database = new WrappingDatabase( graphdb );
-        CypherExecutor executor = new CypherExecutor( database, StringLogger.DEV_NULL );
+        CypherExecutor executor = new CypherExecutor( database, StringLogger.DEV_NULL, new Monitors() );
         executor.start();
         try
         {
