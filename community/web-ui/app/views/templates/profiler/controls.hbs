@@ -1,0 +1,16 @@
+<div class="navbar">
+  <div class="navbar-inner">
+    
+    <div class="container">
+      <a class="brand">Profiler</a>
+      <form class="navbar-form pull-left" action="">
+        {{#disabled}}
+          <button class="btn btn-danger" disabled>Stop</button>
+        {{/disabled}}
+        {{^disabled}}
+          <button class="btn btn-danger profiler-stop">Stop</button>
+        {{/disabled}}
+      </form>
+    </div>
+  </div>
+</div>

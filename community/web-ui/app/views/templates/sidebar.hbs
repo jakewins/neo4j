@@ -1,0 +1,16 @@
+<p>
+  <span class="">1.9 Community Edition</span>
+  <!--a class="btn btn-link btn-mini">Upgrade!</a-->
+</p>
+<ul class="main-menu">
+  {{#items}}
+    <li {{#current}}class="active"{{/current}}><a href="#{{href}}"><span class="icon icon-{{icon}}"></span>{{title}}</a></li>
+  {{/items}}
+</ul>
+<p class="sidebar-resources">
+  <small>Resources</small>
+  <br />
+  <a href="http://docs.neo4j.org/chunked/1.8/tutorials-rest.html" class="btn btn-link btn-mini">Getting started</a>
+  <a href="http://docs.neo4j.org/chunked/1.8/" class="btn btn-link btn-mini">Documentation</a>
+  <a href="https://github.com/neo4j/neo4j/issues/new" class="btn btn-link btn-mini">Report an issue</a>
+</p>

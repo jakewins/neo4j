@@ -1,0 +1,23 @@
+<div class="container">
+<h4>Events</h4>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Timestamp</th>
+      <th>Query</th>
+      <th>Cached</th>
+      <th>Parse time</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#events}}
+    <tr>
+      <td>{{timestamp}}</td>
+      <td>{{query}}</td>
+      <td>{{#wasCached}}yes{{/wasCached}}{{^wasCached}}no{{/wasCached}}</td>
+      <td>{{parseTime}}ms</td>
+    </tr>
+    {{/events}}
+  </tbody>
+</table>
+</div>
