@@ -27,6 +27,7 @@ import static org.neo4j.helpers.collection.IteratorUtil.count;
 
 import java.util.Iterator;
 
+import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.cypher.internal.LRUCache;
@@ -128,6 +129,25 @@ public class ProfilerTest
         Iterator<Event> events = service.getEventsSince( now + 100 ).iterator();
         assertFalse( "Should not have seen this event", events.hasNext() );
     }
+
+    @Test
+    public void shouldReturnEventsInDescendingTimeOrder() throws Exception
+    {
+        // GIVEN
+        LRUCache.Monitor cacheMonitor = createCacheMonitor();
+        service.startListening("me");
+        cacheMonitor.usedCachedQuery( "ONE" );
+        cacheMonitor.usedCachedQuery( "TWO" );
+
+        // WHEN
+        Iterator<Event> events = service.getEventsSince( 0 ).iterator();
+
+        // THEN
+        assertTrue("Latest query comes first in results", ((QueryCacheEvent)events.next()).getQuery().equals("TWO"));
+        assertTrue("Oldest query comes last in results", ((QueryCacheEvent)events.next()).getQuery().equals("ONE"));
+    }
+
+
 
     private LRUCache.Monitor createCacheMonitor()
     {

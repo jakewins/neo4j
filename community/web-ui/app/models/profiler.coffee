@@ -5,8 +5,10 @@ class HttpClient
   constructor : (@baseUrl) ->
   
   get : (path, params, cb) -> @_http "GET", path, params, cb
+  
+  put : (path, data, cb) -> @_http "PUT", path, data, cb
     
-  _http : (method, path, data, cb) ->
+  _http : (method, path, data={}, cb=(->)) ->
     $.ajax({
       url : @baseUrl + path,
       type : method,
@@ -25,28 +27,31 @@ class HttpClient
 class ProfilingService
   
   constructor : () ->
-    #@_http = new HttpClient("#{location.protocol}//#{location.host}/db/manage")
-    @_http = new HttpClient("http://localhost:7474/db/manage")
+    @_http = new HttpClient("#{location.protocol}//#{location.host}/db/manage")
+    @_lastPoll = 0
   
   attachListener : (listener) ->
-    @_http.get("", {}, ()->console.log arguments)
+    @_http.put("/server/profile/start", {}, @_onServerProfilingStarted)
     @_listener = listener
-    
-    if not (@_timer?)
-      @_timer = setInterval(@_poll, 500)
   
   stop : () ->
     if @_timer?
+      @_lastPoll = 0
       clearInterval @_timer
       delete @_timer
+      @_http.put "/server/profile/stop", {}
   
   _poll : =>
-    @_listener([{
-        timestamp : new Date().getTime() / 1000,
-        query : "START blah",
-        wasCached: false,
-        parseTime : 12 }])
-  
+    @_http.get "/server/profile/fetch/#{@_lastPoll}", {}, @_onRecievedEvents
+        
+  _onServerProfilingStarted : =>
+    if not (@_timer?)
+      @_timer = setInterval(@_poll, 1000)
+      
+  _onRecievedEvents : (events)=>
+    if events.length > 0
+      @_lastPoll = events[0].timestamp
+      @_listener events
 
 module.exports = class Profiler extends Model
   
@@ -71,15 +76,18 @@ module.exports = class Profiler extends Model
     @_profilingService.attachListener(@_onNewProfilingEvents)
   
   stopProfiling : ->
+    @set "events" : []
     @_profilingService.stop()
+    @set state : Profiler.State.STOPPED
     
   pauseProfiling : ->
     @_profilingService.stop()
+    @set state : Profiler.State.PAUSED
   
   _onNewProfilingEvents : (newEvents) =>
     events = @get 'events'
-    for event in newEvents
-      events.splice(0, 0, event)
+    spliceArgs = [0, 0].concat(newEvents)
+    events.splice.apply(events, spliceArgs)
       
     if events.length > @eventLimit
       events.splice(@eventLimit, events.length - @eventLimit)

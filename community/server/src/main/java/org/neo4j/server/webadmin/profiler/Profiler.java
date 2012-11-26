@@ -49,7 +49,7 @@ public class Profiler implements LRUCache.Monitor
     {
         listeners.add( id );
 
-        if ( listeners.size() > 0 )
+        if ( listeners.size() == 1 )
         {
             monitors.addMonitorListener( this );
         }
@@ -132,10 +132,10 @@ public class Profiler implements LRUCache.Monitor
             lock.lock();
             try
             {
-                inner.add( event );
-                if(inner.size()>limit)
+                inner.add( 0, event );
+                while(inner.size()>limit)
                 {
-                    inner.remove( 0 );
+                    inner.remove( inner.size() - 1);
                 }
             }
             finally

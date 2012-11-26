@@ -32,3 +32,6 @@ webdriver-binaries
 *.egg-info
 *.egg
 work-tools/sauron/build/
+web-ui/neo4j-home/data
+web-ui/neo4j-home/rrd
+web-ui/neo4j-home/ssl

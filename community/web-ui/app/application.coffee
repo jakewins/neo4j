@@ -7,6 +7,8 @@ NavigationController = require 'controllers/navigation_controller'
 SidebarController = require 'controllers/sidebar_controller'
 Layout = require 'views/layout'
 
+Profiler = require 'models/profiler'
+
 # The application object
 module.exports = class Application extends Chaplin.Application
   # Set your application name here so the document title is set to
@@ -61,6 +63,9 @@ module.exports = class Application extends Chaplin.Application
     # Create a user property
     mediator.user = null
     mediator.navigation = null
+    
+    mediator.profiler = new Profiler()
+    console.log "Asd", mediator
     
     # Seal the mediator
     mediator.seal()

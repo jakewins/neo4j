@@ -440,6 +440,8 @@ public class Jetty6WebServer implements WebServer
         try
         {
             final WebAppContext staticContext = new WebAppContext( null, new SessionHandler( sm ), null, null );
+
+            getJetty().
             staticContext.setServer( getJetty() );
             staticContext.setContextPath( mountPoint );
             URL resourceLoc = getClass().getClassLoader()

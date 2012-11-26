@@ -75,7 +75,7 @@
 })();
 
 window.require.define({"application": function(exports, require, module) {
-  var Application, Chaplin, HeaderController, Layout, NavigationController, SessionController, SidebarController, mediator, routes,
+  var Application, Chaplin, HeaderController, Layout, NavigationController, Profiler, SessionController, SidebarController, mediator, routes,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -94,6 +94,8 @@ window.require.define({"application": function(exports, require, module) {
   SidebarController = require('controllers/sidebar_controller');
 
   Layout = require('views/layout');
+
+  Profiler = require('models/profiler');
 
   module.exports = Application = (function(_super) {
 
@@ -133,6 +135,8 @@ window.require.define({"application": function(exports, require, module) {
     Application.prototype.initMediator = function() {
       mediator.user = null;
       mediator.navigation = null;
+      mediator.profiler = new Profiler();
+      console.log("Asd", mediator);
       return mediator.seal();
     };
 
@@ -356,7 +360,7 @@ window.require.define({"controllers/navigation_controller": function(exports, re
 }});
 
 window.require.define({"controllers/profiler_controller": function(exports, require, module) {
-  var Controller, Profiler, ProfilerController, ProfilerView,
+  var Controller, ProfilerController, ProfilerView, mediator,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -364,7 +368,7 @@ window.require.define({"controllers/profiler_controller": function(exports, requ
 
   ProfilerView = require('views/profiler/profiler_view');
 
-  Profiler = require('models/profiler');
+  mediator = require('mediator');
 
   module.exports = ProfilerController = (function(_super) {
 
@@ -376,14 +380,10 @@ window.require.define({"controllers/profiler_controller": function(exports, requ
 
     ProfilerController.prototype.historyURL = 'profiler';
 
-    ProfilerController.prototype.initialize = function() {
-      ProfilerController.__super__.initialize.apply(this, arguments);
-      return this.profiler = new Profiler();
-    };
-
     ProfilerController.prototype.index = function() {
+      console.log(mediator);
       return this.view = new ProfilerView({
-        profiler: this.profiler
+        profiler: mediator.profiler
       });
     };
 
@@ -969,7 +969,17 @@ window.require.define({"models/profiler": function(exports, require, module) {
       return this._http("GET", path, params, cb);
     };
 
+    HttpClient.prototype.put = function(path, data, cb) {
+      return this._http("PUT", path, data, cb);
+    };
+
     HttpClient.prototype._http = function(method, path, data, cb) {
+      if (data == null) {
+        data = {};
+      }
+      if (cb == null) {
+        cb = (function() {});
+      }
       return $.ajax({
         url: this.baseUrl + path,
         type: method,
@@ -991,36 +1001,44 @@ window.require.define({"models/profiler": function(exports, require, module) {
   ProfilingService = (function() {
 
     function ProfilingService() {
+      this._onRecievedEvents = __bind(this._onRecievedEvents, this);
+
+      this._onServerProfilingStarted = __bind(this._onServerProfilingStarted, this);
+
       this._poll = __bind(this._poll, this);
-      this._http = new HttpClient("http://localhost:7474/db/manage");
+      this._http = new HttpClient("" + location.protocol + "//" + location.host + "/db/manage");
+      this._lastPoll = 0;
     }
 
     ProfilingService.prototype.attachListener = function(listener) {
-      this._http.get("", {}, function() {
-        return console.log(arguments);
-      });
-      this._listener = listener;
-      if (!(this._timer != null)) {
-        return this._timer = setInterval(this._poll, 500);
-      }
+      this._http.put("/server/profile/start", {}, this._onServerProfilingStarted);
+      return this._listener = listener;
     };
 
     ProfilingService.prototype.stop = function() {
       if (this._timer != null) {
+        this._lastPoll = 0;
         clearInterval(this._timer);
-        return delete this._timer;
+        delete this._timer;
+        return this._http.put("/server/profile/stop", {});
       }
     };
 
     ProfilingService.prototype._poll = function() {
-      return this._listener([
-        {
-          timestamp: new Date().getTime() / 1000,
-          query: "START blah",
-          wasCached: false,
-          parseTime: 12
-        }
-      ]);
+      return this._http.get("/server/profile/fetch/" + this._lastPoll, {}, this._onRecievedEvents);
+    };
+
+    ProfilingService.prototype._onServerProfilingStarted = function() {
+      if (!(this._timer != null)) {
+        return this._timer = setInterval(this._poll, 1000);
+      }
+    };
+
+    ProfilingService.prototype._onRecievedEvents = function(events) {
+      if (events.length > 0) {
+        this._lastPoll = events[0].timestamp;
+        return this._listener(events);
+      }
     };
 
     return ProfilingService;
@@ -1061,20 +1079,27 @@ window.require.define({"models/profiler": function(exports, require, module) {
     };
 
     Profiler.prototype.stopProfiling = function() {
-      return this._profilingService.stop();
+      this.set({
+        "events": []
+      });
+      this._profilingService.stop();
+      return this.set({
+        state: Profiler.State.STOPPED
+      });
     };
 
     Profiler.prototype.pauseProfiling = function() {
-      return this._profilingService.stop();
+      this._profilingService.stop();
+      return this.set({
+        state: Profiler.State.PAUSED
+      });
     };
 
     Profiler.prototype._onNewProfilingEvents = function(newEvents) {
-      var event, events, _i, _len;
+      var events, spliceArgs;
       events = this.get('events');
-      for (_i = 0, _len = newEvents.length; _i < _len; _i++) {
-        event = newEvents[_i];
-        events.splice(0, 0, event);
-      }
+      spliceArgs = [0, 0].concat(newEvents);
+      events.splice.apply(events, spliceArgs);
       if (events.length > this.eventLimit) {
         events.splice(this.eventLimit, events.length - this.eventLimit);
       }
@@ -1553,6 +1578,12 @@ window.require.define({"views/profiler/controls_view": function(exports, require
 
     ProfilerControlsView.prototype.template = template;
 
+    ProfilerControlsView.prototype.events = {
+      "click .profiler-stop": "onStopProfilingClicked",
+      "click .profiler-pause": "onPauseProfilingClicked",
+      "click .profiler-resume": "onResumeProfilingClicked"
+    };
+
     ProfilerControlsView.prototype.initialize = function() {
       var _this = this;
       ProfilerControlsView.__super__.initialize.apply(this, arguments);
@@ -1566,9 +1597,25 @@ window.require.define({"views/profiler/controls_view": function(exports, require
         return {
           disabled: true
         };
+      } else if (this.model.getState() === Profiler.State.PAUSED) {
+        return {
+          paused: true
+        };
       } else {
         return this.model.serialize();
       }
+    };
+
+    ProfilerControlsView.prototype.onStopProfilingClicked = function() {
+      return this.model.stopProfiling();
+    };
+
+    ProfilerControlsView.prototype.onPauseProfilingClicked = function() {
+      return this.model.pauseProfiling();
+    };
+
+    ProfilerControlsView.prototype.onResumeProfilingClicked = function() {
+      return this.model.startProfiling();
     };
 
     return ProfilerControlsView;
@@ -1667,10 +1714,13 @@ window.require.define({"views/profiler/workspace_view": function(exports, requir
     };
 
     ProfilerWorkspaceView.prototype.getTemplateFunction = function() {
+      console.log(this.model, this.model.getState());
       switch (this.model.getState()) {
         case Profiler.State.STOPPED:
           return start_template;
         case Profiler.State.RUNNING:
+          return running_template;
+        case Profiler.State.PAUSED:
           return running_template;
       }
     };
@@ -1790,12 +1840,42 @@ window.require.define({"views/templates/profiler/controls": function(exports, re
   function program1(depth0,data) {
     
     
-    return "\n          <button class=\"btn btn-danger\" disabled>Stop</button>\n        ";}
+    return "\n            <div class=\"btn-group\">\n              <button class=\"btn profiler-resume\" disabled>Resume</button>\n              <button class=\"btn profiler-pause\" disabled>Pause</button>\n              <button class=\"btn btn-danger\" disabled>Stop</button>\n            </div>\n        ";}
 
   function program3(depth0,data) {
     
+    var buffer = "", stack1;
+    buffer += "\n          <div class=\"btn-group\">\n            <button class=\"btn profiler-resume\" ";
+    foundHelper = helpers.paused;
+    stack1 = foundHelper || depth0.paused;
+    tmp1 = self.noop;
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.program(4, program4, data);
+    if(foundHelper && typeof stack1 === functionType) { stack1 = stack1.call(depth0, tmp1); }
+    else { stack1 = blockHelperMissing.call(depth0, stack1, tmp1); }
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += ">Resume</button>\n            <button class=\"btn profiler-pause\" ";
+    foundHelper = helpers.paused;
+    stack1 = foundHelper || depth0.paused;
+    tmp1 = self.program(6, program6, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    if(foundHelper && typeof stack1 === functionType) { stack1 = stack1.call(depth0, tmp1); }
+    else { stack1 = blockHelperMissing.call(depth0, stack1, tmp1); }
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += ">Pause</button>\n            <button class=\"btn btn-danger profiler-stop\">Stop</button>\n          </div>\n        ";
+    return buffer;}
+  function program4(depth0,data) {
     
-    return "\n          <button class=\"btn btn-danger profiler-stop\">Stop</button>\n        ";}
+    
+    return "disabled";}
+
+  function program6(depth0,data) {
+    
+    
+    return "disabled";}
 
     buffer += "<div class=\"navbar\">\n  <div class=\"navbar-inner\">\n    \n    <div class=\"container\">\n      <a class=\"brand\">Profiler</a>\n      <form class=\"navbar-form pull-left\" action=\"\">\n        ";
     foundHelper = helpers.disabled;

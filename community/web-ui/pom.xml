@@ -115,15 +115,17 @@
             <version>1.7</version><!--$NO-MVN-MAN-VER$-->
             <executions>
               <execution>
-                <phase>process-classes</phase>
+                <phase>generate-resources</phase>
                 <configuration>
                   <target>
                     <taskdef
                       resource="net/sf/antcontrib/antcontrib.properties"
                       classpathref="maven.plugin.classpath"/>
+
                     <mkdir dir="${basedir}/target/classes"/>
-                    <copydir src="${basedir}/public"
-                             dest="${basedir}/target/classes/webadmin-html" />
+                    <symlink resource="${basedir}/public"
+                             link="${basedir}/target/classes/webadmin-html" />
+
                   </target>
                 </configuration>
                 <goals>

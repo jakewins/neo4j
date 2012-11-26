@@ -5,10 +5,18 @@
       <a class="brand">Profiler</a>
       <form class="navbar-form pull-left" action="">
         {{#disabled}}
-          <button class="btn btn-danger" disabled>Stop</button>
+            <div class="btn-group">
+              <button class="btn profiler-resume" disabled>Resume</button>
+              <button class="btn profiler-pause" disabled>Pause</button>
+              <button class="btn btn-danger" disabled>Stop</button>
+            </div>
         {{/disabled}}
         {{^disabled}}
-          <button class="btn btn-danger profiler-stop">Stop</button>
+          <div class="btn-group">
+            <button class="btn profiler-resume" {{^paused}}disabled{{/paused}}>Resume</button>
+            <button class="btn profiler-pause" {{#paused}}disabled{{/paused}}>Pause</button>
+            <button class="btn btn-danger profiler-stop">Stop</button>
+          </div>
         {{/disabled}}
       </form>
     </div>

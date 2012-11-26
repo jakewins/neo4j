@@ -29,6 +29,7 @@ import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.kernel.info.Monitors;
 import org.neo4j.kernel.logging.Logging;
 import org.neo4j.shell.App;
 import org.neo4j.shell.AppCommandParser;
@@ -64,7 +65,7 @@ public class Start extends ReadOnlyGraphDatabaseApp
         {
             String queryWithoutSemicolon = query.substring( 0, query.lastIndexOf( ";" ) );
 
-            ExecutionEngine engine = new ExecutionEngine( getServer().getDb(), getCypherLogger() );
+            ExecutionEngine engine = new ExecutionEngine( getServer().getDb(), getCypherLogger(), new Monitors() );
             try
             {
                 ExecutionResult result = engine.execute( queryWithoutSemicolon, getParameters( session ) );
