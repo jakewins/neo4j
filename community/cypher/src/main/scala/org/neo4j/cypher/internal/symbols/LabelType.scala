@@ -17,10 +17,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher
+package org.neo4j.cypher.internal.symbols
 
-import internal.spi.TxQueryContextWrap
+/*
+ * Copyright (C) 2012 Neo Technology
+ * All rights reserved
+ */
 
-trait ExecutionPlan {
-  def execute(wrap: TxQueryContextWrap, params: Map[String,Any]): ExecutionResult
+object LabelType {
+  val instance = new LabelType()
+
+  def apply(): LabelType = instance
 }
+
+class LabelType extends ScalarType {
+  override def parentType:CypherType = ScalarType()
+  override def toString = "Label"
+}
+
+

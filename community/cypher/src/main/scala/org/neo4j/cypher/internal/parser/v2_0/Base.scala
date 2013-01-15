@@ -21,7 +21,8 @@ package org.neo4j.cypher.internal.parser.v2_0
 
 import scala.util.parsing.combinator._
 import org.neo4j.helpers.ThisShouldNotHappenError
-import org.neo4j.cypher.internal.commands.expressions.{ParameterExpression, Expression, Literal}
+import org.neo4j.cypher.internal.commands.expressions.{LabelValue, ParameterExpression, Expression, Literal}
+import org.neo4j.cypher.internal.commands.{LabelDel, LabelAdd, LabelSet, LabelOp}
 
 abstract class Base extends JavaTokenParsers {
   var namer = new NodeNamer
@@ -39,6 +40,8 @@ abstract class Base extends JavaTokenParsers {
         Success(result.head, pos)
     }
   }
+
+  def liftToSeq[A](x : Parser[A]):Parser[Seq[A]] = x ^^ (x => Seq(x))
 
   def reduce[A,B](in:Seq[(Seq[A], Seq[B])]):(Seq[A], Seq[B]) = if (in.isEmpty) (Seq(),Seq()) else in.reduce((a, b) => (a._1 ++ b._1, a._2 ++ b._2))
 
@@ -90,6 +93,16 @@ abstract class Base extends JavaTokenParsers {
 
   def positiveNumber: Parser[String] = """\d+""".r
   def anything: Parser[String] = """[.\s]""".r
+
+  def labelOp: Parser[LabelOp] = labelOpStr ^^ {
+      case "="  => LabelSet
+      case "+=" => LabelAdd
+      case "-=" => LabelDel
+  }
+
+  def labelOpStr: Parser[String] = "=" | "+=" | "-="
+
+  def labelLit: Parser[Literal] = ":" ~> identity ^^ { x => Literal(LabelValue(x)) }
 
   def string: Parser[String] = (stringLiteral | apostropheString) ^^ (str => stripQuotes(str))
 

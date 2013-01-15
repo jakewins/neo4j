@@ -21,42 +21,50 @@ package org.neo4j.cypher.internal.parser.v2_0
 
 import org.neo4j.cypher.internal.mutation._
 import org.neo4j.cypher.internal.commands._
-import expressions.{Property, Identifier}
+import expressions.{Literal, Property, Identifier}
 import org.neo4j.cypher.SyntaxException
 
 trait Updates extends Base with Expressions with StartClause {
-  def updates: Parser[(Seq[UpdateAction], Seq[NamedPath])] = rep(delete | set | foreach) ^^ (cmds => reduce(cmds))
+  def updates: Parser[(Seq[UpdateAction], Seq[NamedPath])] =
+    rep(foreach | liftToSeq(label)  | set | delete) ^^ { x => (x.flatten, Seq.empty) }
 
-  def foreach: Parser[(Seq[UpdateAction], Seq[NamedPath])] = ignoreCase("foreach") ~> "(" ~> identity ~ ignoreCase("in") ~ expression ~ ":" ~ opt(createStart) ~ opt(updates) <~ ")" ^^ {
-    case id ~ in ~ collection ~ ":" ~ creates ~ innerUpdates => {
+  private def foreach: Parser[Seq[UpdateAction]] = ignoreCase("foreach") ~> "(" ~> identity ~ ignoreCase("in") ~ expression ~ ":" ~ opt(createStart) ~ opt(updates) <~ ")" ^^ {
+    case id ~ in ~ collection ~ ":" ~ creates ~ innerUpdates =>
       val createCmds = creates.toSeq.map(_._1.map(_.asInstanceOf[UpdatingStartItem].updateAction)).flatten
       val reducedItems: (Seq[UpdateAction], Seq[NamedPath]) = reduce(innerUpdates.toSeq)
       val updateCmds = reducedItems._1
       val namedPaths = reducedItems._2  ++ creates.toSeq.flatMap(_._2)
       if(namedPaths.nonEmpty) throw new SyntaxException("Paths can't be created inside of foreach")
-      (Seq(ForeachAction(collection, id, createCmds ++ updateCmds)), Seq())
-    }
+      Seq(ForeachAction(collection, id, createCmds ++ updateCmds))
   }
 
-  def delete: Parser[(Seq[UpdateAction], Seq[NamedPath])] = ignoreCase("delete") ~> commaList(expression) ^^ {
+  private def label: Parser[UpdateAction] = ignoreCase("label") ~> identity ~ labelOp ~ expression  ^^ {
+    case entity ~ op ~ labelSetExpr =>
+      LabelAction(Identifier(entity), op, labelSetExpr)
+  }
+
+  private def delete: Parser[Seq[UpdateAction]] = ignoreCase("delete") ~> commaList(expression) ^^ {
     case expressions => val updateActions: List[UpdateAction with Product] = expressions.map {
       case Property(entity, property) => DeletePropertyAction(entity, property)
       case x => DeleteEntityAction(x)
     }
-      (updateActions, Seq())
+
+    updateActions
   }
 
-  def set: Parser[(Seq[UpdateAction], Seq[NamedPath])] =
-    setSingleProperty ^^ ((_, Seq.empty)) |
-    setToMap ^^ (x => (Seq(x), Seq.empty))
+  private def set: Parser[Seq[UpdateAction]] = {
+    def setToMap : Parser[UpdateAction] = ignoreCase("set") ~> expression ~ "=" ~ expression ^^ {
+      case element ~ "=" ~ map => MapPropertySetAction(element, map)
+    }
 
-  def setToMap : Parser[UpdateAction] = ignoreCase("set") ~> expression ~ "=" ~ expression ^^ {
-    case element ~ "=" ~ map => MapPropertySetAction(element, map)
-  }
+    def setSingleProperty: Parser[Seq[UpdateAction]] = {
+      def propertySet = property ~ "=" ~ expressionOrPredicate ^^ {
+        case p ~ "=" ~ e => PropertySetAction(p.asInstanceOf[Property], e)
+      }
 
-  def setSingleProperty: Parser[Seq[UpdateAction]] = ignoreCase("set") ~> commaList(propertySet)
+      ignoreCase("set") ~> commaList(propertySet)
+    }
 
-  def propertySet = property ~ "=" ~ expressionOrPredicate ^^ {
-    case p ~ "=" ~ e => PropertySetAction(p.asInstanceOf[Property], e)
+    setSingleProperty | liftToSeq(setToMap)
   }
 }

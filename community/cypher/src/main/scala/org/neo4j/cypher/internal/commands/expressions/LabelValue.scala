@@ -17,10 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher
+package org.neo4j.cypher.internal.commands.expressions
 
-import internal.spi.TxQueryContextWrap
 
-trait ExecutionPlan {
-  def execute(wrap: TxQueryContextWrap, params: Map[String,Any]): ExecutionResult
-}
+case class LabelValue(name: String)

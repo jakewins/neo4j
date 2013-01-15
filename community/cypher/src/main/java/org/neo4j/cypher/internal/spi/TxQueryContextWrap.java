@@ -17,10 +17,36 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher
+package org.neo4j.cypher.internal.spi;
 
-import internal.spi.TxQueryContextWrap
+import org.neo4j.kernel.api.TransactionContext;
 
-trait ExecutionPlan {
-  def execute(wrap: TxQueryContextWrap, params: Map[String,Any]): ExecutionResult
+public class TxQueryContextWrap {
+
+    private final QueryContext queryCtx;
+    private final TransactionContext tx;
+
+    public TxQueryContextWrap(QueryContext queryCtx, TransactionContext tx) {
+        this.queryCtx = queryCtx;
+        this.tx = tx;
+    }
+
+    public QueryContext getQueryContext() {
+        return queryCtx;
+    }
+
+    public void rollback() {
+        queryCtx.close();
+
+        // Rollback tx
+        tx.finish();
+    }
+
+    public void commit() {
+        queryCtx.close();
+
+        // Commit tx
+        tx.success();
+        tx.finish();
+    }
 }

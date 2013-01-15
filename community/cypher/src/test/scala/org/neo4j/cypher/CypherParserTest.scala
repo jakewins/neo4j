@@ -1858,6 +1858,34 @@ foreach(x in [1,2,3] :
         returns(AllIdentifiers()))
   }
 
+  @Test def add_label() {
+    val q2 = Query.
+      start().
+      updates(LabelAction(Identifier("n"), LabelAdd, Literal(LabelValue("LabelName")))).
+      returns()
+
+    testFrom_2_0("START n=node(0) LABEL n += :LabelName",
+      Query.
+        start(NodeById("n", 0)).
+        tail(q2).
+        returns(AllIdentifiers())
+    )
+  }
+
+  @Test def add_multiple_labels() {
+    val coll = Collection(Literal(LabelValue("LabelName2")), Literal(LabelValue("LabelName3")))
+    val q2   = Query.
+      start().
+      updates(LabelAction(Identifier("n"), LabelAdd, coll)).
+      returns()
+
+    testFrom_2_0("START n=node(0) LABEL n += [:LabelName2, :LabelName3]",
+      Query.
+        start(NodeById("n", 0)).
+        tail(q2).
+        returns(AllIdentifiers())
+    )
+  }
 
   @Ignore("slow test") @Test def multi_thread_parsing() {
     val q = """start root=node(0) return x"""
@@ -1904,6 +1932,10 @@ foreach(x in [1,2,3] :
 
   def testFrom_1_9(query: String, expectedQuery: Query) {
     test_1_9(query, expectedQuery)
+    test_2_0(query, expectedQuery)
+  }
+
+  def testFrom_2_0(query: String, expectedQuery: Query) {
     test_2_0(query, expectedQuery)
   }
 
