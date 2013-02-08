@@ -62,13 +62,13 @@ graph nodes or relationships. All parts of the pattern must be directly or indir
 where parts of the pattern are not reachable from any starting point will be rejected.
 
 [options="header", cols=">s,^,^,^,^,^,^", width="100%"]
-|===================
-|Clause|Optional|Multiple rel. types|Varlength|Paths|Maps|Label OR syntax
-|Match|Yes|Yes|Yes|Yes|-|Yes
-|Create|-|-|-|Yes|Yes|-
-|Create Unique|-|-|-|Yes|Yes|-
-|Expressions|-|Yes|Yes|-|-|Yes
-|===================
+      |===================
+      |Clause|Optional|Multiple rel. types|Varlength|Paths|Maps|Label OR syntax
+      |Match|Yes|Yes|Yes|Yes|-|Yes
+      |Create|-|-|-|Yes|Yes|-
+      |Create Unique|-|-|-|Yes|Yes|-
+      |Expressions|-|Yes|Yes|-|-|Yes
+      |===================
 
 == Patterns for related nodes ==
 
@@ -96,9 +96,11 @@ You can declare that nodes should have a certain label in your pattern.
 
 +`a:User-->b`+
 
-Or that it should have multiple labels.
+Or that it should have multiple labels:
 
 +`a:User:Admin-->b`+
+
+== Labels OR-style syntax ==
 
 For usage in +MATCH+ and expressions, there is an OR-style syntax available.
 For instance, a match with this syntax:
@@ -109,7 +111,7 @@ Is equivalent to:
 
 +`MATCH a-->b WHERE a:User OR a:Admin`+
 
-This is, for obvious reasons, not available in +CREATE+ or +CREATE+ +UNIQUE+ statements.
+The shorthand OR syntax is not available in +CREATE+ or +CREATE+ +UNIQUE+ statements.
 
 == Working with relationships ==
 
