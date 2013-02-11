@@ -1,0 +1,16 @@
+.sidebar(ng-controller="SidebarController")
+  p
+    span 2.0 Community Edition
+  
+  ul.main-menu
+    li(ng-repeat='item in menuItems', ng-class='{active: item.active}')
+      a(ng-href='{{ item.href }}')
+        span.icon(class='icon-{{ item.icon }}')
+        | {{ item.title }}
+
+  .sidebar-resources
+    small Resources
+    br
+    a.btn.btn-link.btn-mini(href="http://docs.neo4j.org/chunked/stable/tutorials-rest.html") Getting started
+    a.btn.btn-link.btn-mini(href="http://docs.neo4j.org/chunked/stable/") Documentation</a>
+    a.btn.btn-link.btn-mini(href="https://github.com/neo4j/neo4j/issues/new") Report an issue

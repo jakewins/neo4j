@@ -1,0 +1,24 @@
+
+.data-browser
+  .data-browser-dash 
+    .data-browser-query-wrap
+      .btn.btn-primary.data-browser-exec(ng-click='execute()') Execute &raquo;
+      .code-mirror-wrap
+        textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': 'cypherAutoComplete'}}", ng-model="query")
+  .row-fluid(ng-show='error')
+    .span12
+      h4 {{ error.exception }}
+      pre {{ error.message }}
+      p
+        .btn.btn-mini(data-toggle='collapse', data-target='.data-browser ul.stacktrace') Stacktrace
+      ul.stacktrace.collapse
+        li(ng-repeat="stack in error.stacktrace") 
+          pre {{ stack }}
+  .row-fluid
+    .span12
+      table.table
+        tr
+          th(ng-repeat='column in columns') {{ column }}
+        tr(ng-repeat='row in rows')
+          td(ng-repeat='cell in row') {{ cell }}
+          
