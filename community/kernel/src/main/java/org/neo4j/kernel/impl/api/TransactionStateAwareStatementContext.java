@@ -30,7 +30,11 @@ import java.util.Set;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.helpers.Predicate;
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
+import org.neo4j.kernel.api.LabelNotFoundKernelException;
+import org.neo4j.kernel.api.PropertyKeyNotFoundException;
+import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
+import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class TransactionStateAwareStatementContext extends DelegatingStatementContext
 {
@@ -154,7 +158,7 @@ public class TransactionStateAwareStatementContext extends DelegatingStatementCo
     @Override
     public void addIndexRule( long labelId, long propertyKey ) throws ConstraintViolationKernelException
     {
-        for ( long existingPropertyKey : getIndexRules( labelId ) )
+        for ( long existingPropertyKey : getIndexedProperties( labelId ) )
         {
             if ( propertyKey == existingPropertyKey )
                 return;
@@ -165,12 +169,23 @@ public class TransactionStateAwareStatementContext extends DelegatingStatementCo
     
     @SuppressWarnings( "unchecked" )
     @Override
-    public Iterable<Long> getIndexRules( long labelId )
+    public Iterable<Long> getIndexedProperties( long labelId )
     {
-        Iterable<Long> committedRules = delegate.getIndexRules( labelId ), result = committedRules;
+        Iterable<Long> committedRules = delegate.getIndexedProperties( labelId ), result = committedRules;
         Collection<Long> addedSchemaRules = state.getAddedIndexRules( labelId );
         if ( !addedSchemaRules.isEmpty() )
             result = concat( committedRules, addedSchemaRules );
         return result;
+    }
+
+    @Override
+    public IndexRule.State getIndexState( long labelId, long propertyKey ) throws LabelNotFoundKernelException, PropertyKeyNotFoundException, SchemaRuleNotFoundException
+    {
+        if(state.hasAddedIndexRule( labelId, propertyKey ))
+        {
+            return IndexRule.State.POPULATING;
+        }
+
+        return delegate.getIndexState( labelId, propertyKey );
     }
 }

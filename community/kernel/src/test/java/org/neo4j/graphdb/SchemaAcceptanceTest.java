@@ -58,6 +58,7 @@ public class SchemaAcceptanceTest
         try
         {
             schema.indexCreator( Labels.MY_LABEL ).on( property ).create();
+            assertEquals( Schema.IndexState.POPULATING, schema.getIndexState(single( schema.getIndexes( Labels.MY_LABEL ))));
             tx.success();
         }
         finally
@@ -66,19 +67,11 @@ public class SchemaAcceptanceTest
         }
 
         // Then
-        assertEquals( asSet( property ), asSet( singlePropertyKey( schema.getIndexes( Labels.MY_LABEL ) ) ) );
-    }
+        Iterable<IndexDefinition> indexes = schema.getIndexes( Labels.MY_LABEL );
+        long timeout = System.currentTimeMillis() + 1000 * 5;
 
-    private Iterable<String> singlePropertyKey( Iterable<IndexDefinition> indexes )
-    {
-        return map( new Function<IndexDefinition, String>()
-        {
-            @Override
-            public String apply( IndexDefinition from )
-            {
-                return single( from.getPropertyKeys() );
-            }
-        }, indexes );
+        assertEquals( asSet( property ), asSet( singlePropertyKey( indexes ) ) );
+        awaitIndexState( single( indexes ), Schema.IndexState.ONLINE, schema, timeout );
     }
 
     @Test(expected = ConstraintViolationException.class)
@@ -158,5 +151,29 @@ public class SchemaAcceptanceTest
         {
             tx.finish();
         }
+    }
+
+    private void awaitIndexState( IndexDefinition index, Schema.IndexState state, Schema schema, long timeout )
+    {
+        while( schema.getIndexState( index )  != state )
+        {
+            Thread.yield();
+            if(System.currentTimeMillis() > timeout )
+            {
+                fail( "Expected index to come online within a reasonable time." );
+            }
+        }
+    }
+
+    private Iterable<String> singlePropertyKey( Iterable<IndexDefinition> indexes )
+    {
+        return map( new Function<IndexDefinition, String>()
+        {
+            @Override
+            public String apply( IndexDefinition from )
+            {
+                return single( from.getPropertyKeys() );
+            }
+        }, indexes );
     }
 }

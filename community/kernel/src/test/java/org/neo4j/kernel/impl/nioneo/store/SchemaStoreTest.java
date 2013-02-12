@@ -20,11 +20,12 @@
 package org.neo4j.kernel.impl.nioneo.store;
 
 import static java.nio.ByteBuffer.wrap;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
 import static org.neo4j.helpers.collection.IteratorUtil.first;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.impl.nioneo.store.IndexRule.State.POPULATING;
+import static org.neo4j.kernel.impl.util.BytePrinter.hex;
 import static org.neo4j.kernel.impl.util.StringLogger.SYSTEM;
 
 import java.io.File;
@@ -49,12 +50,13 @@ public class SchemaStoreTest
         // GIVEN
         long propertyKey = 4;
         int labelId = 0;
-        ByteBuffer expected = wrap( new byte[4+1+2+8] );
+        ByteBuffer expected = wrap( new byte[4+1+1+2+8] );
         expected.putInt( labelId );
         expected.put( Kind.INDEX_RULE.id() );
+        expected.put( POPULATING.toByte() );
         expected.putShort( (short) 1 );
         expected.putLong( propertyKey );
-        SchemaRule indexRule = new IndexRule( -1, labelId, new long[] {propertyKey} );
+        SchemaRule indexRule = new IndexRule( -1, labelId, POPULATING, new long[] {propertyKey} );
 
         // WHEN
         Collection<DynamicRecord> records = store.allocateFrom( indexRule );
@@ -63,8 +65,11 @@ public class SchemaStoreTest
             store.updateRecord( record );
         
         // THEN
+        byte[] actual = records.iterator().next().getData();
+
         assertEquals( 1, records.size() );
-        assertTrue( Arrays.equals( expected.array(), records.iterator().next().getData() ) );
+        assertTrue( "\nExpected: " + hex( expected ) + "\n     Got: " + hex( actual ),
+                Arrays.equals( expected.array(), actual ) );
 
         Collection<DynamicRecord> readRecords = store.getRecords( blockId );
         assertEquals( 1, readRecords.size() );
@@ -76,8 +81,8 @@ public class SchemaStoreTest
     {
         // GIVEN
         Collection<SchemaRule> rules = Arrays.<SchemaRule>asList(
-                new IndexRule( 1, 0, new long[] {5} ), new IndexRule( 2, 1, new long[] {6} ),
-                new IndexRule( 3, 1, new long[] {7} ) );
+                new IndexRule( 1, 0, POPULATING, new long[] {5} ), new IndexRule( 2, 1, POPULATING, new long[] {6} ),
+                new IndexRule( 3, 1, POPULATING, new long[] {7} ) );
         for ( SchemaRule rule : rules )
             storeRule( rule );
 
@@ -108,7 +113,6 @@ public class SchemaStoreTest
     public void storeAndLoadAllLongRules() throws Exception
     {
         // GIVEN
-
         Collection<SchemaRule> rules = Arrays.<SchemaRule>asList(
                 createLongIndexRule( 0, 100 ), createLongIndexRule( 1, 6 ), createLongIndexRule( 2, 50 ) );
         for ( SchemaRule rule : rules )
@@ -126,7 +130,7 @@ public class SchemaStoreTest
         long[] propertyKeys = new long[numberOfPropertyKeys];
         for ( int i = 0; i < propertyKeys.length; i++ )
             propertyKeys[i] = i;
-        return new IndexRule( 1, label, propertyKeys );
+        return new IndexRule( 1, label, POPULATING, propertyKeys );
     }
 
     private long storeRule( SchemaRule rule )

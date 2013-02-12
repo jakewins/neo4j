@@ -25,5 +25,5 @@ public interface RecordSerializable
 {
     int length();
     
-    void append( ByteBuffer target );
+    void serialize( ByteBuffer target );
 }

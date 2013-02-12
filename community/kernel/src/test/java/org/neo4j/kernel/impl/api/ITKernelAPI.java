@@ -356,7 +356,7 @@ public class ITKernelAPI
 
         // THEN
         statement = statementContextProvider.getCtxForReading();
-        assertEquals( asSet( propertyKey ), asSet( statement.getIndexRules( labelId ) ) );
+        assertEquals( asSet( propertyKey ), asSet( statement.getIndexedProperties( labelId ) ) );
     }
     
     @Test
@@ -375,7 +375,7 @@ public class ITKernelAPI
         statement = statementContextProvider.getCtxForWriting();
         long propertyKey2 = 10;
         statement.addIndexRule( labelId, propertyKey2 );
-        Set<Long> indexRulesInTx = asSet( statement.getIndexRules( labelId ) );
+        Set<Long> indexRulesInTx = asSet( statement.getIndexedProperties( labelId ) );
         tx.success();
         tx.finish();
 
@@ -397,7 +397,7 @@ public class ITKernelAPI
         tx.finish();
 
         // THEN
-        assertEquals( asSet(), asSet( statementContextProvider.getCtxForReading().getIndexRules( labelId ) ) );
+        assertEquals( asSet(), asSet( statementContextProvider.getCtxForReading().getIndexedProperties( labelId ) ) );
     }
     
     private GraphDatabaseAPI db;

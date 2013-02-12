@@ -131,6 +131,12 @@ public class TxState
         return state != null ? state.getAddedIndexRules() : Collections.<Long>emptyList();
     }
 
+    public boolean hasAddedIndexRule( long labelId, long propertyKey )
+    {
+        LabelState state = getState( labelStates, labelId, null );
+        return state != null ? state.hasAddedIndexRule( propertyKey ) : false;
+    }
+
     public Map<Long,Object> getAddedNodeProperties( long nodeId )
     {
         throw new UnsupportedOperationException();
@@ -254,6 +260,19 @@ public class TxState
         public Collection<Long> getAddedIndexRules()
         {
             return addedIndexRules;
+        }
+
+        public boolean hasAddedIndexRule( long propertyKey )
+        {
+            for ( long addedKey : addedIndexRules )
+            {
+                if(addedKey == propertyKey)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

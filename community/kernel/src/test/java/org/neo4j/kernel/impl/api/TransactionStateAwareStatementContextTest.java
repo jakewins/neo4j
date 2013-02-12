@@ -19,13 +19,9 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 
 import java.util.ArrayList;
@@ -37,7 +33,9 @@ import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
+import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class TransactionStateAwareStatementContextTest
 {
@@ -131,8 +129,8 @@ public class TransactionStateAwareStatementContextTest
         txContext.addIndexRule( labelId1, key1 );
 
         // THEN
-        assertEquals( asSet( key1 ), asSet( txContext.getIndexRules( labelId1 ) ) );
-        assertEquals( asSet(), asSet( store.getIndexRules( labelId1 ) ) );
+        assertEquals( asSet( key1 ), asSet( txContext.getIndexedProperties( labelId1 ) ) );
+        assertEquals( asSet(), asSet( store.getIndexedProperties( labelId1 ) ) );
     }
 
     @Test
@@ -146,8 +144,8 @@ public class TransactionStateAwareStatementContextTest
         txContext.addIndexRule( labelId1, key2 );
 
         // THEN
-        assertEquals( asSet( key1, key2 ), asSet( txContext.getIndexRules( labelId1 ) ) );
-        assertEquals( asSet(), asSet( store.getIndexRules( labelId1 ) ) );
+        assertEquals( asSet( key1, key2 ), asSet( txContext.getIndexedProperties( labelId1 ) ) );
+        assertEquals( asSet(), asSet( store.getIndexedProperties( labelId1 ) ) );
     }
 
     @Test
@@ -161,8 +159,8 @@ public class TransactionStateAwareStatementContextTest
         txContext.addIndexRule( labelId1, key1 );
 
         // THEN
-        assertEquals( asSet( key1 ), asSet( txContext.getIndexRules( labelId1 ) ) );
-        assertEquals( asSet(), asSet( store.getIndexRules( labelId1 ) ) );
+        assertEquals( asSet( key1 ), asSet( txContext.getIndexedProperties( labelId1 ) ) );
+        assertEquals( asSet(), asSet( store.getIndexedProperties( labelId1 ) ) );
     }
 
     @Test
@@ -292,7 +290,7 @@ public class TransactionStateAwareStatementContextTest
         // THEN
         assertTrue( "Should have been removed now", removed );
     }
-    
+
     @Test
     public void removingNonExistentLabelFromNodeShouldRespondFalse() throws Exception
     {
@@ -300,18 +298,39 @@ public class TransactionStateAwareStatementContextTest
         commitNoLabels();
 
         // WHEN
-        boolean removed = txContext.removeLabelFromNode( labelId1, nodeId );
+        txContext.addLabelToNode( labelId1, nodeId );
 
         // THEN
-        assertFalse( "Shouldn't have been removed now", removed );
+        assertLabels( labelId1 );
+    }
+
+    @Test
+    public void creatingAnIndexShouldBePopulatingStateWithinTX() throws Exception
+    {
+        // GIVEN
+        commitLabels( labelId1 );
+        txContext.addIndexRule( labelId1, key1 );
+
+        // WHEN
+        IndexRule.State state = txContext.getIndexState( labelId1, key1 );
+
+        // THEN
+        assertEquals( IndexRule.State.POPULATING, state );
+    }
+
+    @Test(expected = SchemaRuleNotFoundException.class)
+    public void shouldThrowNotFoundWhenAskingForStateOfNonExistentIndex() throws Exception
+    {
+        // GIVEN
+        commitLabels( labelId1 );
+        when(store.getIndexState( labelId1, key1 )).thenThrow( new SchemaRuleNotFoundException( "" ) );
+
+        // WHEN
+        txContext.getIndexState( labelId1, key1 );
     }
     
     private final long labelId1 = 10, labelId2 = 12, nodeId = 20;
-    private final long key1 = 45, key2 = 46, key3 = 47;
-
-//    private final IndexRule rule1a = new IndexRule( labelId1, "rule1a" );
-//    private final IndexRule rule1b = new IndexRule( labelId1, "rule1b" );
-//    private final IndexRule rule2  = new IndexRule( labelId2, "rule2" );
+    private final long key1 = 45, key2 = 46;
 
     private StatementContext store;
     private TxState state;
@@ -321,7 +340,7 @@ public class TransactionStateAwareStatementContextTest
     public void before() throws Exception
     {
         store = mock( StatementContext.class );
-        when( store.getIndexRules( labelId1 ) ).thenReturn( new LinkedList<Long>() );
+        when( store.getIndexedProperties( labelId1 ) ).thenReturn( new LinkedList<Long>() );
         state = new TxState();
         txContext = new TransactionStateAwareStatementContext( store, state );
     }
