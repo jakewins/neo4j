@@ -43,8 +43,6 @@ angular.module('app.services.graph', [])
         @columns = []
         @error   = null
       
-        
-  
     new GraphService
   
 ])

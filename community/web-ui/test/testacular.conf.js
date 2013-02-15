@@ -12,8 +12,8 @@ files = [
   // Application Code //
   'vendor/scripts/angular/angular.js',
   'vendor/scripts/angular/angular-*.js',
-
-  //'vendor/scripts/**/*.js',
+  'vendor/scripts/codemirror/*.js',
+  
   'vendor/scripts/**/*.coffee',
   //'app/scripts/**/*.js',
   'app/scripts/**/*.coffee',

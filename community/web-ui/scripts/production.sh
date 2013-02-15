@@ -1,4 +1,4 @@
 #!/bin/bash
 
-rm -rf _public
+rm -rf target
 node_modules/.bin/brunch build -m
