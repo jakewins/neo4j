@@ -1,5 +1,5 @@
 
-CodeMirror.defineMode("cypher", function(config) {
+var codeMirrorCypherHighlighter = function(config) {
   var indentUnit = config.indentUnit;
   var curPunc;
 
@@ -29,15 +29,7 @@ CodeMirror.defineMode("cypher", function(config) {
   function tokenBase(stream, state) {
     var ch = stream.next();
     curPunc = null;
-    if (ch == "$" || ch == "?") {
-      stream.match(/^[\w\d]*/);
-      return "variable-2";
-    }
-    else if (ch == "<" && !stream.match(/^[\s\u00a0=]/, false)) {
-      stream.match(/^[^\s\u00a0>]*>?/);
-      return "atom";
-    }
-    else if (ch == "\"" || ch == "'") {
+    if (ch == "\"" || ch == "'") {
       state.tokenize = tokenLiteral(ch);
       return state.tokenize(stream, state);
     }
@@ -67,10 +59,7 @@ CodeMirror.defineMode("cypher", function(config) {
     }
     else {
       stream.eatWhile(/[_\w\d]/);
-      if (stream.eat(":")) {
-        stream.eatWhile(/[\w\d_\-]/);
-        return "atom";
-      }
+      
       var word = stream.current(), type;
       if (ops.test(word))
         return null;
@@ -193,6 +182,8 @@ CodeMirror.defineMode("cypher", function(config) {
         return context.indent + (closing ? 0 : indentUnit);
     }
   };
-});
+}
 
-CodeMirror.defineMIME("text/x-mysql", "mysql");
+CodeMirror.defineMode("cypher", codeMirrorCypherHighlighter);
+
+CodeMirror.defineMIME("text/x-cypher", "cypher");

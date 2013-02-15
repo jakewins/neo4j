@@ -3,8 +3,8 @@
     .span12
       pre.data-console-statement {{ interaction.statement }}
       pre.data-console-result    {{ interaction.result }}
-  .data-console-dash
-    .data-console-input-wrap
+  .row-fluid
       .btn.btn-primary.data-console-exec(ng-click='execute()') Execute &raquo;
-      .code-mirror-wrap
+      div
+        .prefix >
         textarea(ui-codemirror="{theme:'eclipse',mode:'cypher'}", ng-model="statement")

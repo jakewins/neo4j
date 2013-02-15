@@ -57,8 +57,22 @@
                       function (e, cur) {return e.getTokenAt(cur);},
                       options);
   };
-  
-  var cypherKeywords = ("START MATCH WHERE RETURN").split(" ");
+
+  var cypherKeywords = [
+    "node", "nodes", "relationship", "relationships", 
+    "any", "all", "none", "single", "length", "type", "id", 
+    "coalesce", "head", "last", "extract", "filter", "tail", 
+    "range", "reduce", "abs", "round", "sqrt", "sign", "str",
+    "replace", "substring", "left", "right", "ltrim", "rtrim",
+    "trim", "lower", "upper", 
+    
+    'START', 'MATCH', 'WHERE', 'RETURN',
+    'CREATE', 'UNIQUE', 'SET', 'DELETE',
+    'FOREACH', 'IN',
+    'ORDER', 'BY', 'SKIP', 'LIMIT',
+
+    'COUNT', 'SUM', 'AVG', 'PERCENTILE', 'DISC',
+    'DISTINCT', 'COLLECT', 'MIN', 'MAX', 'CONT'];
 
   function getCompletions(token, context, keywords, options) {
     var found = [], start = token.string;
@@ -70,8 +84,6 @@
     }
 
     if (context) {
-      // If this is a property, see if it belongs to some object we can
-      // find in the current environment.
       var obj = context.pop(), base;
       if (obj.className == "variable") {
         if (options && options.additionalContext)

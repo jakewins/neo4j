@@ -76,12 +76,6 @@
   </dependencies>
 
   <build>
-    <resources>
-      <resource>
-        <directory>public</directory>
-      </resource>
-    </resources>
-
     <plugins>
       <!-- Development execution -->
       <plugin>
@@ -96,6 +90,15 @@
             </systemProperty>
           </systemProperties>
         </configuration>
+        <dependencies>
+          <dependency>
+                <groupId>org.neo4j</groupId>
+                <artifactId>_</artifactId>
+                <version>_</version>
+                <scope>system</scope>
+                <systemPath>${basedir}/public</systemPath>
+          </dependency>
+        </dependencies>
       </plugin>
 
     </plugins>

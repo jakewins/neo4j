@@ -6,12 +6,11 @@
       <pre class="data-console-result">   {{ interaction.result }}</pre>
     </div>
   </div>
-  <div class="data-console-dash">
-    <div class="data-console-input-wrap">
-      <div ng-click="execute()" class="btn btn-primary data-console-exec">Execute &raquo;</div>
-      <div class="code-mirror-wrap">
-        <textarea ui-codemirror="{theme:'eclipse',mode:'cypher'}" ng-model="statement"></textarea>
-      </div>
+  <div class="row-fluid">
+    <div ng-click="execute()" class="btn btn-primary data-console-exec">Execute &raquo;</div>
+    <div>
+      <div class="prefix">></div>
+      <textarea ui-codemirror="{theme:'eclipse',mode:'cypher'}" ng-model="statement"></textarea>
     </div>
   </div>
 </div>
