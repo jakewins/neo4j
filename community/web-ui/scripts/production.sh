@@ -1,4 +1,4 @@
 #!/bin/bash
 
-rm -rf target
+rm -rf public/webadmin-html
 node_modules/.bin/brunch build -m
