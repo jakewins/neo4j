@@ -79,28 +79,19 @@
     <plugins>
       <!-- Development execution -->
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
+        <artifactId>maven-antrun-plugin</artifactId>
         <configuration>
-          <mainClass>${neo4j-server.mainClass}</mainClass>
-          <systemProperties>
-            <systemProperty>
-              <key>org.neo4j.server.properties</key>
-              <value>${basedir}/neo4j-home/conf/neo4j-server.properties</value>
-            </systemProperty>
-          </systemProperties>
+          <property environment="env" />
+          <target>
+            <java classname="org.neo4j.server.Bootstrapper" 
+                  classpathref="maven.test.classpath"
+                  classpath="${basedir}/public" 
+                  fork='true'>
+              <sysproperty key="org.neo4j.server.properties" value="${basedir}/neo4j-home/conf/neo4j-server.properties"/>
+            </java>
+          </target>
         </configuration>
-        <dependencies>
-          <dependency>
-                <groupId>org.neo4j</groupId>
-                <artifactId>_</artifactId>
-                <version>_</version>
-                <scope>system</scope>
-                <systemPath>${basedir}/public</systemPath>
-          </dependency>
-        </dependencies>
       </plugin>
-
     </plugins>
 
   </build>

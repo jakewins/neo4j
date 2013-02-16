@@ -15,6 +15,7 @@ The Web UI is a single-page coffeescript application that handles basic manageme
 ### Project infrastructure
 
 * [scripts/](scripts) - Helper scripts (run build, run tests, etc)
+* [public/](public) - The compiled HTML/JS/CSS and image resources
 * [neo4j-home/](neo4j-home) - Home directory for Neo4j during development
 
 ## Building
@@ -57,12 +58,12 @@ There are two basic steps to it.
 
 1: Start the brunch autocompiler with
 
-    scripts/development.sh 
+    brunch w
   
 in the source base directory
 
 2: Start Neo4j
 
-    mvn exec:java
+    mvn antrun:run
     
 again, in the source base directory
