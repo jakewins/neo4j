@@ -6,13 +6,16 @@ The Web UI is a single-page coffeescript application that handles basic manageme
 
 ## Project layout
 
-[app/](app) - The application's main source code 
-[test/](test) - The accompanying unit and integration tests
-[vendor/](vendor) - Runtime dependencies
+### Source code
 
+* [app/](app) - The application's main source code 
+* [test/](test) - The accompanying unit and integration tests
+* [vendor/](vendor) - Runtime dependencies
 
-[scripts/](scripts) - Helper scripts (run build, run tests, etc)
-[neo4j-home/](neo4j-home) - Home directory for Neo4j during development
+### Project infrastructure
+
+* [scripts/](scripts) - Helper scripts (run build, run tests, etc)
+* [neo4j-home/](neo4j-home) - Home directory for Neo4j during development
 
 ## Building
 
@@ -28,7 +31,7 @@ And install the project dependencies
 
     npm install
 
-From the project base dir. For running tests, you also need [PhantomJS](http://phantomjs.org/) installed, which is a headless browser where we run our tests.
+From the project base dir. For running tests, you also need [PhantomJS](http://phantomjs.org/) installed, it provides the headless browser environment where the tests are executed.
 
 ### Running the build
     
