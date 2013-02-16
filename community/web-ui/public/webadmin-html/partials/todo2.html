@@ -1,0 +1,19 @@
+<div>
+  <h1>Min fina att-göra-lista</h1>
+  <div ng-controller='AttGoraController'>
+    <p>{{ remaining() }} kvar</p>
+    <ul>
+      <li ng-repeat='todo in todos'>
+        <div class="{{todo.done}}">
+          <input type="checkbox" ng-model='todo.done'>
+          {{ todo.text }}
+        </div>
+      </li>
+    <ul>
+    
+    <button ng-click='addOne();'>Do one!</button>
+    
+    <input type="text" ng-model="newTaskText">
+    <button ng-click='clearDone();'>Clear done tasks</button>
+  </div>
+</div>

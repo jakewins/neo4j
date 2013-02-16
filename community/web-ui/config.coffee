@@ -4,7 +4,7 @@ exports.config =
     definition: false
     wrapper: false
   paths:
-    public: 'target/classes/webadmin-html'
+    public: 'public/webadmin-html'
   files:
     javascripts:
       joinTo:
