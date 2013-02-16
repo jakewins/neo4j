@@ -54,16 +54,6 @@ from the source base directory. Use the .bat script instead if you are on Window
     
 ## Developing
 
-There are two basic steps to it.
-
-1: Start the brunch autocompiler with
-
-    brunch w
-  
-in the source base directory
-
-2: Start Neo4j
-
-    mvn antrun:run
+    scripts/development.sh
     
-again, in the source base directory
+Then go to http://localhost:7474/
