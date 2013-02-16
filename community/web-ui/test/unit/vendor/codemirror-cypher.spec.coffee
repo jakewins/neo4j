@@ -2,6 +2,13 @@
 
 describe "cypher syntax highlighter", ->
 
+  it "should lex stuff correctly", ->
+    
+    lexing 'START',        shouldYield ['keyword']
+    lexing 'START RETURN', shouldYield ['keyword', null, 'keyword']
+    lexing 'MATCH (myNode:Label1:Label2)-[:KNOWS]->other',
+      shouldYield [ 'keyword', null, null, 'variable', 'atom', 'atom', null, null, null, 'atom', null, null, 'variable' ]
+
   lexing = (query, expected) ->
     highlighter = codeMirrorCypherHighlighter({}) 
     stream = new CodeMirror.StringStream(query, 4);
@@ -17,10 +24,3 @@ describe "cypher syntax highlighter", ->
     expect(actual).toEqual expected
       
   shouldYield = (expected) -> expected
-
-  it "should lex stuff correctly", ->
-    
-    lexing 'START',        shouldYield ['keyword']
-    lexing 'START RETURN', shouldYield ['keyword', null, 'keyword']
-    lexing 'MATCH (myNode:Label1:Label2)-[:KNOWS]->other',
-      shouldYield [ 'keyword', null, null, 'variable', 'atom', 'atom', null, null, null, 'atom', null, null, 'variable' ]
