@@ -15,13 +15,15 @@ angular.module('app.services.graph', [])
     
       executeQuery : (query) ->
         @_clear()
-        @query = query
+        @query     = query
+        @isLoading = true
         
         $http.post("/db/data/cypher", { query : query })
           .success(@_onSuccessfulExecution)
           .error(  @_onFailedExecution)
       
       _onSuccessfulExecution : (result) =>
+        @_clear()
         @rows    = result.data.map @_cleanResultRow
         @columns = result.columns
       
@@ -42,6 +44,7 @@ angular.module('app.services.graph', [])
         @rows    = []
         @columns = []
         @error   = null
+        @isLoading = false
       
     new GraphService
   

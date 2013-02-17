@@ -3,7 +3,6 @@
 ### Sevices ###
 
 angular.module('app.services', [
-  'app.services.graph'
   'app.services.console'
 ])
 

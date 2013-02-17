@@ -73,7 +73,26 @@ describe "app.services.graph.GraphService", ->
       expect(graphService.error).toEqual result
     )
     
-    it "should populate state correctly on failed result", inject( ($httpBackend, graphService) ->
+    it "should go to a loading state while waiting for a reply", inject( ($httpBackend, graphService) ->
+                  
+      $httpBackend.expect 'POST', '/db/data/cypher', {"query":"TESTQUERY"}
+      $httpBackend.whenPOST('/db/data/cypher').respond({data:[],columns:[]})
+  
+      # WHEN
+      graphService.executeQuery 'TESTQUERY'
+      
+      # THEN
+      expect(graphService.isLoading).toEqual true
+      
+      # AND WHEN
+      $httpBackend.flush()
+      
+      # THEN
+      expect(graphService.isLoading).toEqual false
+      
+    )
+    
+    it "should send the correct query to the database", inject( ($httpBackend, graphService) ->
                   
       $httpBackend.expect 'POST', '/db/data/cypher', {"query":"TESTQUERY"}
       $httpBackend.whenPOST('/db/data/cypher').respond({data:[],columns:[]})

@@ -88,6 +88,7 @@
                   classpath="${basedir}/public" 
                   fork='true'>
               <sysproperty key="org.neo4j.server.properties" value="${basedir}/neo4j-home/conf/neo4j-server.properties"/>
+              <jvmarg value='-Xmx1024m' />
             </java>
           </target>
         </configuration>

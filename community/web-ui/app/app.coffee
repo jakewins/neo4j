@@ -14,8 +14,9 @@ App = angular.module('app', [
 App.config([
   '$routeProvider'
   '$locationProvider'
+  '$httpProvider'
 
-($routeProvider, $locationProvider, config) ->
+($routeProvider, $locationProvider, $httpProvider, config) ->
 
   $routeProvider
 
@@ -34,4 +35,7 @@ App.config([
 
   # Without server side support html5 must be disabled.
   $locationProvider.html5Mode(false)
+  
+  # Common HTTP headers for the networking layer
+  $httpProvider.defaults.headers.common['X-stream'] = true
 ])
