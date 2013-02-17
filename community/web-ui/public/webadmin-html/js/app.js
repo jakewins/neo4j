@@ -5,7 +5,7 @@ var App;
 App = angular.module('app', ['ui', 'ngCookies', 'ngResource', 'app.controllers', 'app.directives', 'app.filters', 'app.services']);
 
 App.config([
-  '$routeProvider', '$locationProvider', function($routeProvider, $locationProvider, config) {
+  '$routeProvider', '$locationProvider', '$httpProvider', function($routeProvider, $locationProvider, $httpProvider, config) {
     $routeProvider.when('/', {
       templateUrl: 'partials/splash.html',
       controller: 'SplashController'
@@ -18,7 +18,8 @@ App.config([
     }).otherwise({
       redirectTo: '/'
     });
-    return $locationProvider.html5Mode(false);
+    $locationProvider.html5Mode(false);
+    return $httpProvider.defaults.headers.common['X-stream'] = true;
   }
 ]);
 'use strict';
@@ -26,38 +27,47 @@ App.config([
 /* Controllers
 */
 
-angular.module('app.controllers', ['app.controllers.sidebar', 'app.controllers.data.browser', 'app.controllers.data.console', 'app.controllers.splash']).controller('AppCtrl', [
-  '$scope', '$location', '$resource', '$rootScope', function($scope, $location, $resource, $rootScope) {
-    $scope.$location = $location;
-    $scope.$watch('$location.path()', function(path) {
-      return $scope.activeNavId = path || '/';
-    });
-    return $scope.getClass = function(id) {
-      if ($scope.activeNavId.substring(0, id.length) === id) {
-        return 'active';
-      } else {
-        return '';
-      }
-    };
-  }
-]);
+angular.module('app.controllers', ['app.controllers.sidebar', 'app.controllers.data.browser', 'app.controllers.data.console', 'app.controllers.splash']).controller('AppCtrl', ['$scope', '$location', '$resource', '$rootScope', function($scope, $location, $resource, $rootScope) {}]);
 'use strict';
 
-angular.module('app.controllers.data.browser', []).controller('DatabrowserController', [
-  '$scope', 'graphService', function($scope, graphService) {
-    var synchronizeWithGraphData;
+angular.module('app.controllers.data.browser', ['app.services.graph', 'app.services.paginator']).controller('DatabrowserController', [
+  '$scope', 'graphService', 'paginatorService', function($scope, graphService, paginatorService) {
+    var PAGE_SIZE, synchronizeWithGraphData;
+    PAGE_SIZE = 20;
     $scope.query = graphService.query;
+    $scope.page = 1;
+    $scope.execute = function() {
+      return graphService.executeQuery($scope.query);
+    };
+    $scope.updatePagination = function(page) {
+      var buttons, end, numberOfPages, numberOfRows, start;
+      if (page === '_PREV') {
+        page = $scope.page - 1;
+      }
+      if (page === '_NEXT') {
+        page = $scope.page + 1;
+      }
+      numberOfRows = $scope.allRows.length;
+      numberOfPages = Math.ceil(numberOfRows / PAGE_SIZE);
+      buttons = paginatorService.calculateNiceButtons(page, numberOfPages);
+      start = PAGE_SIZE * (page - 1);
+      end = start + PAGE_SIZE;
+      end = end < numberOfRows ? end : numberOfRows;
+      $scope.page = page;
+      $scope.numberOfPages = numberOfPages;
+      $scope.pageButtons = buttons;
+      return $scope.rows = $scope.allRows.slice(start, end);
+    };
     synchronizeWithGraphData = function() {
-      $scope.rows = graphService.rows;
+      $scope.allRows = graphService.rows;
       $scope.columns = graphService.columns;
-      return $scope.error = graphService.error;
+      $scope.error = graphService.error;
+      $scope.isLoading = graphService.isLoading;
+      return $scope.updatePagination(1);
     };
     $scope.graphService = graphService;
     $scope.$watch('graphService.rows', synchronizeWithGraphData);
-    synchronizeWithGraphData();
-    return $scope.execute = function() {
-      return graphService.executeQuery($scope.query);
-    };
+    return synchronizeWithGraphData();
   }
 ]);
 'use strict';
@@ -152,7 +162,7 @@ angular.module('app.filters', []).filter('interpolate', [
 /* Sevices
 */
 
-angular.module('app.services', ['app.services.graph', 'app.services.console']).factory('version', function() {
+angular.module('app.services', ['app.services.console']).factory('version', function() {
   return "2.0".factory('edition', function() {
     return "Community";
   });
@@ -229,12 +239,14 @@ angular.module('app.services.graph', []).factory('graphService', [
       GraphService.prototype.executeQuery = function(query) {
         this._clear();
         this.query = query;
+        this.isLoading = true;
         return $http.post("/db/data/cypher", {
           query: query
         }).success(this._onSuccessfulExecution).error(this._onFailedExecution);
       };
 
       GraphService.prototype._onSuccessfulExecution = function(result) {
+        this._clear();
         this.rows = result.data.map(this._cleanResultRow);
         return this.columns = result.columns;
       };
@@ -263,12 +275,47 @@ angular.module('app.services.graph', []).factory('graphService', [
       GraphService.prototype._clear = function() {
         this.rows = [];
         this.columns = [];
-        return this.error = null;
+        this.error = null;
+        return this.isLoading = false;
       };
 
       return GraphService;
 
     })();
     return new GraphService;
+  }
+]);
+'use strict';
+
+/* A service that manages a common view of the graph for the entire app
+*/
+
+angular.module('app.services.paginator', []).factory('paginatorService', [
+  function() {
+    var PaginatorService;
+    PaginatorService = (function() {
+
+      function PaginatorService() {}
+
+      PaginatorService.prototype.calculateNiceButtons = function(currentPage, numberOfPages) {
+        var buttons;
+        buttons = [
+          {
+            text: '«',
+            action: '_PREV',
+            disabled: currentPage === 1
+          }, {
+            text: '»',
+            action: '_NEXT',
+            disabled: currentPage === numberOfPages
+          }
+        ];
+        return buttons;
+      };
+
+      return PaginatorService;
+
+    })();
+    return new PaginatorService;
   }
 ]);
