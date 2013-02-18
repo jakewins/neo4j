@@ -4,13 +4,13 @@
     <div class="data-browser-query-wrap">
       <div ng-click="execute()" class="btn btn-primary data-browser-exec">Execute &raquo;</div>
       <div class="code-mirror-wrap">
-        <textarea ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': 'cypherAutoComplete'}}" ng-model="query"></textarea>
+        <textarea ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': execute}}" ng-model="query"></textarea>
       </div>
     </div>
   </div>
   <div ng-show="isLoading" class="row-fluid">
-    <div class="well span12">
-      <h3>Hold on to your chair</h3>
+    <div class="loading-screen well">
+      <h3>Hold on to your chair!</h3>
       <p>Neo4j is executing your statement..</p>
     </div>
   </div>
@@ -31,7 +31,7 @@
     </div>
     <div ng-show="rows.length" class="row-fluid">
       <div class="span12">
-        <div class="pagination pagination-small">
+        <div class="pagination pagination-small pagination-right">
           <ul>
             <li class="disabled"><a>Page {{ page }} of {{ numberOfPages }}</a></li>
             <li ng-repeat="button in pageButtons" ng-class="{disabled:button.disabled}"> <a ng-click="updatePagination(button.action)">{{ button.text }}</a></li>
@@ -47,7 +47,7 @@
         </table>
       </div>
     </div>
-    <div ng-show="!rows.length" class="row-fluid">
+    <div ng-show="!rows.length &amp;&amp; !error" class="row-fluid">
       <div class="span12 well">The result set is empty</div>
     </div>
   </div>

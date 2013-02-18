@@ -538,6 +538,19 @@ body {
 .data-browser {
   padding-top: 130px;
 }
+.data-browser .loading-screen {
+  width: 400px;
+  margin: 40px auto;
+  text-align: center;
+}
+.data-browser .code-mirror-wrap {
+  width: 600px;
+}
+.data-browser .CodeMirror {
+  width: 600px;
+  height: 80px;
+  font-size: 12px;
+}
 .data-browser-dash {
   position: fixed;
   top: 50px;
@@ -551,14 +564,6 @@ body {
 }
 .data-browser-query-wrap {
   width: 700px;
-}
-.data-browser .code-mirror-wrap {
-  width: 600px;
-}
-.data-browser .CodeMirror {
-  width: 600px;
-  height: 80px;
-  font-size: 12px;
 }
 .data-browser-exec {
   height: 20px;

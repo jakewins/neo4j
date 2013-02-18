@@ -20985,6 +20985,8 @@ angular.module('ngCookies', ['ng']).
  * @license MIT License, http://www.opensource.org/licenses/MIT
  */
 
+// NOTE: This file has been modified by Neo Technology to support
+// the latest version of Code Mirror
 
 angular.module('ui.config', []).value('ui.config', {});
 angular.module('ui.filters', ['ui.config']);
