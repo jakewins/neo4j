@@ -4,11 +4,11 @@
     .data-browser-query-wrap
       .btn.btn-primary.data-browser-exec(ng-click='execute()') Execute &raquo;
       .code-mirror-wrap
-        textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': 'cypherAutoComplete'}}", ng-model="query")
+        textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': execute}}", ng-model="query")
   
   .row-fluid(ng-show='isLoading')
-    .well.span12
-      h3 Hold on to your chair
+    .loading-screen.well
+      h3 Hold on to your chair!
       p Neo4j is executing your statement..
   
   div(ng-show='!isLoading')
@@ -23,7 +23,7 @@
             pre {{ stack }}
     .row-fluid(ng-show='rows.length')
       .span12
-        .pagination.pagination-small
+        .pagination.pagination-small.pagination-right
           ul
             li.disabled
               a Page {{ page }} of {{ numberOfPages }}
@@ -35,6 +35,6 @@
           tr(ng-repeat='row in rows')
             td(ng-repeat='cell in row') {{ cell }}
             
-    .row-fluid(ng-show='!rows.length')
+    .row-fluid(ng-show='!rows.length && !error')
       .span12.well The result set is empty
           
