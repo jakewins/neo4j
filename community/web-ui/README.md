@@ -26,13 +26,13 @@ The project uses a combination of [Brunch](http://brunch.io/) and Maven as it's 
 
 You will need to install Node.js in whatever way is suitable for your platform. Afterwards, you should install brunch
 
-    npm install -g brunch
+    sudo npm install -g brunch
     
 And install the project dependencies
 
     npm install
 
-From the project base dir. For running tests, you also need [PhantomJS](http://phantomjs.org/) installed, it provides the headless browser environment where the tests are executed.
+From the project base dir. For running tests, you also need [PhantomJS](http://phantomjs.org/) installed, it provides the headless browser environment where the tests are executed. To do that, look at [PhantomJS.org](http://phantomjs.org/)
 
 ### Running the build
     
