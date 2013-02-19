@@ -6,7 +6,7 @@
         <div class="hero-query-logo-wrapper"><img src="img/big-logo.png" class="hero-query-logo"/>
           <div ng-click="execute()" class="btn btn-large btn-primary splash-exec">Execute &raquo;</div>
           <div class="code-mirror-wrap">
-            <textarea ui-codemirror="{theme:'eclipse',mode:'cypher'}" ng-model="query" class="hero-query-input"></textarea>
+            <textarea ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': execute}}" ng-model="query"></textarea>
           </div>
         </div>
       </div>

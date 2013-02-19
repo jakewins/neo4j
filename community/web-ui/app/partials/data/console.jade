@@ -4,7 +4,6 @@
       pre.data-console-statement {{ interaction.statement }}
       pre.data-console-result    {{ interaction.result }}
   .row-fluid
-      .btn.btn-primary.data-console-exec(ng-click='execute()') Execute &raquo;
       div
         .prefix >
-        textarea(ui-codemirror="{theme:'eclipse',mode:'cypher'}", ng-model="statement")
+          textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Enter': execute}}", ng-model="statement")

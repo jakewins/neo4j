@@ -6,7 +6,7 @@
           img.hero-query-logo(src='img/big-logo.png')
           .btn.btn-large.btn-primary.splash-exec(ng-click='execute()') Execute &raquo;
           .code-mirror-wrap
-            textarea.hero-query-input(ui-codemirror="{theme:'eclipse',mode:'cypher'}", ng-model="query")
+            textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': execute}}", ng-model="query")
     
 .row-fluid
   .span4
