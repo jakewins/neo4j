@@ -66,7 +66,7 @@ angular.module('app.controllers.data.browser', ['app.services.graph', 'app.servi
       return $scope.updatePagination(1);
     };
     $scope.graphService = graphService;
-    $scope.$watch('graphService.rows', synchronizeWithGraphData);
+    $scope.$on('graphService.changed', synchronizeWithGraphData);
     return synchronizeWithGraphData();
   }
 ]);
@@ -224,7 +224,7 @@ angular.module('app.services.console', []).factory('consoleService', [
 var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 angular.module('app.services.graph', []).factory('graphService', [
-  '$http', function($http) {
+  '$http', '$rootScope', function($http, $rootScope) {
     var GraphService;
     GraphService = (function() {
 
@@ -240,6 +240,7 @@ angular.module('app.services.graph', []).factory('graphService', [
         this._clear();
         this.query = query;
         this.isLoading = true;
+        this._broadcastChange();
         return $http.post("/db/data/cypher", {
           query: query
         }).success(this._onSuccessfulExecution).error(this._onFailedExecution);
@@ -248,12 +249,19 @@ angular.module('app.services.graph', []).factory('graphService', [
       GraphService.prototype._onSuccessfulExecution = function(result) {
         this._clear();
         this.rows = result.data.map(this._cleanResultRow);
-        return this.columns = result.columns;
+        this.columns = result.columns;
+        return this._broadcastChange();
       };
 
       GraphService.prototype._onFailedExecution = function(error) {
         this._clear();
-        return this.error = error;
+        this.error = error;
+        return this._broadcastChange();
+      };
+
+      GraphService.prototype._broadcastChange = function() {
+        console.log("Broadcast: " + this.isLoading);
+        return $rootScope.$broadcast('graphService.changed', [this]);
       };
 
       GraphService.prototype._cleanResultRow = function(row) {

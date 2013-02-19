@@ -6,6 +6,7 @@
       <div class="code-mirror-wrap">
         <textarea ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': execute}}" ng-model="query"></textarea>
       </div>
+      <div class="muted text-small"> <code>CTRL RETURN</code> Executes statement <code>CTRL SPACE</code> Auto-completes</div>
     </div>
   </div>
   <div ng-show="isLoading" class="row-fluid">

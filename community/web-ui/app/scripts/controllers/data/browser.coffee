@@ -51,6 +51,6 @@ angular.module('app.controllers.data.browser', [
       $scope.updatePagination(1)
 
     $scope.graphService = graphService
-    $scope.$watch 'graphService.rows', synchronizeWithGraphData
+    $scope.$on 'graphService.changed', synchronizeWithGraphData
     synchronizeWithGraphData()
 ])

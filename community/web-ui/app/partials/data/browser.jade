@@ -5,6 +5,11 @@
       .btn.btn-primary.data-browser-exec(ng-click='execute()') Execute &raquo;
       .code-mirror-wrap
         textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': execute}}", ng-model="query")
+      .muted.text-small 
+        code CTRL RETURN
+        |  Executes statement 
+        code CTRL SPACE
+        |  Auto-completes
   
   .row-fluid(ng-show='isLoading')
     .loading-screen.well

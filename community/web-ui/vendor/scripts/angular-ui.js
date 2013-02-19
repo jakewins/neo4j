@@ -700,6 +700,20 @@ angular.module('ui.directives').directive('uiCodemirror', ['ui.config', '$parse'
       var updateCodeMirror = function (options) {
         // Merge together the options from the uiConfig and the attribute itself with the onChange event above.
         options = angular.extend({}, options, uiConfig.codemirror);
+        
+        // Tie the keybinding calllbacks into angular, if they are functions (strings refer to static codemirror functions)
+        if(options.extraKeys) {
+          for(var key in options.extraKeys) {
+            var val = options.extraKeys[key];
+            if(typeof(val) != 'string') {
+              (function(originalCallback) { // Tie the current value of 'val' to an inner scope
+                options.extraKeys[key] = function(codeMirror) {
+                  scope.$apply(originalCallback);
+                }
+              })(val); 
+            }
+          }
+        }
 
         // If there is a codemirror widget for this element already then we need to unwire if first
         if (codemirror) {
