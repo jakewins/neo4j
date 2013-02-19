@@ -536,7 +536,7 @@ body {
   left: -8px;
 }
 .data-browser {
-  padding-top: 130px;
+  padding-top: 150px;
 }
 .data-browser .loading-screen {
   width: 400px;
@@ -558,7 +558,7 @@ body {
   left: 210px;
   border-bottom: 2px solid #ddd;
   border-left: 1px solid #ddd;
-  height: 90px;
+  height: 110px;
   padding: 20px;
   background: #efefef;
 }

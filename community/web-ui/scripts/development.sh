@@ -74,9 +74,11 @@ function onExit()
 
 trap onExit EXIT
 
+mkdir target
+
 startServer;
 
-rm -rf public/webadmin-html
+rm -rf ./public/webadmin-html/*
 autoCompileWebadmin;
 startTestRunner;
 infiniteSleep;

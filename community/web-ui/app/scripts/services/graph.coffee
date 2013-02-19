@@ -6,7 +6,8 @@ angular.module('app.services.graph', [])
 
 .factory('graphService', [
   '$http'
-  ($http)->
+  '$rootScope'
+  ($http, $rootScope)->
     class GraphService
     
       constructor : () ->
@@ -18,6 +19,7 @@ angular.module('app.services.graph', [])
         @query     = query
         @isLoading = true
         
+        @_broadcastChange()
         $http.post("/db/data/cypher", { query : query })
           .success(@_onSuccessfulExecution)
           .error(  @_onFailedExecution)
@@ -26,10 +28,16 @@ angular.module('app.services.graph', [])
         @_clear()
         @rows    = result.data.map @_cleanResultRow
         @columns = result.columns
+        @_broadcastChange()
       
       _onFailedExecution : (error) =>
         @_clear()
         @error = error
+        @_broadcastChange()
+        
+      _broadcastChange : ->
+        console.log "Broadcast: " + @isLoading
+        $rootScope.$broadcast 'graphService.changed', [this]
         
       _cleanResultRow : (row) ->
         for cell in row

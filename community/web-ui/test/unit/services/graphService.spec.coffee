@@ -100,3 +100,39 @@ describe "app.services.graph.GraphService", ->
       # WHEN
       graphService.executeQuery 'TESTQUERY'
     )
+    
+    it "should broadcast a change event the service state changes", inject( ($rootScope, $httpBackend, graphService) ->
+      
+      changeEvents = []
+      result = {
+          "columns" : [ "myNode" ],
+          "data" : [ [ {
+            "data" : {
+              "name" : "My First Node"
+            },
+            "self" : "http://localhost:7474/db/data/node/33256",
+          } ] ]
+        }
+                  
+      $httpBackend.expect 'POST', '/db/data/cypher'
+      $httpBackend.whenPOST('/db/data/cypher').respond(result)
+      $rootScope.$on "graphService.changed", (ev) -> changeEvents.push(ev)
+  
+      # WHEN
+      graphService.executeQuery 'TESTQUERY'
+      
+      # THEN
+      expect(changeEvents.length).toEqual 1
+      expect(graphService.query).toEqual 'TESTQUERY'
+      expect(graphService.isLoading).toEqual true
+      
+      # AND WHEN (the server has actually responded)
+      $httpBackend.flush()
+      
+      # THEN
+      expect(changeEvents.length).toEqual 2
+      expect(graphService.query).toEqual 'TESTQUERY'
+      expect(graphService.isLoading).toEqual false
+      expect(graphService.columns).toEqual [ "myNode" ]
+      expect(graphService.rows).toEqual [ [ { "name" : "My First Node" } ] ]
+    )
