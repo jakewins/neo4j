@@ -26,15 +26,17 @@
         ul.stacktrace.collapse
           li(ng-repeat="stack in error.stacktrace") 
             pre {{ stack }}
+    
     .row-fluid(ng-show='rows.length')
-      .span12
-        .pagination.pagination-small.pagination-right
-          ul
-            li.disabled
-              a Page {{ page }} of {{ numberOfPages }}
-            li(ng-repeat='button in pageButtons', ng-class='{disabled:button.disabled}') 
-              a(ng-click='updatePagination(button.action)') {{ button.text }}
-        table.table.well
+      .span12.results
+        .header
+          .pagination.pagination-small.pagination-right
+            ul
+              li.disabled
+                a Page {{ page }} of {{ numberOfPages }}
+              li(ng-repeat='button in pageButtons', ng-class='{disabled:button.disabled}') 
+                a(ng-click='updatePagination(button.action)') {{ button.text }}
+        table.table
           tr
             th(ng-repeat='column in columns') {{ column }}
           tr(ng-repeat='row in rows')

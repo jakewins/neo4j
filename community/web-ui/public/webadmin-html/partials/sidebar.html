@@ -1,8 +1,5 @@
 
 <div ng-controller="SidebarController" class="sidebar">
-  <p><span>2.0 Community Edition</span></p>
-  <ul class="main-menu">
-    <li ng-repeat="item in menuItems" ng-class="{active: item.active}"><a ng-href="{{ item.href }}"><span class="icon icon-{{ item.icon }}"></span>{{ item.title }}</a></li>
-  </ul>
+  <ul ng-include="'partials/menu_recursive.html'" ng-init="items=menuItems" class="main-menu"></ul>
   <div class="sidebar-resources"><small>Resources</small><br/><a href="http://docs.neo4j.org/chunked/stable/tutorials-rest.html" class="btn btn-link btn-mini">Getting started</a><a href="http://docs.neo4j.org/chunked/stable/" class="btn btn-link btn-mini">Documentation</a></a><a href="https://github.com/neo4j/neo4j/issues/new" class="btn btn-link btn-mini">Report an issue</a></div>
 </div>

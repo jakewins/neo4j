@@ -8,18 +8,27 @@ angular.module('app.controllers.data.console', [])
 
   ($scope, consoleService) ->
     
-    $scope.interations = consoleService.interactions
+    $scope.engine = "shell" # Default
     
     synchronizeWithConsoleService = ->
-      $scope.interactions = consoleService.interactions
+      $scope.availableEngines = consoleService.engines
+      if consoleService.engines[$scope.engine]?
+        engineState = consoleService.engines[$scope.engine]
+        $scope.interactions = engineState.interactions
+        $scope.engineName = engineState.name
+      else
+        $scope.interactions = []
+        $scope.engineName = $scope.engine
     
-    $scope.consoleService = consoleService
-    $scope.$watch('consoleService.interactions.length',
-                  synchronizeWithConsoleService)
+    $scope.$on('consoleService.changed', synchronizeWithConsoleService)
     synchronizeWithConsoleService()
     
+    $scope.changeEngine = (engine)->
+      $scope.engine = engine
+      synchronizeWithConsoleService()
+    
     $scope.execute = ->
-      consoleService.execute $scope.statement
+      consoleService.execute $scope.statement, $scope.engine
       $scope.statement = ""
     
 ])

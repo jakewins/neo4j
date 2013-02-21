@@ -31,14 +31,16 @@
       </div>
     </div>
     <div ng-show="rows.length" class="row-fluid">
-      <div class="span12">
-        <div class="pagination pagination-small pagination-right">
-          <ul>
-            <li class="disabled"><a>Page {{ page }} of {{ numberOfPages }}</a></li>
-            <li ng-repeat="button in pageButtons" ng-class="{disabled:button.disabled}"> <a ng-click="updatePagination(button.action)">{{ button.text }}</a></li>
-          </ul>
+      <div class="span12 results">
+        <div class="header">
+          <div class="pagination pagination-small pagination-right">
+            <ul>
+              <li class="disabled"><a>Page {{ page }} of {{ numberOfPages }}</a></li>
+              <li ng-repeat="button in pageButtons" ng-class="{disabled:button.disabled}"> <a ng-click="updatePagination(button.action)">{{ button.text }}</a></li>
+            </ul>
+          </div>
         </div>
-        <table class="table well">
+        <table class="table">
           <tr>
             <th ng-repeat="column in columns">{{ column }}</th>
           </tr>

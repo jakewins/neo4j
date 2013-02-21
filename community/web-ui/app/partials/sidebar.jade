@@ -1,12 +1,5 @@
 .sidebar(ng-controller="SidebarController")
-  p
-    span 2.0 Community Edition
-  
-  ul.main-menu
-    li(ng-repeat='item in menuItems', ng-class='{active: item.active}')
-      a(ng-href='{{ item.href }}')
-        span.icon(class='icon-{{ item.icon }}')
-        | {{ item.title }}
+  ul.main-menu(ng-include="'partials/menu_recursive.html'", ng-init="items=menuItems")
 
   .sidebar-resources
     small Resources

@@ -1,0 +1,7 @@
+
+<li ng-repeat="item in items" ng-class="{active: item.active}"><a ng-href="{{ item.href }}" ng-show="item.href"><span class="icon icon-{{ item.icon }}"></span>{{ item.title }}</a>
+  <div ng-show="!item.href" class="title">{{ item.title }} »
+    <div class="subtitle">{{ item.subtitle }}</div>
+  </div>
+  <ul ng-include="'partials/menu_recursive.html'" ng-init="items=item.items"></ul>
+</li>

@@ -1,4 +1,6 @@
 
+@import "../themes/custom/_variables.less";
+
 .sidebar-container  {
   width: 210px;
   float: left;
@@ -17,39 +19,72 @@
   list-style:none;
 }
 
-.main-menu > li {
-  border-top: 1px solid #dedede;
-  border-bottom: 1px solid #d9d9d9;
+@indent: 10px;
+@base-pad: 20px;
+
+ul.main-menu {
+  li {
+    border-top: 1px solid #dedede;
+    border-bottom: 1px solid #d9d9d9;
+    
+    a:hover {
+      text-decoration:none;
+      background:#f5f5f5;
+    }
+    
+    .active {
+      background-color: #fdfdfd;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) inset;
+      background-image: linear-gradient(top, #f5f5f5 0%, #f9f9f9 100%);
+      
+      a {
+        background: url(../img/sidebar-current.png) no-repeat right center;
+      }
+    }
+    
+    a {
+      display:block;
+      padding: 8px 10px 8px 20px;
+      color: #666;
+      text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.05);
+      font-size: 13px;
+      
+      .icon {
+        float:left;
+        margin: 3px 5px 0 0;
+        opacity: .9;  
+      }
+    }
+    
+    // Titles
+    .title {
+      padding: 10px 0 8px @base-pad;
+      color: @grayDarker;
+      font-weight:bold;
+      font-family: @sansFontFamily;
+      font-size: 15px;
+    }
+    
+    // Submenus
+    ul {
+      list-style: none;
+      margin-left: 0 !important;
+      //background: #dedede;
+      li {
+        border:none;
+      }
+      
+      > li a { padding-left: @base-pad + @indent; }
+      > li ul > li a { padding-left: @base-pad + @indent * 2;
+      font-size: 12px; }
+      > li .title { 
+        padding: 8px 0 5px @base-pad + @indent; 
+        font-size:13px;
+      }
+    }
+  }
 }
 
-.main-menu > li.active {
-  background-color: #fdfdfd;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) inset;
-  background-image: linear-gradient(top, #f5f5f5 0%, #f9f9f9 100%);
-}
-
-.main-menu > li a .icon {
-  float:left;
-  margin: 3px 5px 0 0;
-  opacity: .9;  
-}
-
-.main-menu > li > a {
-  display:block;
-  padding: 8px 10px 8px 20px;
-  color: #666;
-  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.05);
-  font-size: 13px;
-}
-
-.main-menu > li > a:hover {
-  text-decoration:none;
-  background:#f5f5f5;
-}
-
-.main-menu > li.active > a {
-  background: url(../img/sidebar-current.png) no-repeat right center;
-}
 
 .sidebar-resources {
   position:fixed;
@@ -57,12 +92,11 @@
   left:20px;
   width:170px;
   text-align:right;
-}
-
-.sidebar-resources > a {
-  padding: 2px 0;
-  margin: 0;
-  line-height: 1.6em;
-  display:block;
-  text-align:right;
+  a {
+    padding: 2px 0;
+    margin: 0;
+    line-height: 1.6em;
+    display:block;
+    text-align:right;
+  }
 }

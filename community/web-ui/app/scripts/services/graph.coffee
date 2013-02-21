@@ -36,7 +36,6 @@ angular.module('app.services.graph', [])
         @_broadcastChange()
         
       _broadcastChange : ->
-        console.log "Broadcast: " + @isLoading
         $rootScope.$broadcast 'graphService.changed', [this]
         
       _cleanResultRow : (row) ->

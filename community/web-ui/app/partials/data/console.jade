@@ -1,8 +1,14 @@
+.dropdown
+  a.btn.dropdown-toggle(data-toggle="dropdown", role="button", href="#") Engine: {{ engineName }} 
+    b.caret
+  ul.dropdown-menu(role="menu")
+    li(ng-repeat='(key,engine) in availableEngines') 
+      a(ng-click='changeEngine(key)') {{engine.name}}
 .data-console
   .row-fluid(ng-repeat='interaction in interactions')
     .span12
       pre.data-console-statement {{ interaction.statement }}
-      pre.data-console-result    {{ interaction.result }}
+      pre.data-console-result {{ interaction.result }}
   .row-fluid
       div
         .prefix >

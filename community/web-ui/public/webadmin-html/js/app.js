@@ -75,15 +75,27 @@ angular.module('app.controllers.data.browser', ['app.services.graph', 'app.servi
 angular.module('app.controllers.data.console', []).controller('ConsoleController', [
   '$scope', 'consoleService', function($scope, consoleService) {
     var synchronizeWithConsoleService;
-    $scope.interations = consoleService.interactions;
+    $scope.engine = "shell";
     synchronizeWithConsoleService = function() {
-      return $scope.interactions = consoleService.interactions;
+      var engineState;
+      $scope.availableEngines = consoleService.engines;
+      if (consoleService.engines[$scope.engine] != null) {
+        engineState = consoleService.engines[$scope.engine];
+        $scope.interactions = engineState.interactions;
+        return $scope.engineName = engineState.name;
+      } else {
+        $scope.interactions = [];
+        return $scope.engineName = $scope.engine;
+      }
     };
-    $scope.consoleService = consoleService;
-    $scope.$watch('consoleService.interactions.length', synchronizeWithConsoleService);
+    $scope.$on('consoleService.changed', synchronizeWithConsoleService);
     synchronizeWithConsoleService();
+    $scope.changeEngine = function(engine) {
+      $scope.engine = engine;
+      return synchronizeWithConsoleService();
+    };
     return $scope.execute = function() {
-      consoleService.execute($scope.statement);
+      consoleService.execute($scope.statement, $scope.engine);
       return $scope.statement = "";
     };
   }
@@ -91,31 +103,78 @@ angular.module('app.controllers.data.console', []).controller('ConsoleController
 'use strict';
 
 angular.module('app.controllers.sidebar', []).controller('SidebarController', [
-  '$scope', '$location', function($scope, $location) {
+  '$scope', '$location', 'consoleService', function($scope, $location, consoleService) {
     $scope.menuItems = [
       {
-        href: '#/data/browser',
         title: 'Data',
-        icon: 'th',
-        active: true
+        icon: 'heart',
+        active: false,
+        items: [
+          {
+            href: '#/data/browser',
+            title: 'Query Tool',
+            icon: 'list',
+            active: false
+          }, {
+            href: '#/data/visualizer',
+            title: 'Explorer',
+            icon: 'map-marker',
+            active: false
+          }, {
+            title: 'Shell',
+            icon: 'list-alt',
+            active: false,
+            href: '#/data/console'
+          }
+        ]
       }, {
-        href: '#/data/console',
-        title: 'Console',
-        icon: 'list-alt',
-        active: false
+        title: 'Schema',
+        active: false,
+        items: [
+          {
+            href: '#/schema/indexes',
+            title: 'Indexes',
+            icon: 'filter',
+            active: false
+          }, {
+            href: '#/schema/legacy-indexes',
+            title: 'Legacy indexes',
+            icon: 'filter',
+            active: false
+          }
+        ]
+      }, {
+        title: 'System',
+        active: false,
+        items: [
+          {
+            href: '#/schema/indexes',
+            title: 'JMX Browser',
+            icon: 'cog',
+            active: false
+          }
+        ]
       }
     ];
     $scope.$location = $location;
     return $scope.$watch('$location.path()', function(path) {
-      var item, _i, _len, _ref, _results;
+      var setActive;
       path = "#" + (path || '/');
-      _ref = $scope.menuItems;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        item = _ref[_i];
-        _results.push(item.active = item.href === path);
-      }
-      return _results;
+      setActive = function(items) {
+        var item, _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = items.length; _i < _len; _i++) {
+          item = items[_i];
+          item.active = item.href === path;
+          if (item.items != null) {
+            _results.push(setActive(item.items));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      };
+      return setActive($scope.menuItems);
     });
   }
 ]);
@@ -169,45 +228,178 @@ angular.module('app.services', ['app.services.console']).factory('version', func
 });
 'use strict';
 
-angular.module('app.services.console', []).factory('consoleService', [
-  '$http', function($http) {
-    var ConsoleService;
-    ConsoleService = (function() {
+var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-      function ConsoleService() {
-        this.interactions = [];
-        this._sendStatement("init()");
+angular.module('app.services.console', []).factory('consoleService', [
+  '$http', '$rootScope', function($http, $rootScope) {
+    var ConsoleService, HttpEngine, RemoteEngine;
+    HttpEngine = (function() {
+
+      HttpEngine.prototype.statementRegex = /^((GET)|(PUT)|(POST)|(DELETE)) ([^ ]+)( (.+))?$/i;
+
+      function HttpEngine(_engineKey, _out) {
+        this._engineKey = _engineKey;
+        this._out = _out;
+        this._out(this._engineKey, "", ["Welcome to the REST Shell!", "Usage: <VERB> <PATH> [JSON]", 'Eg: GET /db/data or POST /db/data/node {"name":"My Node"}']);
       }
 
-      ConsoleService.prototype.execute = function(statement) {
+      HttpEngine.prototype.execute = function(statement, out) {
+        var data, method, result, url, _ref;
+        if (this.statementRegex.test(statement)) {
+          result = this.statementRegex.exec(statement);
+          _ref = [result[1], result[6], result[8]], method = _ref[0], url = _ref[1], data = _ref[2];
+          if (data != null) {
+            try {
+              data = JSON.parse(data);
+            } catch (e) {
+              this._out(this._engineKey, statement, ["Invalid JSON payload."]);
+              return;
+            }
+          }
+          return $http({
+            method: method,
+            url: url,
+            data: data
+          }).success(this._onResponse(statement)).error(this._onResponse(statement));
+        } else {
+          return this._out(this._engineKey, statement, ["Invalid syntax, syntax is: <VERB> <URI> <JSON DATA>"]);
+        }
+      };
+
+      HttpEngine.prototype._onResponse = function(statement) {
+        var _this = this;
+        return function(payload, status, meta) {
+          if (typeof payload === 'object') {
+            payload = JSON.stringify(payload, null, "  ");
+          }
+          return _this._out(_this._engineKey, statement, ["" + status, payload]);
+        };
+      };
+
+      return HttpEngine;
+
+    })();
+    RemoteEngine = (function() {
+
+      function RemoteEngine(_engineKey, _out) {
+        this._engineKey = _engineKey;
+        this._out = _out;
+        this._onInitFailed = __bind(this._onInitFailed, this);
+
+        this._sendStatement("init()").error(this._onInitFailed);
+      }
+
+      RemoteEngine.prototype.execute = function(statement) {
         return this._sendStatement(statement).success(this._onStatementExecuted(statement)).error(this._onStatementFailed(statement));
       };
 
-      ConsoleService.prototype._onStatementExecuted = function(statement) {
+      RemoteEngine.prototype._sendStatement = function(statement) {
+        return $http.post('/db/manage/server/console', {
+          command: statement,
+          engine: this._engineKey
+        });
+      };
+
+      RemoteEngine.prototype._onStatementExecuted = function(statement) {
         var _this = this;
         return function(result) {
           var lines, prompt;
           lines = result[0], prompt = result[1];
-          _this.interactions.push({
-            statement: statement,
-            result: lines
-          });
-          return console.log(_this.interactions);
+          return _this._out(_this._engineKey, statement, lines.split('\n'));
         };
       };
 
-      ConsoleService.prototype._onStatementFailed = function(statement) {
+      RemoteEngine.prototype._onStatementFailed = function(statement) {
         var _this = this;
         return function(error) {
-          return console.log(error);
+          return _this._out(_this._engineKey, statement, ["Unable to execute statement, please see the server logs."]);
         };
       };
 
-      ConsoleService.prototype._sendStatement = function(statement) {
-        return $http.post('/db/manage/server/console', {
-          command: statement,
-          engine: "SHELL"
+      RemoteEngine.prototype._onInitFailed = function(error) {
+        var init_error_msg;
+        init_error_msg = "The server failed to initialize this shell. It responded with:";
+        return this._out(this._engineKey, "", [init_error_msg, error]);
+      };
+
+      return RemoteEngine;
+
+    })();
+    ConsoleService = (function() {
+
+      function ConsoleService() {
+        this._onInitializingRemoteEnginesFailed = __bind(this._onInitializingRemoteEnginesFailed, this);
+
+        this._appendInteraction = __bind(this._appendInteraction, this);
+        this.engines = {};
+        this._initializeEngines();
+      }
+
+      ConsoleService.prototype.execute = function(statement, engine) {
+        if (this.engines[engine] != null) {
+          return this.engines[engine].engine.execute(statement);
+        } else {
+          throw new Exception("Unknown shell engine " + engine + ".");
+        }
+      };
+
+      ConsoleService.prototype._appendInteraction = function(engine, statement, result) {
+        if (!(this.engines[engine] != null)) {
+          this._defineEngine(engine, engine, null);
+        }
+        result = result.join('\n');
+        this.engines[engine].interactions.push({
+          statement: statement,
+          result: result
         });
+        return $rootScope.$broadcast('consoleService.changed', [engine, statement, result]);
+      };
+
+      ConsoleService.prototype._initializeEngines = function() {
+        var _this = this;
+        this._defineEngine('http', 'REST Shell', new HttpEngine('http', this._appendInteraction));
+        return $http.get('/db/manage/server/console').success(function(response) {
+          var engine, _i, _len, _ref, _results;
+          _ref = response.engines;
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            engine = _ref[_i];
+            _results.push(_this._initRemoteEngine(engine));
+          }
+          return _results;
+        }).error(this._onInitializingRemoteEnginesFailed);
+      };
+
+      ConsoleService.prototype._onInitializingRemoteEnginesFailed = function(err) {};
+
+      ConsoleService.prototype._initRemoteEngine = function(key) {
+        var engine;
+        engine = new RemoteEngine(key, this._appendInteraction);
+        return this._defineEngine(key, this._humanReadableEngineName(key), engine);
+      };
+
+      ConsoleService.prototype._defineEngine = function(key, name, engine) {
+        var def, _base, _ref, _ref1;
+        def = (_ref = (_base = this.engines)[key]) != null ? _ref : _base[key] = {};
+        def.key = key;
+        def.name = name;
+        if ((_ref1 = def.interactions) == null) {
+          def.interactions = [];
+        }
+        return def.engine = engine;
+      };
+
+      ConsoleService.prototype._humanReadableEngineName = function(engineKey) {
+        var knownEngines;
+        knownEngines = {
+          'shell': "Neo4j Shell",
+          'gremlin': "Gremlin"
+        };
+        if (knownEngines[engineKey] != null) {
+          return knownEngines[engineKey];
+        } else {
+          return engineKey;
+        }
       };
 
       return ConsoleService;
@@ -260,7 +452,6 @@ angular.module('app.services.graph', []).factory('graphService', [
       };
 
       GraphService.prototype._broadcastChange = function() {
-        console.log("Broadcast: " + this.isLoading);
         return $rootScope.$broadcast('graphService.changed', [this]);
       };
 
