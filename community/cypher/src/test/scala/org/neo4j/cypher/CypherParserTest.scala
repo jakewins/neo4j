@@ -2262,6 +2262,12 @@ foreach(x in [1,2,3] :
   def testAll(query: String, expectedQuery: AbstractQuery) {
     test_1_8(query, expectedQuery)
     test_1_9(query, expectedQuery)
+    // test_2_0(query, expectedQuery)
+  }
+
+  def testPre_2_0(query: String, expectedQuery: AbstractQuery) {
+    test_1_8(query, expectedQuery)
+    test_1_9(query, expectedQuery)
   }
 
   def testQuery(version: Option[String], query: String, expectedQuery: AbstractQuery) {
