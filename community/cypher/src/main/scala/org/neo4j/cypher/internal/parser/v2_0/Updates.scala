@@ -26,7 +26,7 @@ import org.neo4j.cypher.SyntaxException
 
 trait Updates extends Base with Expressions with StartAndCreateClause {
   def updates: Parser[(Seq[UpdateAction], Seq[NamedPath])] =
-    rep(foreach | liftToSeq(labelAction)  | set | delete) ^^ { x => (x.flatten, Seq.empty) }
+    rep(foreach | set | delete) ^^ { x => (x.flatten, Seq.empty) }
 
   private def foreach: Parser[Seq[UpdateAction]] = FOREACH ~> parens( identity ~ IN ~ expression ~ ":" ~ opt(createStart) ~ opt(updates) ) ^^ {
     case id ~ in ~ collection ~ ":" ~ creates ~ innerUpdates =>
@@ -38,16 +38,23 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
       Seq(ForeachAction(collection, id, createCmds ++ updateCmds))
   }
 
-  private def getActionFromVerb(x:String): LabelOp = x match {
-    case _ if x == "add" => LabelAdd
-    case _ if x == "remove" => LabelDel
-  }
-
-  private def labelAction: Parser[UpdateAction] = (ADD | REMOVE) ~ identity ~ labelShortForm ^^ {
-      case verb ~ entity ~ labels =>
-        val action = getActionFromVerb(verb)
-        LabelAction(Identifier(entity), action, labels.asExpr)
+  private def set: Parser[Seq[UpdateAction]] = {
+    def mapSetter : Parser[UpdateAction] = SET ~> expression ~ "=" ~ expression ^^ {
+      case element ~ "=" ~ map => MapPropertySetAction(element, map)
     }
+
+    def singleSetter: Parser[Seq[UpdateAction]] = {
+      def labelSet: Parser[UpdateAction] = labelAction(LabelAdd)
+
+      def propertySet: Parser[UpdateAction] = property ~ "=" ~ exprOrPred ^^ {
+        case p ~ "=" ~ e => PropertySetAction(p.asInstanceOf[Property], e)
+      }
+
+      SET ~> commaList(propertySet|labelSet)
+    }
+
+    singleSetter | liftToSeq(mapSetter)
+  }
 
   private def delete: Parser[Seq[UpdateAction]] = DELETE ~> commaList(expression) ^^ {
     case expressions => val updateActions: List[UpdateAction with Product] = expressions.map {
@@ -58,19 +65,8 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
     updateActions
   }
 
-  private def set: Parser[Seq[UpdateAction]] = {
-    def setToMap : Parser[UpdateAction] = SET ~> expression ~ "=" ~ expression ^^ {
-      case element ~ "=" ~ map => MapPropertySetAction(element, map)
+  private def labelAction(verb: LabelOp): Parser[UpdateAction] = identity ~ labelShortForm ^^ {
+      case entity ~ labels =>
+        LabelAction(Identifier(entity), verb, labels.asExpr)
     }
-
-    def setSingleProperty: Parser[Seq[UpdateAction]] = {
-      def propertySet = property ~ "=" ~ exprOrPred ^^ {
-        case p ~ "=" ~ e => PropertySetAction(p.asInstanceOf[Property], e)
-      }
-
-      SET ~> commaList(propertySet)
-    }
-
-    setSingleProperty | liftToSeq(setToMap)
-  }
 }

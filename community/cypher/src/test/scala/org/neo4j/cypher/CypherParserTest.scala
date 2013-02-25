@@ -1953,7 +1953,7 @@ foreach(x in [1,2,3] :
       updates(LabelAction(Identifier("n"), LabelAdd, Literal(List(LabelName("LabelName"))))).
       returns()
 
-    testFrom_2_0("START n=node(0) ADD n:LabelName",
+    testFrom_2_0("START n=node(0) SET n:LabelName",
       Query.
         start(NodeById("n", 0)).
         tail(q2).
