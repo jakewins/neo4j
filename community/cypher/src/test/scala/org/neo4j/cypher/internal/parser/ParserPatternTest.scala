@@ -32,10 +32,10 @@ class ParserPatternTest extends ParserPattern with ParserTest with Expressions {
     implicit val parserToTest = labelShortForm
 
     parsing(":FOO") shouldGive
-      LabelSet(Some(LabelSupport.labelCollection("FOO")))
+      LabelSet(LabelSupport.labelCollection("FOO"))
 
     parsing(":FOO:BAR") shouldGive
-      LabelSet(Some(LabelSupport.labelCollection("FOO", "BAR")))
+      LabelSet(LabelSupport.labelCollection("FOO", "BAR"))
 
     assertFails("[:foo, :bar]")
   }
@@ -44,13 +44,13 @@ class ParserPatternTest extends ParserPattern with ParserTest with Expressions {
     implicit val parserToTest = labelChoiceForm
 
     parsing(":FOO") shouldGive
-      LabelSet(Some(LabelSupport.labelCollection("FOO")))
+      LabelSet(LabelSupport.labelCollection("FOO"))
 
     parsing(":FOO|:BAZ") shouldGive
-      LabelChoice(LabelSet(Some(LabelSupport.labelCollection("FOO"))), LabelSet(Some(LabelSupport.labelCollection("BAZ"))))
+      LabelChoice(LabelSet(LabelSupport.labelCollection("FOO")), LabelSet(LabelSupport.labelCollection("BAZ")))
 
     parsing(":Sun:Day|:Night:Moon") shouldGive
-      LabelChoice(LabelSet(Some(LabelSupport.labelCollection("Sun", "Day"))), LabelSet(Some(LabelSupport.labelCollection("Night", "Moon"))))
+      LabelChoice(LabelSet(LabelSupport.labelCollection("Sun", "Day")), LabelSet(LabelSupport.labelCollection("Night", "Moon")))
 
     assertFails("[:foo, :bar]")
   }

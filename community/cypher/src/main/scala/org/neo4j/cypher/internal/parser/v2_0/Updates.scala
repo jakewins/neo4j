@@ -76,6 +76,6 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
 
   private def labelAction(verb: LabelOp): Parser[UpdateAction] = identity ~ labelShortForm ^^ {
       case entity ~ labels =>
-        LabelAction(Identifier(entity), verb, labels.asExpr)
+        LabelAction(Identifier(entity), verb, labels.labelVals)
     }
 }

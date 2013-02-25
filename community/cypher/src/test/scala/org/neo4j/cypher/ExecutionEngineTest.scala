@@ -2391,18 +2391,6 @@ RETURN x0.name?
     assert(isTopLevelTx)
   }
 
-  @Test def should_return_literal_label_as_string() {
-    val result = parseAndExecute("""START a=node(0) return :foo""")
-
-    assert(result.toList === List(Map((":foo" -> "foo"))))
-  }
-
-  @Test def should_return_label_collection_as_string_collection() {
-    val result = parseAndExecute("""START a=node(0) return [:foo, :bar] as r""")
-
-    assert(result.toList === List(Map(("r" -> List("foo", "bar")))))
-  }
-
   @Test def should_add_label_to_node() {
     val a = createNode()
     val result = parseAndExecute("""START a=node(1) SET a :foo RETURN a""")

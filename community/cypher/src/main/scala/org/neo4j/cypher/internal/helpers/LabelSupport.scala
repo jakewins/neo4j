@@ -19,20 +19,15 @@
  */
 package org.neo4j.cypher.internal.helpers
 
-import org.neo4j.cypher.internal.ExecutionContext
-import org.neo4j.cypher.internal.commands.values.{LabelName, LabelValue}
-import org.neo4j.cypher.CypherTypeException
-import org.neo4j.cypher.internal.commands.expressions.{Literal, Expression}
+import org.neo4j.cypher.internal.commands.values.{ResolvedLabel, LabelValue, LabelName}
 import org.neo4j.cypher.internal.spi.QueryContext
-import org.neo4j.cypher.internal.pipes.QueryState
 
 object LabelSupport extends CollectionSupport {
+  def labelCollection(elems: String*): Seq[LabelValue] = Seq(elems.map(LabelName(_)): _*)
 
-  def getLabelsAsLongs(context: ExecutionContext, labels: Expression)(implicit state: QueryState) =
-    makeTraversable(labels(context)).map {
-      case x: LabelValue => x.resolveForId(state.query).id
-      case _             => throw new CypherTypeException("Label expressions must return labels")
+  def getOrCreateLabelIds(labels: Seq[LabelValue])(implicit ctx: QueryContext): Seq[Long] =
+    labels.map {
+      case (r: ResolvedLabel) => r.id
+      case (l: LabelValue)    => ctx.getOrCreateLabelId(l.name)
     }
-
-  def labelCollection(elems: String*): Expression = Literal(Seq(elems.map(LabelName(_)): _*))
 }

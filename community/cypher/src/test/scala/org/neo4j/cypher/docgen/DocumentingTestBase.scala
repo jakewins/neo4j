@@ -37,7 +37,6 @@ import org.neo4j.test.GeoffService
 import org.scalatest.Assertions
 import org.neo4j.test.AsciiDocGenerator
 import org.neo4j.kernel.{GraphDatabaseAPI, AbstractGraphDatabase}
-import org.neo4j.graphdb.DynamicLabel.{label => dynamicLabel}
 import org.neo4j.cypher.internal.helpers.GraphIcing
 
 

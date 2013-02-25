@@ -58,8 +58,6 @@ class LabelsAcceptanceTest extends ExecutionEngineHelper with StatisticsChecker 
   @Test def Using_labels_in_RETURN_clauses() {
     assertThat("START n=node(0) RETURN labels(n)", List())
     assertThat("START n=node(0) SET n :FOO RETURN labels(n)", List("FOO"))
-    assertThat("START n = node(0) RETURN :FOO", List("FOO"))
-    assertThat("START n = node(0) RETURN [:FOO, :BAR]", List("FOO", "BAR"))
   }
 
 

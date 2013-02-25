@@ -26,7 +26,7 @@ class SetTest extends DocumentingTestBase {
   def graphDescription = List(
     "Andres:Swedish KNOWS Peter",
     "Stefan KNOWS Andres",
-    "Emil:Person KNOWS Peter"
+    "Emil KNOWS Peter"
   )
 
   override val properties = Map(
