@@ -43,7 +43,7 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
     case _ if x == "remove" => LabelDel
   }
 
-  private def labelAction: Parser[UpdateAction] = (ADD | REMOVE) ~ identity ~ labelLongForm ^^ {
+  private def labelAction: Parser[UpdateAction] = (ADD | REMOVE) ~ identity ~ labelShortForm ^^ {
       case verb ~ entity ~ labels =>
         val action = getActionFromVerb(verb)
         LabelAction(Identifier(entity), action, labels.asExpr)

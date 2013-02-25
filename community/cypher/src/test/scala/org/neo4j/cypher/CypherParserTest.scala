@@ -1348,7 +1348,7 @@ class CypherParserTest extends JUnitSuite with Assertions {
   }
 
   @Test def create_node_with_a_label() {
-    testFrom_2_0("create a label :FOO",
+    testFrom_2_0("create a:FOO",
       Query.
         start(CreateNodeStartItem(CreateNode("a", Map(), LabelSupport.labelCollection("FOO"), false))).
         returns()
@@ -1356,7 +1356,7 @@ class CypherParserTest extends JUnitSuite with Assertions {
   }
 
   @Test def create_node_with_multiple_labels() {
-    testFrom_2_0("create a label :FOO:BAR",
+    testFrom_2_0("create a:FOO:BAR",
       Query.
         start(CreateNodeStartItem(CreateNode("a", Map(), LabelSupport.labelCollection("FOO", "BAR"), false))).
         returns()
@@ -1364,7 +1364,7 @@ class CypherParserTest extends JUnitSuite with Assertions {
   }
 
   @Test def create_node_with_multiple_labels_with_spaces() {
-    testFrom_2_0("create a label :FOO :BAR",
+    testFrom_2_0("create a :FOO :BAR",
       Query.
         start(CreateNodeStartItem(CreateNode("a", Map(), LabelSupport.labelCollection("FOO", "BAR"), false))).
         returns()
@@ -1939,7 +1939,7 @@ foreach(x in [1,2,3] :
       updates(LabelAction(Identifier("n"), LabelAdd, Literal(List(LabelName("LabelName"))))).
       returns()
 
-    testFrom_2_0("START n=node(0) ADD n LABEL :LabelName",
+    testFrom_2_0("START n=node(0) set n:LabelName",
       Query.
         start(NodeById("n", 0)).
         tail(q2).
@@ -1968,7 +1968,7 @@ foreach(x in [1,2,3] :
       updates(LabelAction(Identifier("n"), LabelAdd, coll)).
       returns()
 
-    testFrom_2_0("START n=node(0) ADD n LABEL :LabelName2 :LabelName3",
+    testFrom_2_0("START n=node(0) set n :LabelName2 :LabelName3",
       Query.
         start(NodeById("n", 0)).
         tail(q2).
@@ -1983,7 +1983,7 @@ foreach(x in [1,2,3] :
       updates(LabelAction(Identifier("n"), LabelAdd, coll)).
       returns()
 
-    testFrom_2_0("START n=node(0) ADD n:LabelName2:LabelName3",
+    testFrom_2_0("START n=node(0) set n:LabelName2:LabelName3",
       Query.
         start(NodeById("n", 0)).
         tail(q2).
@@ -1998,21 +1998,7 @@ foreach(x in [1,2,3] :
       updates(LabelAction(Identifier("n"), LabelAdd, coll)).
       returns()
 
-    testFrom_2_0("START n=node(0) ADD n :LabelName2 :LabelName3",
-      Query.
-        start(NodeById("n", 0)).
-        tail(q2).
-        returns(AllIdentifiers())
-    )
-  }
-
-  @Test def add_own_labels() {
-    val q2 = Query.
-      start().
-      updates(LabelAction(Identifier("n"), LabelAdd, LabelsFunction(Identifier("n")))).
-      returns()
-
-    testFrom_2_0("START n=node(0) ADD n LABEL labels(n)",
+    testFrom_2_0("START n=node(0) SET n :LabelName2 :LabelName3",
       Query.
         start(NodeById("n", 0)).
         tail(q2).
@@ -2026,7 +2012,7 @@ foreach(x in [1,2,3] :
       updates(LabelAction(Identifier("n"), LabelDel, LabelSupport.labelCollection("LabelName"))).
       returns()
 
-    testFrom_2_0("START n=node(0) REMOVE n LABEL :LabelName",
+    testFrom_2_0("START n=node(0) REMOVE n:LabelName",
       Query.
         start(NodeById("n", 0)).
         tail(q2).
@@ -2041,7 +2027,7 @@ foreach(x in [1,2,3] :
       updates(LabelAction(Identifier("n"), LabelDel, coll)).
       returns()
 
-    testFrom_2_0("START n=node(0) REMOVE n LABEL :LabelName2:LabelName3",
+    testFrom_2_0("START n=node(0) REMOVE n:LabelName2:LabelName3",
       Query.
         start(NodeById("n", 0)).
         tail(q2).

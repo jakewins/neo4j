@@ -30,23 +30,15 @@ trait Labels extends Base {
       LabelSet(Some(Literal(litList.map(_.v))))
   }
 
-  private def labelExpr: Parser[LabelSet] = expression ^^ (expr => LabelSet(Some(expr)))
-
-  private def labelKeywordForm: Parser[LabelSet] = LABEL ~> (labelShortForm | labelExpr)
-
-  private def labelGroupsForm: Parser[LabelSpec] = rep1sep(labelShortForm, "|") ^^ {
-    case labelSets => LabelChoice(labelSets: _*).simplify
-  }
-
-  def labelChoiceForm: Parser[LabelSpec] = labelGroupsForm | labelKeywordForm
-
-  def optLabelChoiceForm: Parser[LabelSpec] = opt(labelChoiceForm) ^^ {
+  def optLabelShortForm: Parser[LabelSet] = opt(labelShortForm) ^^ {
     case optSpec => optSpec.getOrElse(LabelSet.empty)
   }
 
-  def labelLongForm: Parser[LabelSet] = labelShortForm | labelKeywordForm
+  def labelChoiceForm: Parser[LabelSpec] = rep1sep(labelShortForm, "|") ^^ {
+    case labelSets => LabelChoice(labelSets: _*).simplify
+  }
 
-  def optLabelLongForm: Parser[LabelSet] = opt(labelLongForm) ^^ {
+  def optLabelChoiceForm: Parser[LabelSpec] = opt(labelChoiceForm) ^^ {
     case optSpec => optSpec.getOrElse(LabelSet.empty)
   }
 

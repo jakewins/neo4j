@@ -29,7 +29,7 @@ import org.neo4j.cypher.internal.helpers.LabelSupport
 class ParserPatternTest extends ParserPattern with ParserTest with Expressions {
 
   @Test def label_literal_list_parsing() {
-    implicit val parserToTest = labelLongForm
+    implicit val parserToTest = labelShortForm
 
     parsing(":FOO") or
     parsing("label :FOO") shouldGive
