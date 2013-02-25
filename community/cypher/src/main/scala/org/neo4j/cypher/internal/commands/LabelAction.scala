@@ -30,7 +30,7 @@ import org.neo4j.cypher.internal.helpers.{LabelSupport, CastSupport, CollectionS
 
 sealed abstract class LabelOp
 
-case object LabelAddOp extends LabelOp
+case object LabelSetOp extends LabelOp
 case object LabelRemoveOp extends LabelOp
 
 case class LabelAction(entity: Expression, labelOp: LabelOp, labelSet: Expression)
@@ -45,7 +45,7 @@ case class LabelAction(entity: Expression, labelOp: LabelOp, labelSet: Expressio
     val labelIds: Iterable[Long] = LabelSupport.getLabelsAsLongs(context, labelSet)(state)
 
     labelOp match {
-      case LabelAddOp => queryCtx.addLabelsToNode(node.getId, labelIds)
+      case LabelSetOp => queryCtx.addLabelsToNode(node.getId, labelIds)
       case LabelRemoveOp => queryCtx.removeLabelsFromNode(node.getId, labelIds)
     }
 

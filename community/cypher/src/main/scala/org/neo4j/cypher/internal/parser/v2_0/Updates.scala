@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.parser.v2_0
 
 import org.neo4j.cypher.internal.mutation._
 import org.neo4j.cypher.internal.commands._
-import expressions.{Collection, Property, Identifier}
+import expressions.{Expression, Collection, Property, Identifier}
 import org.neo4j.cypher.SyntaxException
 
 trait Updates extends Base with Expressions with StartAndCreateClause {
@@ -44,7 +44,7 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
     }
 
     def singleSetter: Parser[Seq[UpdateAction]] = {
-      def labelSet: Parser[UpdateAction] = labelAction(LabelAddOp)
+      def labelSet: Parser[UpdateAction] = labelAction(LabelSetOp)
 
       def propertySet: Parser[UpdateAction] = property ~ "=" ~ exprOrPred ^^ {
         case p ~ "=" ~ e => PropertySetAction(p.asInstanceOf[Property], e)
@@ -58,18 +58,21 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
 
   private def remove: Parser[Seq[UpdateAction]] =
     // order is important as n:foo doesn't parse as expression nicely
-    REMOVE ~> commaList(labelRemover|propertyRemover|failure("node labelling or property expected"))
+    REMOVE ~> commaList(labelAction(LabelRemoveOp)|mapExpression(propertyRemover)|failure("node labelling or property expected"))
 
   private def delete: Parser[Seq[UpdateAction]] =
-    DELETE ~> commaList(entityRemover|propertyRemover)
+    // order is important to avoid trying to delete the evaluated property as entity
+    DELETE ~> commaList(mapExpression(propertyRemover.orElse(entityRemover)))
 
-  private def propertyRemover: Parser[UpdateAction] = expression ^^ {
+
+  private def mapExpression(pf: PartialFunction[Expression, UpdateAction]): Parser[UpdateAction] =
+    expression ^^ pf
+
+  private def propertyRemover: PartialFunction[Expression, UpdateAction] = {
     case Property(entity, property) => DeletePropertyAction(entity, property)
   }
 
-  private def labelRemover: Parser[UpdateAction] = labelAction(LabelRemoveOp)
-
-  private def entityRemover: Parser[UpdateAction] = expression ^^ {
+  private def entityRemover: PartialFunction[Expression, UpdateAction] = {
     case x => DeleteEntityAction(x)
   }
 

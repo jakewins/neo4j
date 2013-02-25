@@ -1936,7 +1936,7 @@ foreach(x in [1,2,3] :
   @Test def add_label() {
     val q2 = Query.
       start().
-      updates(LabelAction(Identifier("n"), LabelAddOp, Literal(List(LabelName("LabelName"))))).
+      updates(LabelAction(Identifier("n"), LabelSetOp, Literal(List(LabelName("LabelName"))))).
       returns()
 
     testFrom_2_0("START n=node(0) set n:LabelName",
@@ -1950,7 +1950,7 @@ foreach(x in [1,2,3] :
   @Test def add_short_label() {
     val q2 = Query.
       start().
-      updates(LabelAction(Identifier("n"), LabelAddOp, Literal(List(LabelName("LabelName"))))).
+      updates(LabelAction(Identifier("n"), LabelSetOp, Literal(List(LabelName("LabelName"))))).
       returns()
 
     testFrom_2_0("START n=node(0) SET n:LabelName",
@@ -1965,7 +1965,7 @@ foreach(x in [1,2,3] :
     val coll = LabelSupport.labelCollection("LabelName2", "LabelName3")
     val q2   = Query.
       start().
-      updates(LabelAction(Identifier("n"), LabelAddOp, coll)).
+      updates(LabelAction(Identifier("n"), LabelSetOp, coll)).
       returns()
 
     testFrom_2_0("START n=node(0) set n :LabelName2 :LabelName3",
@@ -1980,7 +1980,7 @@ foreach(x in [1,2,3] :
     val coll = LabelSupport.labelCollection("LabelName2", "LabelName3")
     val q2   = Query.
       start().
-      updates(LabelAction(Identifier("n"), LabelAddOp, coll)).
+      updates(LabelAction(Identifier("n"), LabelSetOp, coll)).
       returns()
 
     testFrom_2_0("START n=node(0) set n:LabelName2:LabelName3",
@@ -1995,7 +1995,7 @@ foreach(x in [1,2,3] :
     val coll = LabelSupport.labelCollection("LabelName2", "LabelName3")
     val q2   = Query.
       start().
-      updates(LabelAction(Identifier("n"), LabelAddOp, coll)).
+      updates(LabelAction(Identifier("n"), LabelSetOp, coll)).
       returns()
 
     testFrom_2_0("START n=node(0) SET n :LabelName2 :LabelName3",
@@ -2049,16 +2049,6 @@ foreach(x in [1,2,3] :
       Query.
         start(NodeById("n", 0)).
         where(HasLabel(Identifier("n"), Literal(Seq(LabelName("Foo"), LabelName("Bar"))))).
-        returns(ReturnItem(Identifier("n"), "n"))
-    )
-  }
-
-  @Test def filter_by_labels_in_where_with_or_syntax() {
-    testFrom_2_0("START n=node(0) WHERE n:Foo|:Bar RETURN n",
-      Query.
-        start(NodeById("n", 0)).
-        where(Or(HasLabel(Identifier("n"), Literal(Seq(LabelName("Foo")))),
-                 HasLabel(Identifier("n"), Literal(Seq(LabelName("Bar")))))).
         returns(ReturnItem(Identifier("n"), "n"))
     )
   }
