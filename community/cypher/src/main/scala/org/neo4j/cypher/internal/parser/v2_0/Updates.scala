@@ -26,7 +26,7 @@ import org.neo4j.cypher.SyntaxException
 
 trait Updates extends Base with Expressions with StartAndCreateClause {
   def updates: Parser[(Seq[UpdateAction], Seq[NamedPath])] =
-    rep(foreach | set | delete) ^^ { x => (x.flatten, Seq.empty) }
+    rep(foreach | set | remove | delete) ^^ { x => (x.flatten, Seq.empty) }
 
   private def foreach: Parser[Seq[UpdateAction]] = FOREACH ~> parens( identity ~ IN ~ expression ~ ":" ~ opt(createStart) ~ opt(updates) ) ^^ {
     case id ~ in ~ collection ~ ":" ~ creates ~ innerUpdates =>
@@ -44,7 +44,7 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
     }
 
     def singleSetter: Parser[Seq[UpdateAction]] = {
-      def labelSet: Parser[UpdateAction] = labelAction(LabelAdd)
+      def labelSet: Parser[UpdateAction] = labelAction(LabelAddOp)
 
       def propertySet: Parser[UpdateAction] = property ~ "=" ~ exprOrPred ^^ {
         case p ~ "=" ~ e => PropertySetAction(p.asInstanceOf[Property], e)
@@ -56,13 +56,21 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
     singleSetter | liftToSeq(mapSetter)
   }
 
-  private def delete: Parser[Seq[UpdateAction]] = DELETE ~> commaList(expression) ^^ {
-    case expressions => val updateActions: List[UpdateAction with Product] = expressions.map {
-      case Property(entity, property) => DeletePropertyAction(entity, property)
-      case x => DeleteEntityAction(x)
-    }
+  private def remove: Parser[Seq[UpdateAction]] =
+    // order is important as n:foo doesn't parse as expression nicely
+    REMOVE ~> commaList(labelRemover|propertyRemover|failure("node labelling or property expected"))
 
-    updateActions
+  private def delete: Parser[Seq[UpdateAction]] =
+    DELETE ~> commaList(entityRemover|propertyRemover)
+
+  private def propertyRemover: Parser[UpdateAction] = expression ^^ {
+    case Property(entity, property) => DeletePropertyAction(entity, property)
+  }
+
+  private def labelRemover: Parser[UpdateAction] = labelAction(LabelRemoveOp)
+
+  private def entityRemover: Parser[UpdateAction] = expression ^^ {
+    case x => DeleteEntityAction(x)
   }
 
   private def labelAction(verb: LabelOp): Parser[UpdateAction] = identity ~ labelShortForm ^^ {

@@ -533,7 +533,7 @@ return distinct center""")
   
   @Test
   def should_be_able_to_add_label_to_node() {
-    val result = parseAndExecute("start n=node(0) add n:FOO return n")
+    val result = parseAndExecute("start n=node(0) set n:FOO return n")
     val createdNode = result.columnAs[Node]("n").next()
 
     assert(createdNode.getLabels.asScala.map(_.name()) === List("FOO"))

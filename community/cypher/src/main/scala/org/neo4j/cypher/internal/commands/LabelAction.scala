@@ -30,8 +30,8 @@ import org.neo4j.cypher.internal.helpers.{LabelSupport, CastSupport, CollectionS
 
 sealed abstract class LabelOp
 
-case object LabelAdd extends LabelOp
-case object LabelDel extends LabelOp
+case object LabelAddOp extends LabelOp
+case object LabelRemoveOp extends LabelOp
 
 case class LabelAction(entity: Expression, labelOp: LabelOp, labelSet: Expression)
   extends UpdateAction with GraphElementPropertyFunctions with CollectionSupport {
@@ -45,8 +45,8 @@ case class LabelAction(entity: Expression, labelOp: LabelOp, labelSet: Expressio
     val labelIds: Iterable[Long] = LabelSupport.getLabelsAsLongs(context, labelSet)(state)
 
     labelOp match {
-      case LabelAdd => queryCtx.addLabelsToNode(node.getId, labelIds)
-      case LabelDel => queryCtx.removeLabelsFromNode(node.getId, labelIds)
+      case LabelAddOp => queryCtx.addLabelsToNode(node.getId, labelIds)
+      case LabelRemoveOp => queryCtx.removeLabelsFromNode(node.getId, labelIds)
     }
 
     Stream(context)

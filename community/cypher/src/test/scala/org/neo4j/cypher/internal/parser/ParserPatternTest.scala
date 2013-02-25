@@ -31,12 +31,10 @@ class ParserPatternTest extends ParserPattern with ParserTest with Expressions {
   @Test def label_literal_list_parsing() {
     implicit val parserToTest = labelShortForm
 
-    parsing(":FOO") or
-    parsing("label :FOO") shouldGive
+    parsing(":FOO") shouldGive
       LabelSet(Some(LabelSupport.labelCollection("FOO")))
 
-    parsing(":FOO:BAR") or
-    parsing("label :FOO:BAR") shouldGive
+    parsing(":FOO:BAR") shouldGive
       LabelSet(Some(LabelSupport.labelCollection("FOO", "BAR")))
 
     assertFails("[:foo, :bar]")
@@ -71,9 +69,6 @@ class ParserPatternTest extends ParserPattern with ParserTest with Expressions {
 
     parsing("n VALUES {name:'Andres'}") shouldGive
       ParsedEntity("n", Identifier("n"), Map("name"->Literal("Andres")), LabelSet.empty, false)
-
-    parsing("n LABEL :FOO") shouldGive
-      ParsedEntity("n", Identifier("n"), Map.empty, LabelSet(Some(LabelSupport.labelCollection("FOO"))), false)
   }
 
   def matchTranslator(abstractPattern: AbstractPattern) = ???
