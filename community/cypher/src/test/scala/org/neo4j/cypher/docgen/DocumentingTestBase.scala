@@ -38,6 +38,7 @@ import org.scalatest.Assertions
 import org.neo4j.test.AsciiDocGenerator
 import org.neo4j.kernel.{GraphDatabaseAPI, AbstractGraphDatabase}
 import org.neo4j.graphdb.DynamicLabel.{label => dynamicLabel}
+import org.neo4j.cypher.internal.helpers.GraphIcing
 
 
 trait DocumentationHelper {
@@ -86,7 +87,7 @@ trait DocumentationHelper {
 
 }
 
-abstract class DocumentingTestBase extends Assertions with DocumentationHelper {
+abstract class DocumentingTestBase extends Assertions with DocumentationHelper with GraphIcing {
   def testQuery(title: String, text: String, queryText: String, returns: String, assertions: (ExecutionResult => Unit)*) {
     internalTestQuery(title, text, queryText, returns, None, assertions: _*)
   }
@@ -175,6 +176,7 @@ abstract class DocumentingTestBase extends Assertions with DocumentationHelper {
     (engine.execute(query), query)
   }
 
+  protected def getLabelsFromNode(p: ExecutionResult): Iterable[String] = p.columnAs[Node]("n").next().labels
 
   private def runThunkInTx(thunk: () => Any)
   {

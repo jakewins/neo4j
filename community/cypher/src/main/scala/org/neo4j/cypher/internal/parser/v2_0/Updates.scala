@@ -61,12 +61,10 @@ trait Updates extends Base with Expressions with StartAndCreateClause {
     REMOVE ~> commaList(labelAction(LabelRemoveOp)|mapExpression(propertyRemover)|failure("node labelling or property expected"))
 
   private def delete: Parser[Seq[UpdateAction]] =
-    // order is important to avoid trying to delete the evaluated property as entity
-    DELETE ~> commaList(mapExpression(propertyRemover.orElse(entityRemover)))
+    DELETE ~> commaList(mapExpression(entityRemover))
 
 
-  private def mapExpression(pf: PartialFunction[Expression, UpdateAction]): Parser[UpdateAction] =
-    expression ^^ pf
+  private def mapExpression(pf: PartialFunction[Expression, UpdateAction]): Parser[UpdateAction] = expression ^^ pf
 
   private def propertyRemover: PartialFunction[Expression, UpdateAction] = {
     case Property(entity, property) => DeletePropertyAction(entity, property)

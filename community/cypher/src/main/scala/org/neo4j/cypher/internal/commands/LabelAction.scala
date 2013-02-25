@@ -45,7 +45,7 @@ case class LabelAction(entity: Expression, labelOp: LabelOp, labelSet: Expressio
     val labelIds: Iterable[Long] = LabelSupport.getLabelsAsLongs(context, labelSet)(state)
 
     labelOp match {
-      case LabelSetOp => queryCtx.addLabelsToNode(node.getId, labelIds)
+      case LabelSetOp => queryCtx.setLabelsOnNode(node.getId, labelIds)
       case LabelRemoveOp => queryCtx.removeLabelsFromNode(node.getId, labelIds)
     }
 

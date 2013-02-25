@@ -87,7 +87,7 @@ class SnitchingQueryContext extends QueryContext {
   var labels: Map[String, Long] = Map("green" -> 12, "blue" -> 42)
 
 
-  override def addLabelsToNode(n: Long, input: Iterable[Long]): Int = {
+  override def setLabelsOnNode(n: Long, input: Iterable[Long]): Int = {
     node = n
     ids = input.toSeq
     ids.size
