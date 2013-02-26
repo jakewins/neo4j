@@ -22,10 +22,6 @@ package org.neo4j.cypher.internal.executionplan
 import org.junit.Test
 import org.scalatest.Assertions
 import org.neo4j.cypher.internal.commands.values.{LabelValue, LabelName, ResolvedLabel}
-import org.neo4j.cypher.internal.commands.{LabelSetOp, LabelAction}
-import org.neo4j.cypher.internal.commands.expressions.Identifier
-import org.neo4j.cypher.UnknownLabelException
-import org.neo4j.cypher.internal.mutation.CreateNode
 
 class LabelResolutionTest extends Assertions {
 
@@ -40,7 +36,6 @@ class LabelResolutionTest extends Assertions {
     // WHEN
     assert(blue === resolver(blue))
   }
-
 
   @Test
   def testLabelNamesAreResolved() {
@@ -63,13 +58,13 @@ class LabelResolutionTest extends Assertions {
   }
 
   @Test
-  def testUnknownLabelNamesThrow() {
+  def testUnknownLabelDefersToLazyResolving() {
     // GIVEN
     val resolver = LabelResolution(mapper("green" -> green))
     val expr     = LabelName("red")
 
     // WHEN
-    intercept[UnknownLabelException](resolver(expr))
+    assert(expr === resolver(expr))
   }
 
   def mapper(pairs: (String, ResolvedLabel)*): (String => Option[ResolvedLabel]) = {
