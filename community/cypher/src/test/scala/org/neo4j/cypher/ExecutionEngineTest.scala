@@ -47,7 +47,7 @@ import org.junit.{Ignore, Test}
 import org.neo4j.index.lucene.ValueContext
 import org.neo4j.test.ImpermanentGraphDatabase
 import util.Random
-import org.neo4j.kernel.TopLevelTransaction
+import org.neo4j.kernel.{EmbeddedGraphDatabase, EmbeddedReadOnlyGraphDatabase, TopLevelTransaction}
 import org.neo4j.kernel.api.ConstraintViolationKernelException
 
 
@@ -1650,7 +1650,7 @@ RETURN x0.name?
 
     val result = parseAndExecute("start a=node(1,2,3) return distinct a.color, count(*)").toList
     result.foreach(x => {
-      val c = x("a.color").asInstanceOf[Iterable[_]]
+      val c = x("a.color").asInstanceOf[Array[_]]
       if (c.toList == List("red"))
         assertEquals(2L, x("count(*)"))
       else if (c.toList == List("blue"))
@@ -2622,5 +2622,25 @@ RETURN x0.name?
 
     //THEN
     assert(result.columns === List("n"))
+  }
+
+  @Test
+  def read_only_database_can_process_has_label_predicates() {
+    //GIVEN
+    val engine = getReadOnlyEngine()
+
+    //WHEN
+    val result = engine.execute("START n=node(0) WHERE n:NonExistingLabel RETURN n")
+
+    //THEN
+    assert(result.toList === List())
+  }
+
+  private def getReadOnlyEngine(): ExecutionEngine = {
+    val old = new EmbeddedGraphDatabase("target/readonly")
+    old.shutdown()
+    val db = new EmbeddedReadOnlyGraphDatabase("target/readonly")
+    new ExecutionEngine(db)
+
   }
 }

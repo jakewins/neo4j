@@ -23,11 +23,11 @@ import org.neo4j.cypher.internal.commands.expressions.Expression
 import org.neo4j.cypher.internal.symbols.{StringType, SymbolTable}
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
-import org.neo4j.cypher.UnknownLabelException
 
 sealed abstract class LabelValue extends Expression {
   def name: String
-  def id: Long
+
+  def id(state: QueryState): Long
 
   def children = Seq.empty
 
@@ -42,7 +42,9 @@ sealed abstract class LabelValue extends Expression {
 
 
 case class LabelName(name: String) extends LabelValue {
-  def id = throw new UnknownLabelException(name)
+  def id(state: QueryState): Long = state.query.getOrCreateLabelId(name)
 }
 
-case class ResolvedLabel(name: String, id: Long) extends LabelValue
+case class ResolvedLabel(name: String, labelId: Long) extends LabelValue {
+  def id(state: QueryState): Long = labelId
+}

@@ -25,9 +25,9 @@ import org.neo4j.cypher.internal.spi.QueryContext
 object LabelSupport extends CollectionSupport {
   def labelCollection(elems: String*): Seq[LabelValue] = Seq(elems.map(LabelName(_)): _*)
 
-  def getOrCreateLabelIds(labels: Seq[LabelValue])(implicit ctx: QueryContext): Seq[Long] =
-    labels.map {
-      case (r: ResolvedLabel) => r.id
-      case (l: LabelValue)    => ctx.getOrCreateLabelId(l.name)
-    }
+//  def getOrCreateLabelIds(labels: Seq[LabelValue])(implicit ctx: QueryContext): Seq[Long] =
+//    labels.map {
+//      case (r: ResolvedLabel) => r.id
+//      case (l: LabelValue)    => ctx.getOrCreateLabelId(l.name)
+//    }
 }

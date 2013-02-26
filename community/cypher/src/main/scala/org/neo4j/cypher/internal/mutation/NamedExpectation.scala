@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.mutation
 
-import org.neo4j.cypher.internal.commands.expressions.{Collection, Literal, Identifier, Expression}
+import org.neo4j.cypher.internal.commands.expressions.{Literal, Identifier, Expression}
 import org.neo4j.cypher.internal.symbols.{SymbolTable, TypeSafe}
 import org.neo4j.graphdb.{Relationship, Node, PropertyContainer}
 import collection.Map
@@ -29,7 +29,6 @@ import org.neo4j.cypher.internal.spi.Operations
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
 import org.neo4j.cypher.internal.commands.values.LabelValue
-import collection.convert.Wrappers.SeqWrapper
 
 object NamedExpectation {
   def apply(name: String, bare: Boolean): NamedExpectation = NamedExpectation(name, Map.empty, bare)
@@ -111,7 +110,7 @@ case class NamedExpectation(name: String, e: Expression, properties: Map[String,
       case node: Node =>
         val qtx      = state.query
         val nodeId   = node.getId
-        val labelIds = LabelSupport.getOrCreateLabelIds(labels)(qtx)
+        val labelIds = labels.map(_.id(state))
         labelIds.forall( qtx.isLabelSetOnNode(_, nodeId) )
       case _ =>
         true

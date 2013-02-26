@@ -45,7 +45,7 @@ case class LabelAction(entity: Expression, labelOp: LabelOp, labels: Seq[LabelVa
   def exec(context: ExecutionContext, state: QueryState) = {
     val node      = CastSupport.erasureCastOrFail[Node](entity(context)(state))
     val queryCtx  = state.query
-    val labelIds  = LabelSupport.getOrCreateLabelIds(labels)(queryCtx)
+    val labelIds  = labels.map(_.id(state))
 
     labelOp match {
       case LabelSetOp => queryCtx.setLabelsOnNode(node.getId, labelIds)

@@ -303,8 +303,14 @@ case class HasLabel(entity: Expression, labels: Seq[LabelValue]) extends Predica
     val node           = CastSupport.erasureCastOrFail[Node](entity(m))
     val nodeId         = node.getId
     val queryCtx       = state.query
-    val expectedLabels = labels.map(_.id)
 
+    val expectedLabels = try {
+      labels.map(_.id(state))
+    } catch {
+      // If we are running in a query were we can't write changes,
+      // just return false for this predicate.
+      case _: NotInTransactionException => return false
+    }
     expectedLabels.forall(queryCtx.isLabelSetOnNode(_, nodeId))
   }
 
