@@ -61,6 +61,7 @@ trait Expressions extends Base with ParserPattern with Predicates with StringLit
       | percentileFunction
       | coalesceFunc
       | filterFunc
+      | shortestPathFunc
       | nullableProperty
       | property
       | stringLit
@@ -115,6 +116,22 @@ trait Expressions extends Base with ParserPattern with Predicates with StringLit
     case symbol ~ in ~ collection ~ where ~ pred => FilterFunction(collection, symbol, pred)
   }
 
+  def shortestPathFunc: Parser[Expression] = {
+    def translate(abstractPattern: AbstractPattern): Maybe[ShortestPath] =
+
+      COMPILE ERROR. HA!
+      I don't want this to return no, because I want the error shown if you use a path incorrectly to come from
+      the predicates code. Right now, returning no here overrides the predicate's no.
+
+      matchTranslator(abstractPattern) match {
+      case Yes(p@Seq(pattern: ShortestPath)) => Yes(p.asInstanceOf[Seq[ShortestPath]])
+      case _                                 => No(Seq("This should not be here, how do I make this only match on shortest path?"))
+    }
+
+    usePath(translate) ^^ {
+      case patterns:Seq[ShortestPath] => ShortestPathExpression(patterns.head)
+    }
+  }
   def function: Parser[Expression] = Parser {
     case in => {
       val inner = identity ~ parens(commaList(expression | entity))
