@@ -19,18 +19,24 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 
+import java.util.Collections;
 import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.neo4j.kernel.impl.api.index.IndexDescriptor;
+import org.neo4j.kernel.impl.api.state.OldTxStateBridge;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class TxStateTest
 {
+
     @Test
     public void shouldGetAddedLabels() throws Exception
     {
@@ -154,13 +160,32 @@ public class TxStateTest
         // THEN
         assertEquals( asSet( rule ), state.getIndexRuleDiffSets().getAdded() );
     }
+
+    @Test
+    public void shouldExcludeNodesWithRemovedLabelInIndexDiffSet() throws Exception
+    {
+        // Given
+        long nodeId = 1337l;
+        state.removeLabelFromNode( 1l, nodeId );
+
+        when( legacyState.getDeletedNodes() ).thenReturn( Collections.<Long>emptyList() );
+
+        // When
+        DiffSets<Long> diff = state.getIndexDiffSet( new IndexDescriptor( 1l, 2l ), 42 );
+
+        // Then
+        assertThat( diff.getRemoved(), equalTo(asSet( nodeId )) );
+        assertThat( diff.getAdded(),   equalTo( Collections.<Long>emptySet() ));
+    }
     
     private TxState state;
+    private OldTxStateBridge legacyState;
     
     @Before
     public void before() throws Exception
     {
-        state = new TxState(null);
+        legacyState = mock( OldTxStateBridge.class );
+        state = new TxState(legacyState);
     }
 
     private IndexRule newIndexRule( long ruleId, long labelId, long propertyKey )

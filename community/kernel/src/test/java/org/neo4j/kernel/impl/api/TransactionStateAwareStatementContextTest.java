@@ -349,9 +349,9 @@ public class TransactionStateAwareStatementContextTest
     
     
     // Index state
-    
+
     @Test
-    public void removedNodeShouldNotShowUpInIndexQueries() throws Exception
+    public void shouldIncludeChangesFromTxStateInIndexQuery() throws Exception
     {
         // Given
         when( store.exactIndexLookup( 1337l, "My Value" ) ).thenReturn( asList( 1l, 2l, 3l ) );
@@ -363,7 +363,6 @@ public class TransactionStateAwareStatementContextTest
         // Then
         assertThat( asSet( result ), equalTo( asSet( 1l, 3l ) ) );
     }
-
 
     private ExceptionExpectingFunction<SchemaRuleNotFoundException> getIndexRule()
     {
@@ -405,7 +404,7 @@ public class TransactionStateAwareStatementContextTest
     private StatementContext store;
     private OldTxStateBridge oldTxState;
     private TxState state;
-    private StatementContext txContext;
+    private TransactionStateAwareStatementContext txContext;
     
     @Before
     public void before() throws Exception

@@ -144,6 +144,8 @@ public class TxState
     {
         DiffSets<Long> diff = new DiffSets<Long>();
         diff.removeAll( legacyState.getDeletedNodes() );
+        diff.removeAll( labelStates.get( idx.getLabelId() ).getNodeDiffSets().getRemoved() );
+
         return diff;
     }
 
