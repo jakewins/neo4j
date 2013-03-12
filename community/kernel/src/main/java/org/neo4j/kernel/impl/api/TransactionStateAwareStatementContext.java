@@ -205,6 +205,21 @@ public class TransactionStateAwareStatementContext extends DelegatingStatementCo
     public Iterable<Long> exactIndexLookup( long indexId, Object value ) throws IndexNotFoundKernelException
     {
         IndexDescriptor idx = delegate.getIndexDescriptor( indexId );
-        return state.getIndexDiffSet(idx, value).apply(delegate.exactIndexLookup( indexId, value ));
+        DiffSets<Long> diff = state.getNodesWithChangedProperty( idx.getPropertyKeyId(), value );
+        diff.removeAll( state.getDeletedNodes() );
+
+        final long labelId = idx.getLabelId();
+        Predicate<Long> labelFilter = new Predicate<Long>()
+        {
+            @Override
+            public boolean accept( Long item )
+            {
+                return isLabelSetOnNode( labelId, item );
+            }
+        };
+
+        diff = diff.filterAdded( labelFilter );
+        Iterable<Long> source = delegate.exactIndexLookup( indexId, value );
+        return diff.apply( source );
     }
 }

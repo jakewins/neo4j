@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.neo4j.kernel.impl.api.DiffSets;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
@@ -140,14 +141,13 @@ public class TxState
         return ruleDiffSets;
     }
 
-    public DiffSets<Long> getIndexDiffSet( IndexDescriptor idx, Object value )
+    public DiffSets<Long> getNodesWithChangedProperty( long propertyKeyId, Object value )
     {
-        DiffSets<Long> diff = legacyState.getNodesWithChangedProperty( idx.getPropertyKeyId(), value );
-        diff.removeAll( legacyState.getDeletedNodes() );
+        return legacyState.getNodesWithChangedProperty( propertyKeyId, value );
+    }
 
-        diff.removeAll( labelStates.get( idx.getLabelId() ).getNodeDiffSets().getRemoved() );
-
-        return diff;
+    public Iterable<Long> getDeletedNodes() {
+        return legacyState.getDeletedNodes();
     }
 
     private static interface StateCreator<STATE>
