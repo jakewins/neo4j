@@ -465,7 +465,7 @@ public abstract class InternalAbstractGraphDatabase
         
         SchemaCache schemaCache = new SchemaCache( Collections.<SchemaRule>emptyList() );
 
-        kernelAPI = life.add( new Kernel( txManager, propertyIndexManager, persistenceManager,
+        kernelAPI = life.add( new Kernel( txManager, propertyIndexManager, persistenceManager, nodeManager,
                 xaDataSourceManager, lockManager, schemaCache ) );
         // XXX: Circular dependency, temporary during transition to KernelAPI
         txManager.setKernel(kernelAPI);

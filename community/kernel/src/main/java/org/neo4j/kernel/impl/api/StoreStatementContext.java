@@ -26,6 +26,7 @@ import static org.neo4j.helpers.collection.Iterables.map;
 import java.util.Collections;
 import java.util.Iterator;
 
+import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.helpers.Function;
 import org.neo4j.helpers.Predicate;
@@ -34,6 +35,7 @@ import org.neo4j.kernel.api.ConstraintViolationKernelException;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyIdNotFoundException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
+import org.neo4j.kernel.api.PropertyNotFoundException;
 import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
@@ -41,6 +43,7 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.KeyNotFoundException;
+import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.core.PropertyIndexManager;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
@@ -52,21 +55,25 @@ import org.neo4j.kernel.impl.nioneo.store.SchemaRule.Kind;
 import org.neo4j.kernel.impl.nioneo.store.SchemaStore;
 import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.persistence.PersistenceManager;
+import org.neo4j.kernel.impl.transaction.LockType;
 
 public class StoreStatementContext implements StatementContext
 {
     private final PropertyIndexManager propertyIndexManager;
+    private final NodeManager nodeManager;
     private final PersistenceManager persistenceManager;
     private final NeoStore neoStore;
     private final IndexingService indexService;
 
     public StoreStatementContext( PropertyIndexManager propertyIndexManager,
-            PersistenceManager persistenceManager, NeoStore neoStore, IndexingService indexService )
+            PersistenceManager persistenceManager, NodeManager nodeManager,
+            NeoStore neoStore, IndexingService indexService )
     {
         this.indexService = indexService;
         assert neoStore != null : "No neoStore provided";
         this.propertyIndexManager = propertyIndexManager;
         this.persistenceManager = persistenceManager;
+        this.nodeManager = nodeManager;
         this.neoStore = neoStore;
     }
 
@@ -332,6 +339,23 @@ public class StoreStatementContext implements StatementContext
         catch ( KeyNotFoundException e )
         {
             throw new PropertyKeyIdNotFoundException( propertyId, e );
+        }
+    }
+
+    @Override
+    public Object getNodePropertyValue( long nodeId, long propertyKeyId )
+            throws PropertyKeyIdNotFoundException, PropertyNotFoundException
+    {
+        // TODO: Remove use of NodeManager here
+        try
+        {
+            String propertyKey = getPropertyKeyName( propertyKeyId );
+            return nodeManager.getNodeForProxy( nodeId, null ).getProperty( nodeManager, propertyKey );
+        }
+        catch (NotFoundException e)
+        {
+            throw new PropertyNotFoundException(
+                    "No property with id " + propertyKeyId + " on node with id " + nodeId, e );
         }
     }
 

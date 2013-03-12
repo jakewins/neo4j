@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.api;
 
 import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static org.neo4j.graphdb.DynamicLabel.label;
@@ -40,9 +41,11 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
+import org.neo4j.kernel.api.PropertyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.core.PropertyIndexManager;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.persistence.PersistenceManager;
@@ -52,6 +55,49 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 
 public class StoreStatementContextTest
 {
+    @Test
+    public void should_be_able_to_read_a_node_property() throws Exception
+    {
+        // GIVEN
+        String labelName = "mylabel";
+        String propertyKey = "myproperty";
+        int propertyValue = 42;
+
+        Transaction tx = db.beginTx();
+        Node node = db.createNode();
+        long nodeId = node.getId();
+        node.setProperty( propertyKey, propertyValue );
+        tx.success();
+        tx.finish();
+
+        // WHEN
+        long propertyKeyId = statement.getPropertyKeyId( propertyKey );
+        int result = (Integer) statement.getNodePropertyValue( nodeId, propertyKeyId );
+
+        // THEN
+        assertThat( propertyValue, equalTo( result ) );
+    }
+
+    @Test(expected = /* THEN */ PropertyNotFoundException.class)
+    public void should_throw_when_reading_a_missing_node_property() throws Exception
+    {
+        // GIVEN
+        String labelName = "mylabel";
+        String propertyKey = "myproperty";
+        int propertyValue = 42;
+
+        Transaction tx = db.beginTx();
+        Node node = db.createNode();
+        node.setProperty( propertyKey, propertyValue );
+        long nodeId = db.createNode().getId();
+        tx.success();
+        tx.finish();
+
+        // WHEN
+        long propertyKeyId = statement.getPropertyKeyId( propertyKey );
+        statement.getNodePropertyValue( nodeId, propertyKeyId );
+    }
+
     @Test
     public void should_be_able_to_add_label_to_node() throws Exception
     {
@@ -329,7 +375,7 @@ public class StoreStatementContextTest
         IndexingService mockIndexService = mock(IndexingService.class);
         when( mockIndexService.getIndexDescriptor( 1337l ) ).thenReturn( idxDesc );
 
-        StoreStatementContext ctx = new StoreStatementContext( null, null, mock(NeoStore.class), mockIndexService );
+        StoreStatementContext ctx = new StoreStatementContext( null, null, null, mock( NeoStore.class ), mockIndexService );
 
         // WHEN
         IndexDescriptor idx = ctx.getIndexDescriptor( 1337l );
@@ -348,6 +394,7 @@ public class StoreStatementContextTest
         statement = new StoreStatementContext(
                 db.getDependencyResolver().resolveDependency( PropertyIndexManager.class ),
                 db.getDependencyResolver().resolveDependency( PersistenceManager.class ),
+                db.getDependencyResolver().resolveDependency( NodeManager.class ),
                 // Ooh, jucky
                 db.getDependencyResolver().resolveDependency( XaDataSourceManager.class )
                         .getNeoStoreDataSource().getNeoStore(),

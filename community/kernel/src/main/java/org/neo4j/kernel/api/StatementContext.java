@@ -148,6 +148,13 @@ public interface StatementContext
      */
     String getPropertyKeyName( long propertyId ) throws PropertyKeyIdNotFoundException;
 
+
+    /**
+     * Returns the value of the property given it's property key id for the node with the given node id
+     */
+    Object getNodePropertyValue( long nodeId, long propertyId)
+            throws PropertyKeyIdNotFoundException, PropertyNotFoundException;
+
     /**
      * Returns an iterable with the matched nodes.
      */

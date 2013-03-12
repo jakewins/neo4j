@@ -24,6 +24,7 @@ import org.neo4j.kernel.api.ConstraintViolationKernelException;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.PropertyKeyIdNotFoundException;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
+import org.neo4j.kernel.api.PropertyNotFoundException;
 import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
@@ -133,6 +134,13 @@ public class ReadOnlyStatementContext implements StatementContext
     public long getPropertyKeyId( String propertyKey ) throws PropertyKeyNotFoundException
     {
         return delegate.getPropertyKeyId( propertyKey );
+    }
+
+    @Override
+    public Object getNodePropertyValue( long nodeId, long propertyId )
+            throws PropertyKeyIdNotFoundException, PropertyNotFoundException
+    {
+        return delegate.getNodePropertyValue( nodeId, propertyId );
     }
 
     @Override
