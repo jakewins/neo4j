@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class TxStateTest
@@ -159,7 +160,7 @@ public class TxStateTest
     @Before
     public void before() throws Exception
     {
-        state = new TxState();
+        state = new TxState(null);
     }
 
     private IndexRule newIndexRule( long ruleId, long labelId, long propertyKey )

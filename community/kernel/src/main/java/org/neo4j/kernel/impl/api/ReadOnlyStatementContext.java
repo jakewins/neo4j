@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 /*
@@ -141,7 +142,7 @@ public class ReadOnlyStatementContext implements StatementContext
     }
 
     @Override
-    public Iterable<Long> exactIndexLookup( long indexId, Object value )
+    public Iterable<Long> exactIndexLookup( long indexId, Object value ) throws IndexNotFoundKernelException
     {
         return delegate.exactIndexLookup( indexId, value );
     }
@@ -156,6 +157,12 @@ public class ReadOnlyStatementContext implements StatementContext
     public IndexRule getIndexRule( long labelId, long propertyKey ) throws SchemaRuleNotFoundException
     {
         return delegate.getIndexRule( labelId, propertyKey );
+    }
+
+    @Override
+    public IndexDescriptor getIndexDescriptor( long indexId ) throws IndexNotFoundKernelException
+    {
+        return delegate.getIndexDescriptor( indexId );
     }
 
     private NotInTransactionException readOnlyException()

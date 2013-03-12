@@ -38,6 +38,7 @@ import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.KeyNotFoundException;
 import org.neo4j.kernel.impl.core.PropertyIndexManager;
@@ -251,6 +252,12 @@ public class StoreStatementContext implements StatementContext
     }
 
     @Override
+    public IndexDescriptor getIndexDescriptor( long indexId ) throws IndexNotFoundKernelException
+    {
+        return indexService.getIndexDescriptor( indexId );
+    }
+
+    @Override
     public Iterable<IndexRule> getIndexRules( final long labelId )
     {
         return toIndexRules( new Predicate<SchemaRule>()
@@ -293,7 +300,7 @@ public class StoreStatementContext implements StatementContext
     @Override
     public InternalIndexState getIndexState( IndexRule indexRule ) throws IndexNotFoundKernelException
     {
-        return indexService.getContextForRule( indexRule.getId() ).getState();
+        return indexService.getIndexContext( indexRule.getId() ).getState();
     }
 
     @Override

@@ -25,14 +25,13 @@ import org.neo4j.kernel.impl.nioneo.store.IndexRule;
  * Description of a single index as needed by the {@link IndexContext} cake
  *
  * This is a IndexContext cake level representation of {@link IndexRule}
- *
  */
 public class IndexDescriptor
 {
     private final long labelId;
     private final long propertyKeyId;
 
-    IndexDescriptor( long labelId, long propertyKeyId )
+    public IndexDescriptor( long labelId, long propertyKeyId )
     {
         this.labelId = labelId;
         this.propertyKeyId = propertyKeyId;

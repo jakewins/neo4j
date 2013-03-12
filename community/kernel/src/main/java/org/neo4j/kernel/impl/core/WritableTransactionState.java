@@ -71,6 +71,7 @@ public class WritableTransactionState implements TransactionState
                 new ArrayMap<Long,CowRelElement>();
         private final Set<Long> createdNodes = new HashSet<Long>();
         private final Set<Long> createdRelationships = new HashSet<Long>();
+        private final Set<Long> deletedNodes = new HashSet<Long>();
         private CowGraphElement graph;
 
         public CowNodeElement nodeElement( long id, boolean create )
@@ -539,6 +540,7 @@ public class WritableTransactionState implements TransactionState
         PrimitiveElement element = getPrimitiveElement( true );
         element.nodeElement( id, true ).setDeleted();
         element.createdNodes.remove( id );
+        element.deletedNodes.add( id );
     }
     
     @Override
@@ -727,6 +729,12 @@ public class WritableTransactionState implements TransactionState
     public Set<Long> getCreatedRelationships()
     {
         return primitiveElement != null ? primitiveElement.createdRelationships : Collections.<Long>emptySet();
+    }
+
+    @Override
+    public Set<Long> getDeletedNodes()
+    {
+        return primitiveElement.deletedNodes;
     }
 
     @Override

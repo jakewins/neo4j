@@ -63,11 +63,13 @@ import org.neo4j.helpers.Function;
 import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.Service;
 import org.neo4j.helpers.Settings;
+import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.api.KernelAPI;
 import org.neo4j.kernel.api.KernelException;
 import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
+import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConfigurationChange;
@@ -1507,7 +1509,16 @@ public abstract class InternalAbstractGraphDatabase
         }
 
         // Ha! We found an index - let's use it to find matching nodes
-        return map2nodes( ctx.exactIndexLookup( indexRule.getId(), value ) );
+        try
+        {
+            return map2nodes( ctx.exactIndexLookup( indexRule.getId(), value ) );
+        }
+        catch ( IndexNotFoundKernelException e )
+        {
+            // Wut. Now the index is gone :(
+            throw new ThisShouldNotHappenError( "Jake", "The index existed within the context of this transaction, " +
+                                                        "but is not there now, this should not be possible." );
+        }
     }
 
     private Iterable<Node> getNodesByLabelAndPropertyWithoutIndex( final String propertyName, final Object value, StatementContext ctx, long labelId )

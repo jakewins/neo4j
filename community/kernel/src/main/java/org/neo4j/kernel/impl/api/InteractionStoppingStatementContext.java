@@ -27,8 +27,13 @@ import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
+/**
+ * Directly implements the interface to force updating this class whenever StatementContext changes.
+ * When you add methods here, make sure that they call the assertOperationsAllowed() method before delegating.
+ */
 public class InteractionStoppingStatementContext implements StatementContext
 {
     private final StatementContext delegate;
@@ -118,6 +123,14 @@ public class InteractionStoppingStatementContext implements StatementContext
     }
 
     @Override
+    public IndexDescriptor getIndexDescriptor( long indexId ) throws IndexNotFoundKernelException
+
+    {
+        assertOperationsAllowed();
+        return delegate.getIndexDescriptor( indexId );
+    }
+
+    @Override
     public void dropIndexRule( IndexRule indexRule ) throws ConstraintViolationKernelException
     {
         assertOperationsAllowed();
@@ -167,7 +180,7 @@ public class InteractionStoppingStatementContext implements StatementContext
     }
 
     @Override
-    public Iterable<Long> exactIndexLookup( long indexId, Object value )
+    public Iterable<Long> exactIndexLookup( long indexId, Object value ) throws IndexNotFoundKernelException
     {
         assertOperationsAllowed();
         return delegate.exactIndexLookup( indexId, value );

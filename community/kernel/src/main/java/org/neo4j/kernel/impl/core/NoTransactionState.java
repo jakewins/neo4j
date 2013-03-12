@@ -19,8 +19,9 @@
  */
 package org.neo4j.kernel.impl.core;
 
+import static java.util.Collections.emptySet;
+
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Set;
 
 import org.neo4j.graphdb.NotInTransactionException;
@@ -194,12 +195,18 @@ public class NoTransactionState implements TransactionState
     @Override
     public Set<Long> getCreatedNodes()
     {
-        return Collections.emptySet();
+        return emptySet();
     }
 
     @Override
     public Set<Long> getCreatedRelationships()
     {
-        return Collections.emptySet();
+        return emptySet();
+    }
+
+    @Override
+    public Set<Long> getDeletedNodes()
+    {
+        return emptySet();
     }
 }

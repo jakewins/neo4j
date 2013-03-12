@@ -33,6 +33,8 @@ import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.impl.api.index.IndexDescriptor;
+import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class TransactionStateAwareStatementContext extends DelegatingStatementContext
@@ -190,14 +192,21 @@ public class TransactionStateAwareStatementContext extends DelegatingStatementCo
     @Override
     public Iterable<IndexRule> getIndexRules( long labelId )
     {
-        Iterable<IndexRule> committedRules = delegate.getIndexRules( labelId );
-        return state.getIndexRuleDiffSetsByLabel( labelId ).apply( committedRules );
+        return state.getIndexRuleDiffSetsByLabel( labelId ).apply( delegate.getIndexRules( labelId ) );
     }
 
     @Override
     public Iterable<IndexRule> getIndexRules()
     {
-        Iterable<IndexRule> committedRules = delegate.getIndexRules();
-        return state.getIndexRuleDiffSets().apply( committedRules );
+        return state.getIndexRuleDiffSets().apply( delegate.getIndexRules() );
+    }
+
+    @Override
+    public Iterable<Long> exactIndexLookup( long indexId, Object value ) throws IndexNotFoundKernelException
+    {
+        Iterable<Long> nodeIds = delegate.exactIndexLookup( indexId, value );
+        IndexDescriptor idx = delegate.getIndexDescriptor( indexId );
+
+        return state.getIndexDiffSet(idx, value).apply(nodeIds);
     }
 }

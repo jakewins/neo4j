@@ -27,6 +27,7 @@ import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class DelegatingStatementContext implements StatementContext
@@ -105,6 +106,12 @@ public class DelegatingStatementContext implements StatementContext
     }
 
     @Override
+    public IndexDescriptor getIndexDescriptor( long indexId ) throws IndexNotFoundKernelException
+    {
+        return delegate.getIndexDescriptor( indexId );
+    }
+
+    @Override
     public void dropIndexRule( IndexRule indexRule ) throws ConstraintViolationKernelException
     {
         delegate.dropIndexRule( indexRule );
@@ -147,7 +154,7 @@ public class DelegatingStatementContext implements StatementContext
     }
 
     @Override
-    public Iterable<Long> exactIndexLookup( long indexId, Object value )
+    public Iterable<Long> exactIndexLookup( long indexId, Object value ) throws IndexNotFoundKernelException
     {
         return delegate.exactIndexLookup( indexId, value );
     }

@@ -148,7 +148,7 @@ public class IndexingService extends LifecycleAdapter
             awaitIndexFuture( future );
     }
 
-    public IndexContext getContextForRule( long indexId ) throws IndexNotFoundKernelException
+    public IndexContext getIndexContext( long indexId ) throws IndexNotFoundKernelException
     {
         IndexContext indexContext = indexes.get( indexId );
         if ( indexContext == null )
@@ -156,6 +156,11 @@ public class IndexingService extends LifecycleAdapter
             throw new IndexNotFoundKernelException( "No index with id " + indexId + " exists." );
         }
         return indexContext;
+    }
+
+    public IndexDescriptor getIndexDescriptor( long indexId ) throws IndexNotFoundKernelException
+    {
+        return getIndexContext( indexId ).getDescriptor();
     }
 
     /**

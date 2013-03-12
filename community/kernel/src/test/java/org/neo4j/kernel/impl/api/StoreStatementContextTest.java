@@ -20,10 +20,8 @@
 package org.neo4j.kernel.impl.api;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 import static org.neo4j.graphdb.DynamicLabel.label;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cache_type;
 import static org.neo4j.helpers.collection.IteratorUtil.addToCollection;
@@ -43,8 +41,10 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.api.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
+import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.PropertyIndexManager;
+import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.persistence.PersistenceManager;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.test.ImpermanentGraphDatabase;
@@ -318,6 +318,24 @@ public class StoreStatementContextTest
         {
             // Good
         }
+    }
+
+    @Test
+    public void should_get_index_descriptor_by_id() throws Exception
+    {
+        // GIVEN
+        IndexDescriptor idxDesc = new IndexDescriptor(1, 2);
+
+        IndexingService mockIndexService = mock(IndexingService.class);
+        when( mockIndexService.getIndexDescriptor( 1337l ) ).thenReturn( idxDesc );
+
+        StoreStatementContext ctx = new StoreStatementContext( null, null, mock(NeoStore.class), mockIndexService );
+
+        // WHEN
+        IndexDescriptor idx = ctx.getIndexDescriptor( 1337l );
+
+        // THEN
+        assertEquals( idx, idxDesc );
     }
     
     private GraphDatabaseAPI db;

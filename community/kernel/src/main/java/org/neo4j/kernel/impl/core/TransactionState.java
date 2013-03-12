@@ -101,6 +101,8 @@ public interface TransactionState
     Set<Long> getCreatedNodes();
     
     Set<Long> getCreatedRelationships();
+
+    Set<Long> getDeletedNodes();
     
     public static final TransactionState NO_STATE = new NoTransactionState();
 }
