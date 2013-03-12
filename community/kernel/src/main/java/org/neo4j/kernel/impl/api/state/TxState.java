@@ -142,8 +142,9 @@ public class TxState
 
     public DiffSets<Long> getIndexDiffSet( IndexDescriptor idx, Object value )
     {
-        DiffSets<Long> diff = new DiffSets<Long>();
+        DiffSets<Long> diff = legacyState.getNodesWithChangedProperty( idx.getPropertyKeyId(), value );
         diff.removeAll( legacyState.getDeletedNodes() );
+
         diff.removeAll( labelStates.get( idx.getLabelId() ).getNodeDiffSets().getRemoved() );
 
         return diff;

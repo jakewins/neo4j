@@ -33,6 +33,7 @@ import javax.transaction.Transaction;
 
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
 import org.neo4j.kernel.impl.nioneo.store.Record;
 import org.neo4j.kernel.impl.transaction.LockManager;
@@ -123,6 +124,11 @@ public class WritableTransactionState implements TransactionState
         CowEntityElement( long id )
         {
             this.id = id;
+        }
+
+        public long getId()
+        {
+            return id;
         }
 
         public ArrayMap<Integer, PropertyData> getPropertyAddMap( boolean create )
@@ -735,6 +741,15 @@ public class WritableTransactionState implements TransactionState
     public Set<Long> getDeletedNodes()
     {
         return primitiveElement.deletedNodes;
+    }
+
+    @Override
+    public Iterable<CowNodeElement> getChangedNodes()
+    {
+        if ( primitiveElement == null )
+            return Iterables.empty();
+
+        return primitiveElement.nodes.values();
     }
 
     @Override

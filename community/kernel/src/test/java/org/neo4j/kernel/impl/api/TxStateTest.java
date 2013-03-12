@@ -165,21 +165,46 @@ public class TxStateTest
     public void shouldExcludeNodesWithRemovedLabelInIndexDiffSet() throws Exception
     {
         // Given
-        long nodeId = 1337l;
-        state.removeLabelFromNode( 1l, nodeId );
+        long nodeId = 1337l,
+             propertyKeyId = 2l,
+             labelId = 1l;
+        state.removeLabelFromNode( labelId, nodeId );
 
-        when( legacyState.getDeletedNodes() ).thenReturn( Collections.<Long>emptyList() );
+        when( legacyState.getDeletedNodes() ).thenReturn( emptySet );
+        when( legacyState.getNodesWithChangedProperty( propertyKeyId, 42 ) ).thenReturn( new DiffSets<Long>() );
 
         // When
-        DiffSets<Long> diff = state.getIndexDiffSet( new IndexDescriptor( 1l, 2l ), 42 );
+        DiffSets<Long> diff = state.getIndexDiffSet( new IndexDescriptor( labelId, propertyKeyId ), 42 );
 
         // Then
         assertThat( diff.getRemoved(), equalTo(asSet( nodeId )) );
         assertThat( diff.getAdded(),   equalTo( Collections.<Long>emptySet() ));
     }
+
+    @Test
+    public void shouldIncludeAddedNodesWithCorrectPropertyAndLabelCombo() throws Exception
+    {
+        // Given
+        long nodeId = 1337l;
+        int propertKey = 2;
+        int propValue = 42;
+        state.addLabelToNode( 1l, nodeId );
+
+        DiffSets<Long> nodesWithChangedProp = new DiffSets<Long>( asSet(nodeId), emptySet );
+        when( legacyState.getDeletedNodes() ).thenReturn( emptySet );
+        when( legacyState.getNodesWithChangedProperty( propertKey, propValue ) ).thenReturn( nodesWithChangedProp );
+
+        // When
+        DiffSets<Long> diff = state.getIndexDiffSet( new IndexDescriptor( 1l, propertKey ), propValue );
+
+        // Then
+        assertThat( diff.getRemoved(), equalTo( emptySet ) );
+        assertThat( diff.getAdded(),   equalTo( asSet( nodeId ) ));
+    }
     
     private TxState state;
     private OldTxStateBridge legacyState;
+    private final Set<Long> emptySet = Collections.<Long>emptySet();
     
     @Before
     public void before() throws Exception

@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
 import org.neo4j.kernel.impl.transaction.TxHook;
 import org.neo4j.kernel.impl.transaction.xaframework.TxIdGenerator;
@@ -208,5 +209,11 @@ public class NoTransactionState implements TransactionState
     public Set<Long> getDeletedNodes()
     {
         return emptySet();
+    }
+
+    @Override
+    public Iterable<WritableTransactionState.CowNodeElement> getChangedNodes()
+    {
+        return Iterables.empty();
     }
 }
