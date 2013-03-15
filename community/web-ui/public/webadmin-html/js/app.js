@@ -6,16 +6,14 @@ App = angular.module('app', ['ui', 'ngCookies', 'ngResource', 'app.controllers',
 
 App.config([
   '$routeProvider', '$locationProvider', '$httpProvider', function($routeProvider, $locationProvider, $httpProvider, config) {
-    $routeProvider.when('/', {
-      templateUrl: 'partials/splash.html',
-      controller: 'SplashController'
-    }).when('/data/browser', {
-      templateUrl: 'partials/data/browser.html',
-      controller: 'DatabrowserController'
-    }).when('/data/console', {
-      templateUrl: 'partials/data/console.html',
-      controller: 'ConsoleController'
-    }).otherwise({
+    var goTo;
+    goTo = function(tmpl, ctrl) {
+      return {
+        templateUrl: "partials/" + tmpl + ".html",
+        controller: ctrl
+      };
+    };
+    $routeProvider.when('/', goTo("splash", "SplashController")).when('/data/browser', goTo("data/browser", "DatabrowserController")).when('/data/console', goTo("data/console", "ConsoleController")).when('/system/jmx', goTo("system/jmx", "JmxController")).otherwise({
       redirectTo: '/'
     });
     $locationProvider.html5Mode(false);
@@ -27,7 +25,7 @@ App.config([
 /* Controllers
 */
 
-angular.module('app.controllers', ['app.controllers.sidebar', 'app.controllers.data.browser', 'app.controllers.data.console', 'app.controllers.splash']).controller('AppCtrl', ['$scope', '$location', '$resource', '$rootScope', function($scope, $location, $resource, $rootScope) {}]);
+angular.module('app.controllers', ['app.controllers.sidebar', 'app.controllers.data.browser', 'app.controllers.data.console', 'app.controllers.system.jmx', 'app.controllers.splash']).controller('AppCtrl', ['$scope', '$location', '$resource', '$rootScope', function($scope, $location, $resource, $rootScope) {}]);
 'use strict';
 
 angular.module('app.controllers.data.browser', ['app.services.graph', 'app.services.paginator']).controller('DatabrowserController', [
@@ -181,7 +179,7 @@ angular.module('app.controllers.sidebar', []).controller('SidebarController', [
         active: false,
         items: [
           {
-            href: '#/schema/indexes',
+            href: '#/system/jmx',
             title: 'JMX Browser',
             icon: 'cog',
             active: false
@@ -223,6 +221,14 @@ RETURN myNode';
       graphService.executeQuery($scope.query);
       return $location.path('/data/browser');
     };
+  }
+]);
+'use strict';
+
+angular.module('app.controllers.system.jmx', ['app.services.jmx']).controller('JmxController', [
+  '$scope', 'jmxService', function($scope, jmxService) {
+    $scope.domains = ["org.neo4j", "java.lang", "java.util.logging"];
+    return $scope.beans = [];
   }
 ]);
 'use strict';
@@ -526,6 +532,24 @@ angular.module('app.services.graph', []).factory('graphService', [
 
     })();
     return new GraphService;
+  }
+]);
+'use strict';
+
+/* A service that manages a common view of the graph for the entire app
+*/
+
+angular.module('app.services.jmx', []).factory('jmxService', [
+  '$http', '$rootScope', function($http, $rootScope) {
+    var JmxService;
+    JmxService = (function() {
+
+      function JmxService() {}
+
+      return JmxService;
+
+    })();
+    return new JmxService;
   }
 ]);
 'use strict';

@@ -60,7 +60,7 @@ angular.module('app.controllers.sidebar', [])
         active: no,
         items : [
           { # JMX Browser
-            href: '#/schema/indexes', title: 'JMX Browser',
+            href: '#/system/jmx', title: 'JMX Browser',
             icon: 'cog', active: no,
           }
           

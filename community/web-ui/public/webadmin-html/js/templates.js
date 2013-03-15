@@ -52,4 +52,13 @@ var __indent = [];
 buf.push('\n<div class="row-fluid">\n  <div class="span12">\n    <div class="hero-unit hero-unit-inverse neo-20-announcement-hero">\n      <div class="hero-query-wrapper">\n        <div class="hero-query-logo-wrapper"><img src="img/big-logo.png" class="hero-query-logo"/>\n          <div ng-click="execute()" class="btn btn-large btn-primary splash-exec">Execute &raquo;</div>\n          <div class="code-mirror-wrap">\n            <textarea ui-codemirror="{theme:\'eclipse\',mode:\'cypher\', extraKeys:{\'Ctrl-Space\': \'cypherAutoComplete\',\'Ctrl-Enter\': execute}}" ng-model="query"></textarea>\n          </div>\n        </div>\n      </div>\n    </div>\n  </div>\n</div>\n<div class="row-fluid">\n  <div class="span4">\n    <h2>New to Neo4j?</h2>\n    <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui.</p>\n    <p><a class="btn">View details &raquo;</a></p>\n  </div>\n  <div class="span4">\n    <h2>Labels!</h2>\n    <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui.</p>\n    <p><a class="btn">View details &raquo;</a></p>\n  </div>\n  <div class="span4">\n    <h2>Cypher performance</h2>\n    <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>\n    <p><a class="btn">View details &raquo;</a></p>\n  </div>\n</div>');
 }
 return buf.join("");
+};module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
+var buf = [];
+with (locals || {}) {
+var interp;
+var __indent = [];
+buf.push('\n<div class="row-fluid">\n  <div class="span3">\n    <div ng-repeat="domain in domains">{{ domain }}</div>\n  </div>\n  <div class="span3">\n    <h1>Items</h1>\n  </div>\n  <div class="span6">\n    <h1>Details</h1>\n  </div>\n</div>');
+}
+return buf.join("");
 };

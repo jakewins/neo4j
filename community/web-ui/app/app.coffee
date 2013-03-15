@@ -18,17 +18,18 @@ App.config([
 
 ($routeProvider, $locationProvider, $httpProvider, config) ->
 
+  goTo = (tmpl, ctrl) -> ({
+    templateUrl : "partials/#{tmpl}.html"
+    controller  : ctrl
+  })
+
   $routeProvider
 
-    .when('/', {
-      templateUrl: 'partials/splash.html',
-      controller:  'SplashController'})
-    .when('/data/browser', {
-      templateUrl: 'partials/data/browser.html',
-      controller:  'DatabrowserController'})
-    .when('/data/console', {
-      templateUrl: 'partials/data/console.html',
-      controller:  'ConsoleController'})
+    .when('/',             goTo "splash", "SplashController")
+    .when('/data/browser', goTo "data/browser", "DatabrowserController")
+    .when('/data/console', goTo "data/console", "ConsoleController")
+    
+    .when('/system/jmx',   goTo "system/jmx", "JmxController")
 
     # Catch all
     .otherwise({redirectTo: '/'})
