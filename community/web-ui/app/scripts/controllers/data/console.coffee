@@ -11,34 +11,58 @@ angular.module('app.controllers.data.console', [])
     
     # Store the current console in the global state, so we don't loose it
     # when the user switches between views
-    $rootScope.currentConsoleEngine ?= "shell"
+    state = $rootScope.consoleState ?=
+      engine : "shell"
+      # Current statement
+      statement : ""
+      # Steps back in history we are currently looking at,
+      # 0 is latest, higher is older.
+      historyIndex : 0
+    $scope.statement = state.statement
     
     synchronizeWithConsoleService = ->
+      engine = state.engine
       $scope.availableEngines = consoleService.engines
-      if consoleService.engines[$scope.currentConsoleEngine]?
-        engineState = consoleService.engines[$scope.currentConsoleEngine]
+      if consoleService.engines[engine]?
+        engineState = consoleService.engines[engine]
         $scope.interactions = engineState.interactions
         $scope.engineName = engineState.name
       else
         $scope.interactions = []
-        $scope.engineName = $scope.currentConsoleEngine
+        $scope.engineName = engine
     
     $scope.$on('consoleService.changed', synchronizeWithConsoleService)
     synchronizeWithConsoleService()
     
     $scope.changeEngine = (engine)->
-      $rootScope.currentConsoleEngine = engine
+      state.engine = engine
+      state.historyIndex = 0
+      setStatement ""
       synchronizeWithConsoleService()
       
-    
     $scope.prevHistory = ->
-      $scope.statement = "Prev"
+      interactions = $scope.interactions
+      idx = state.historyIndex + 1
+      if idx <= interactions.length
+        state.historyIndex = idx
+        setStatement interactions[interactions.length-idx].statement
       
     $scope.nextHistory = ->
-      $scope.statement = "Next"
+      interactions = $scope.interactions
+      idx = state.historyIndex - 1
+      if idx > 0
+        state.historyIndex = idx
+        setStatement interactions[interactions.length-idx].statement
+      else if idx is 0
+        state.historyIndex = idx
+        setStatement ""
     
     $scope.execute = ->
-      consoleService.execute $scope.statement, $scope.currentConsoleEngine
-      $scope.statement = ""
+      state.historyIndex = 0
+      consoleService.execute $scope.statement, state.engine
+      setStatement ""
+      
+    setStatement = (s)->
+      state.statement = $scope.statement = s
     
 ])

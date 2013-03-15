@@ -74,37 +74,62 @@ angular.module('app.controllers.data.browser', ['app.services.graph', 'app.servi
 
 angular.module('app.controllers.data.console', []).controller('ConsoleController', [
   '$scope', '$rootScope', 'consoleService', function($scope, $rootScope, consoleService) {
-    var synchronizeWithConsoleService, _ref;
-    if ((_ref = $rootScope.currentConsoleEngine) == null) {
-      $rootScope.currentConsoleEngine = "shell";
-    }
+    var setStatement, state, synchronizeWithConsoleService, _ref;
+    state = (_ref = $rootScope.consoleState) != null ? _ref : $rootScope.consoleState = {
+      engine: "shell",
+      statement: "",
+      historyIndex: 0
+    };
+    $scope.statement = state.statement;
     synchronizeWithConsoleService = function() {
-      var engineState;
+      var engine, engineState;
+      engine = state.engine;
       $scope.availableEngines = consoleService.engines;
-      if (consoleService.engines[$scope.currentConsoleEngine] != null) {
-        engineState = consoleService.engines[$scope.currentConsoleEngine];
+      if (consoleService.engines[engine] != null) {
+        engineState = consoleService.engines[engine];
         $scope.interactions = engineState.interactions;
         return $scope.engineName = engineState.name;
       } else {
         $scope.interactions = [];
-        return $scope.engineName = $scope.currentConsoleEngine;
+        return $scope.engineName = engine;
       }
     };
     $scope.$on('consoleService.changed', synchronizeWithConsoleService);
     synchronizeWithConsoleService();
     $scope.changeEngine = function(engine) {
-      $rootScope.currentConsoleEngine = engine;
+      state.engine = engine;
+      state.historyIndex = 0;
+      setStatement("");
       return synchronizeWithConsoleService();
     };
     $scope.prevHistory = function() {
-      return $scope.statement = "Prev";
+      var idx, interactions;
+      interactions = $scope.interactions;
+      idx = state.historyIndex + 1;
+      if (idx <= interactions.length) {
+        state.historyIndex = idx;
+        return setStatement(interactions[interactions.length - idx].statement);
+      }
     };
     $scope.nextHistory = function() {
-      return $scope.statement = "Next";
+      var idx, interactions;
+      interactions = $scope.interactions;
+      idx = state.historyIndex - 1;
+      if (idx > 0) {
+        state.historyIndex = idx;
+        return setStatement(interactions[interactions.length - idx].statement);
+      } else if (idx === 0) {
+        state.historyIndex = idx;
+        return setStatement("");
+      }
     };
-    return $scope.execute = function() {
-      consoleService.execute($scope.statement, $scope.currentConsoleEngine);
-      return $scope.statement = "";
+    $scope.execute = function() {
+      state.historyIndex = 0;
+      consoleService.execute($scope.statement, state.engine);
+      return setStatement("");
+    };
+    return setStatement = function(s) {
+      return state.statement = $scope.statement = s;
     };
   }
 ]);
@@ -216,7 +241,9 @@ angular.module('app.directives', ['app.services']).directive('appVersion', [
     return scope.$watch(attrs.scrollHereOnChange, function() {
       return setTimeout((function() {
         if (window.innerHeight < (element[0].offsetTop + 50)) {
-          return window.scrollTo(0, element[0].offsetTop);
+          return $('html, body').stop().animate({
+            scrollTop: element[0].offsetTop
+          }, 400);
         }
       }), 0);
     });

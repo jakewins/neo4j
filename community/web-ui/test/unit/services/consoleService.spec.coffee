@@ -99,3 +99,4 @@ describe "app.services.console.ConsoleService", ->
       	]''' }
     )
     
+    

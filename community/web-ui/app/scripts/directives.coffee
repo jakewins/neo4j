@@ -22,6 +22,9 @@ angular.module('app.directives', [
     scope.$watch attrs.scrollHereOnChange, ->
       setTimeout((->
         if window.innerHeight < (element[0].offsetTop + 50)
-          window.scrollTo(0, element[0].offsetTop)
+          $('html, body').stop().animate({
+            scrollTop : element[0].offsetTop
+          }, 400)
+          #window.scrollTo(0, element[0].offsetTop)
       ),0)
 )
