@@ -30,7 +30,7 @@ describe "app.services.console.ConsoleService", ->
       
       # THEN
       interactions = consoleService.engines['A_TEST_ENGINE'].interactions
-      expect(interactions).toEqual [ { statement : 'TESTQUERY', result : result.split('\n') } ] 
+      expect(interactions).toEqual [ { statement : 'TESTQUERY', result : result } ] 
     )
     
     it "should handle initialization failing", inject( ($httpBackend, consoleService) ->
@@ -43,7 +43,7 @@ describe "app.services.console.ConsoleService", ->
       
       # THEN
       interations = consoleService.engines['A_TEST_ENGINE'].interactions
-      expect(interations).toEqual [ { statement : '', result : ["The server failed to initialize this shell. It responded with:", "Some arbitrary text"] } ]
+      expect(interations).toEqual [ { statement : '', result : "The server failed to initialize this shell. It responded with:\nSome arbitrary text" } ]
     )
 
     it "should handle statement failing", inject( ($rootScope, $httpBackend, consoleService) ->
@@ -66,7 +66,7 @@ describe "app.services.console.ConsoleService", ->
       interations = consoleService.engines['A_TEST_ENGINE'].interactions
       expect(interations).toEqual [ { 
         statement : 'TESTQUERY', 
-        result : ['Unable to execute statement, please see the server logs.'] } ]
+        result : 'Unable to execute statement, please see the server logs.' } ]
       expect(events.length).toEqual 1
     )
   
@@ -90,12 +90,12 @@ describe "app.services.console.ConsoleService", ->
       $httpBackend.flush()
       
       # THEN
-      interactions = consoleService.engines['http'].interactions
-      expect(interactions).toEqual [ { statement : 'GET /someurl', result : [ '200', '''[
+      interactions = consoleService.engines['http'].interactions[1]
+      expect(interactions).toEqual { statement : 'GET /someurl', result : '''200\n[
       	  "this",
       	  "is",
       	  "the",
       	  "response"
-      	]''' ] } ]
+      	]''' }
     )
     
