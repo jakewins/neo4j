@@ -511,8 +511,14 @@ body {
 }
 .data-console .CodeMirror {
   width: 600px;
-  height: 80px;
+  height: 30px;
   font-size: 18px;
+  position: relative;
+  left: 15px;
+  top: -20px;
+}
+.data-console .dropdown {
+  position: fixed;
 }
 .data-console-statement {
   margin-bottom: 2px;

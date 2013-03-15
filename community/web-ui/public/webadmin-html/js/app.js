@@ -73,29 +73,37 @@ angular.module('app.controllers.data.browser', ['app.services.graph', 'app.servi
 'use strict';
 
 angular.module('app.controllers.data.console', []).controller('ConsoleController', [
-  '$scope', 'consoleService', function($scope, consoleService) {
-    var synchronizeWithConsoleService;
-    $scope.engine = "shell";
+  '$scope', '$rootScope', 'consoleService', function($scope, $rootScope, consoleService) {
+    var synchronizeWithConsoleService, _ref;
+    if ((_ref = $rootScope.currentConsoleEngine) == null) {
+      $rootScope.currentConsoleEngine = "shell";
+    }
     synchronizeWithConsoleService = function() {
       var engineState;
       $scope.availableEngines = consoleService.engines;
-      if (consoleService.engines[$scope.engine] != null) {
-        engineState = consoleService.engines[$scope.engine];
+      if (consoleService.engines[$scope.currentConsoleEngine] != null) {
+        engineState = consoleService.engines[$scope.currentConsoleEngine];
         $scope.interactions = engineState.interactions;
         return $scope.engineName = engineState.name;
       } else {
         $scope.interactions = [];
-        return $scope.engineName = $scope.engine;
+        return $scope.engineName = $scope.currentConsoleEngine;
       }
     };
     $scope.$on('consoleService.changed', synchronizeWithConsoleService);
     synchronizeWithConsoleService();
     $scope.changeEngine = function(engine) {
-      $scope.engine = engine;
+      $rootScope.currentConsoleEngine = engine;
       return synchronizeWithConsoleService();
     };
+    $scope.prevHistory = function() {
+      return $scope.statement = "Prev";
+    };
+    $scope.nextHistory = function() {
+      return $scope.statement = "Next";
+    };
     return $scope.execute = function() {
-      consoleService.execute($scope.statement, $scope.engine);
+      consoleService.execute($scope.statement, $scope.currentConsoleEngine);
       return $scope.statement = "";
     };
   }
@@ -203,7 +211,17 @@ angular.module('app.directives', ['app.services']).directive('appVersion', [
       return elm.text("" + version + " " + edition + " Edition");
     };
   }
-]);
+]).directive('scrollHereOnChange', function() {
+  return function(scope, element, attrs) {
+    return scope.$watch(attrs.scrollHereOnChange, function() {
+      return setTimeout((function() {
+        if (window.innerHeight < (element[0].offsetTop + 50)) {
+          return window.scrollTo(0, element[0].offsetTop);
+        }
+      }), 0);
+    });
+  };
+});
 'use strict';
 
 /* Filters
@@ -359,14 +377,13 @@ angular.module('app.services.console', []).factory('consoleService', [
         var _this = this;
         this._defineEngine('http', 'REST Shell', new HttpEngine('http', this._appendInteraction));
         return $http.get('/db/manage/server/console').success(function(response) {
-          var engine, _i, _len, _ref, _results;
+          var engine, _i, _len, _ref;
           _ref = response.engines;
-          _results = [];
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             engine = _ref[_i];
-            _results.push(_this._initRemoteEngine(engine));
+            _this._initRemoteEngine(engine);
           }
-          return _results;
+          return $rootScope.$broadcast('consoleService.changed');
         }).error(this._onInitializingRemoteEnginesFailed);
       };
 

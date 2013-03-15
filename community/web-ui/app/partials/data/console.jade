@@ -1,15 +1,16 @@
-.dropdown
-  a.btn.dropdown-toggle(data-toggle="dropdown", role="button", href="#") Engine: {{ engineName }} 
-    b.caret
-  ul.dropdown-menu(role="menu")
-    li(ng-repeat='(key,engine) in availableEngines') 
-      a(ng-click='changeEngine(key)') {{engine.name}}
-.data-console
-  .row-fluid(ng-repeat='interaction in interactions')
-    .span12
-      pre.data-console-statement {{ interaction.statement }}
+.row-fluid.data-console
+
+  .span10
+    div(ng-repeat='interaction in interactions')
+      pre.data-console-statement(ng-show="interaction.statement") {{ interaction.statement }}
       pre.data-console-result {{ interaction.result }}
-  .row-fluid
-      div
-        .prefix >
-          textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Enter': execute}}", ng-model="statement")
+    .prefix(scroll-here-on-change="interactions.length") >
+      textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Enter': execute, 'Up': prevHistory, 'Down': nextHistory}}", ng-model="statement", autofocus)
+            
+  .span2
+    .dropdown
+      a.btn.dropdown-toggle(data-toggle="dropdown", role="button", href="#") Engine: {{ engineName }} 
+        b.caret
+      ul.dropdown-menu(role="menu")
+        li(ng-repeat='(key,engine) in availableEngines') 
+          a(ng-click='changeEngine(key)', data-toggle="dropdown") {{engine.name}}

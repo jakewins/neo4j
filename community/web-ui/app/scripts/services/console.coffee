@@ -105,7 +105,9 @@ angular.module('app.services.console', [])
         # Server-provided remote shells
         $http.get('/db/manage/server/console')
           .success( (response) =>
-            @_initRemoteEngine(engine) for engine in response.engines )
+            @_initRemoteEngine(engine) for engine in response.engines
+            $rootScope.$broadcast 'consoleService.changed'
+          )
           .error @_onInitializingRemoteEnginesFailed
   
       _onInitializingRemoteEnginesFailed : (err)=>

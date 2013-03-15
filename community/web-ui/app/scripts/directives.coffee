@@ -16,3 +16,12 @@ angular.module('app.directives', [
     (scope, elm, attrs) ->
       elm.text("#{version} #{edition} Edition")
 ])
+
+.directive('scrollHereOnChange', ->
+  (scope, element, attrs) ->
+    scope.$watch attrs.scrollHereOnChange, ->
+      setTimeout((->
+        if window.innerHeight < (element[0].offsetTop + 50)
+          window.scrollTo(0, element[0].offsetTop)
+      ),0)
+)

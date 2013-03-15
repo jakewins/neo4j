@@ -1,21 +1,19 @@
 
-<div class="dropdown"><a data-toggle="dropdown" role="button" href="#" class="btn dropdown-toggle">Engine: {{ engineName }} <b class="caret"></b></a>
-  <ul role="menu" class="dropdown-menu">
-    <li ng-repeat="(key,engine) in availableEngines"> <a ng-click="changeEngine(key)">{{engine.name}}</a></li>
-  </ul>
-</div>
-<div class="data-console">
-  <div ng-repeat="interaction in interactions" class="row-fluid">
-    <div class="span12">
-      <pre class="data-console-statement">{{ interaction.statement }}</pre>
+<div class="row-fluid data-console">
+  <div class="span10">
+    <div ng-repeat="interaction in interactions">
+      <pre ng-show="interaction.statement" class="data-console-statement">{{ interaction.statement }}</pre>
       <pre class="data-console-result">{{ interaction.result }}</pre>
     </div>
+    <div scroll-here-on-change="interactions.length" class="prefix">>
+      <textarea ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Enter': execute, 'Up': prevHistory, 'Down': nextHistory}}" ng-model="statement" autofocus="autofocus"></textarea>
+    </div>
   </div>
-  <div class="row-fluid">
-    <div>
-      <div class="prefix">>
-        <textarea ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Enter': execute}}" ng-model="statement"></textarea>
-      </div>
+  <div class="span2">
+    <div class="dropdown"><a data-toggle="dropdown" role="button" href="#" class="btn dropdown-toggle">Engine: {{ engineName }} <b class="caret"></b></a>
+      <ul role="menu" class="dropdown-menu">
+        <li ng-repeat="(key,engine) in availableEngines"> <a ng-click="changeEngine(key)" data-toggle="dropdown">{{engine.name}}</a></li>
+      </ul>
     </div>
   </div>
 </div>
