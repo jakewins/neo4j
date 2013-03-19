@@ -30,13 +30,7 @@ import org.neo4j.tooling.GlobalGraphOperations
 import org.neo4j.kernel.api.SchemaRuleNotFoundException
 import collection.mutable
 
-class TransactionBoundQueryContext(graph: GraphDatabaseAPI) extends QueryContext {
-
-  val tx: Transaction = graph.beginTx()
-  private val ctx: StatementContext = graph
-    .getDependencyResolver
-    .resolveDependency(classOf[ThreadToStatementContextBridge])
-    .getCtxForWriting
+class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction, ctx: StatementContext) extends QueryContext {
 
   def setLabelsOnNode(node: Long, labelIds: Iterable[Long]): Int = labelIds.foldLeft(0) {
     case (count, labelId) => if (ctx.addLabelToNode(labelId, node)) count + 1 else count
