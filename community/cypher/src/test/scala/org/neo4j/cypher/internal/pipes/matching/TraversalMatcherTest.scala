@@ -23,14 +23,9 @@ import org.junit.Test
 import org.neo4j.cypher.GraphDatabaseTestBase
 import org.neo4j.graphdb.{Node, Path}
 import org.neo4j.cypher.internal.pipes._
-import matching.SingleStep
-import org.neo4j.graphdb.DynamicRelationshipType.withName
 import org.neo4j.graphdb.Direction.OUTGOING
-import org.neo4j.cypher.internal.commands.True
-import org.neo4j.cypher.internal.spi.gdsimpl.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
-import scala.Some
 import org.neo4j.cypher.internal.commands.True
 
 

@@ -51,8 +51,6 @@ class DelegatingQueryContext(inner: QueryContext) extends QueryContext {
     inner.removeLabelsFromNode(node, labelIds)
   }
 
-  def getTransaction = inner.getTransaction
-
   def getOrCreatePropertyKeyId(propertyKey: String) = inner.getOrCreatePropertyKeyId(propertyKey)
 
   def getPropertyKeyId(propertyKey: String) = inner.getPropertyKeyId(propertyKey)

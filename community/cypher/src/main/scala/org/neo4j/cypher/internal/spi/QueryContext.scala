@@ -71,13 +71,6 @@ trait QueryContext {
 
   def getNodesByLabel(id: Long): Iterator[Node]
 
-  /**
-   * This should not exist. It's a transient stated before locking is done somewhere else
-   * @return
-   */
-  @Deprecated
-  def getTransaction: Transaction
-
   def upgradeToLockingQueryContext: LockingQueryContext = upgrade(this)
 
   def upgrade(context: QueryContext): LockingQueryContext
