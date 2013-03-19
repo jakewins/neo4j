@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.api.operations;
 
+import org.neo4j.helpers.Function;
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
 import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
@@ -28,7 +29,6 @@ import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public interface SchemaOperations
 {
-
     /**
      * Adds a {@link org.neo4j.kernel.impl.nioneo.store.IndexRule} to the database which applies globally on both
      * existing as well as new data.
@@ -65,4 +65,10 @@ public interface SchemaOperations
      */
     void dropIndexRule( IndexRule indexRule ) throws ConstraintViolationKernelException;
 
+    /**
+     * The schema state is flushed when ever the schema is updated. If you build objects
+     * the rely on the current state of the schema, use this to make sure you don't use
+     * outdated schema information.
+     */
+    <T> T getOrCreateFromSchemaState( Object key, Function<Void, T> creator );
 }

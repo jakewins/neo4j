@@ -392,4 +392,10 @@ public class StoreStatementContext implements StatementContext
     {
         return indexManager.existsForRelationships( indexName );
     }
+
+    @Override
+    public <T> T getOrCreateFromSchemaState( Object key, Function<Void, T> creator )
+    {
+        throw new UnsupportedOperationException( "Schema state is not handled by the stores" );
+    }
 }

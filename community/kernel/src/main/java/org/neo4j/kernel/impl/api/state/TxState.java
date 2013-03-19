@@ -44,6 +44,11 @@ public class TxState
         this.legacyState = legacyState;
     }
 
+    public boolean hasSchemaChanges()
+    {
+        return ruleDiffSets.isEmpty();
+
+    }
     public boolean hasChanges()
     {
         return !nodeStates.isEmpty() || !labelStates.isEmpty();

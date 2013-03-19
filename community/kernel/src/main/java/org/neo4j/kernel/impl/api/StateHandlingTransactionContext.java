@@ -36,15 +36,17 @@ public class StateHandlingTransactionContext extends DelegatingTransactionContex
      */
     @Deprecated
     private final TransactionState oldTransactionState;
+    private final SchemaStateHolder holder;
 
     public StateHandlingTransactionContext( TransactionContext actual, PersistenceCache persistenceCache,
-            TransactionState oldTransactionState, SchemaCache schemaCache )
+            TransactionState oldTransactionState, SchemaCache schemaCache, SchemaStateHolder holder )
     {
         super(actual);
         this.persistenceCache = persistenceCache;
         this.oldTransactionState = oldTransactionState;
         this.schemaCache = schemaCache;
         this.state = new TxState(new OldTxStateBridgeImpl( oldTransactionState ));
+        this.holder = holder;
     }
 
     @Override
@@ -71,5 +73,11 @@ public class StateHandlingTransactionContext extends DelegatingTransactionContex
         // - commit changes from tx state to the cache
         // TODO: This should *not* be done here, it should be done as part of transaction application (eg WriteTransaction)
         persistenceCache.apply( state );
+
+//        if ( state.hasSchemaChanges() )
+//            holder.flush();
+
+//        if ( state.hasSchemaStateChanges() )
+//            holder.apply( state.getSchemaStateUpdates() );
     }
 }

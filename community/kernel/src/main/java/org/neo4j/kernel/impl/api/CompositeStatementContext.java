@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import org.neo4j.helpers.Function;
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
 import org.neo4j.kernel.api.EntityNotFoundException;
 import org.neo4j.kernel.api.LabelNotFoundKernelException;
@@ -63,6 +64,16 @@ public abstract class CompositeStatementContext implements StatementContext
         this.delegateToClose    = delegate;
     }
 
+    public CompositeStatementContext( StatementContext delegate, SchemaOperations schemaOperations )
+    {
+        this.entityOperations   = delegate;
+        this.propertyOperations = delegate;
+        this.labelOperations    = delegate;
+        this.schemaOperations   = schemaOperations;
+        this.legacyOperations   = delegate;
+        this.delegateToClose    = delegate;
+    }
+
     // Hook methods
 
     protected void beforeOperation() {}
@@ -91,6 +102,7 @@ public abstract class CompositeStatementContext implements StatementContext
                     "implementation of the statement context interface." );
         }
     }
+
 
     //
     // READ OPERATIONS
@@ -304,6 +316,19 @@ public abstract class CompositeStatementContext implements StatementContext
         afterReadOperation();
         afterOperation();
 
+        return result;
+    }
+
+    @Override
+    public <T> T getOrCreateFromSchemaState( Object key, Function<Void, T> creator )
+    {
+        beforeOperation();
+        beforeReadOperation();
+
+        T result = schemaOperations.getOrCreateFromSchemaState( key, creator );
+
+        afterReadOperation();
+        afterOperation();
         return result;
     }
 
