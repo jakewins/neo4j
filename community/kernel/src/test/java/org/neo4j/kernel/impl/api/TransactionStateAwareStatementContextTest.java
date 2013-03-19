@@ -548,7 +548,7 @@ public class TransactionStateAwareStatementContextTest
 
         oldTxState = mock( OldTxStateBridge.class );
 
-        state = new TxState(oldTxState);
+        state = new TxState( oldTxState );
         txContext = new TransactionStateAwareStatementContext( store, state );
     }
     

@@ -39,16 +39,11 @@ public class TxState
 
     private final OldTxStateBridge legacyState;
 
-    public TxState(OldTxStateBridge legacyState)
+    public TxState( OldTxStateBridge legacyState )
     {
         this.legacyState = legacyState;
     }
 
-    public boolean hasSchemaChanges()
-    {
-        return ruleDiffSets.isEmpty();
-
-    }
     public boolean hasChanges()
     {
         return !nodeStates.isEmpty() || !labelStates.isEmpty();

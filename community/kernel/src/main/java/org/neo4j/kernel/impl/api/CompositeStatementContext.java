@@ -320,12 +320,12 @@ public abstract class CompositeStatementContext implements StatementContext
     }
 
     @Override
-    public <T> T getOrCreateFromSchemaState( Object key, Function<Void, T> creator )
+    public <K, V> V getOrCreateFromSchemaState( K key, Class<V> clazz, Function<K, V> creator )
     {
         beforeOperation();
         beforeReadOperation();
 
-        T result = schemaOperations.getOrCreateFromSchemaState( key, creator );
+        V result = schemaOperations.getOrCreateFromSchemaState( key, clazz, creator );
 
         afterReadOperation();
         afterOperation();

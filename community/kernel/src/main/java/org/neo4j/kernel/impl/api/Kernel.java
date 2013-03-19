@@ -27,6 +27,7 @@ import org.neo4j.kernel.api.TransactionContext;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.core.PropertyIndexManager;
+import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.SchemaRule;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
@@ -67,6 +68,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
     private final DependencyResolver dependencyResolver;
     private final PersistenceCache persistenceCache;
     private final SchemaCache schemaCache;
+    private final KernelSchemaStateHolder schemaStateHolder;
 
     // These non-final components are all circular dependencies in various configurations.
     // As we work towards refactoring the old kernel, we should work to remove these.
@@ -87,6 +89,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         this.dependencyResolver = dependencyResolver;
         this.persistenceCache = new PersistenceCache( new NodeCacheLoader( persistenceManager ) );
         this.schemaCache = schemaCache;
+        this.schemaStateHolder = new KernelSchemaStateHolder();
     }
     
     @Override
@@ -136,9 +139,10 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         // XXX: This is disabled during transition phase, we are still using the legacy transaction management stuff
         //result = new TransactionLifecycleTransactionContext( result, transactionManager, propertyIndexManager, persistenceManager, cache );
 
-        // + Transaction state and Caching
-        result = new StateHandlingTransactionContext( result, persistenceCache,
-                transactionManager.getTransactionState(), schemaCache );
+        // + Transaction state and caching
+        TransactionState transactionState = transactionManager.getTransactionState();
+        result = new StateHandlingTransactionContext( result,
+                persistenceCache, transactionState, schemaCache, schemaStateHolder );
         // + Constraints evaluation
         result = new ConstraintEvaluatingTransactionContext( result );
         // + Locking

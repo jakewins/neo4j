@@ -38,6 +38,7 @@ import org.neo4j.kernel.api.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.operations.SchemaOperations;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
@@ -47,11 +48,18 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
     private final TxState state;
     private final StatementContext delegate;
 
-    public TransactionStateAwareStatementContext( StatementContext actual, TxState state )
+    public TransactionStateAwareStatementContext( StatementContext actual,
+                                                  SchemaOperations schemaOperations,
+                                                  TxState state )
     {
-        super( actual );
+        super( actual, schemaOperations );
         this.state = state;
         this.delegate = actual;
+    }
+
+    public TransactionStateAwareStatementContext( StatementContext actual, TxState state )
+    {
+        this( actual, actual, state);
     }
 
     @Override

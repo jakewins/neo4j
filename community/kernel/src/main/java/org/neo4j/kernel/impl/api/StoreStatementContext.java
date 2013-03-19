@@ -394,7 +394,7 @@ public class StoreStatementContext implements StatementContext
     }
 
     @Override
-    public <T> T getOrCreateFromSchemaState( Object key, Function<Void, T> creator )
+    public <K, V> V getOrCreateFromSchemaState( K key, Class<V> clazz, Function<K, V> creator )
     {
         throw new UnsupportedOperationException( "Schema state is not handled by the stores" );
     }

@@ -207,7 +207,7 @@ public class TxStateTest
     public void before() throws Exception
     {
         legacyState = mock( OldTxStateBridge.class );
-        state = new TxState(legacyState);
+        state = new TxState( legacyState );
     }
 
     private IndexRule newIndexRule( long ruleId, long labelId, long propertyKey )

@@ -30,8 +30,8 @@ public class SchemaStateOperations extends DelegatingSchemaOperations
     }
 
     @Override
-    public <T> T getOrCreateFromSchemaState( Object key, Function<Void, T> creator )
+    public <K, V> V getOrCreateFromSchemaState( K key, Class<V> clazz, Function<K, V> creator )
     {
-        return stateHolder.getOrCreateFromSchemaState( key, creator );
+        return stateHolder.getOrCreate( key, clazz, creator );
     }
 }

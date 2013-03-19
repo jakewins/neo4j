@@ -68,10 +68,10 @@ public class LockingStatementContext extends CompositeStatementContext
     }
 
     @Override
-    public <T> T getOrCreateFromSchemaState( Object key, Function<Void, T> creator )
+    public <K, V> V getOrCreateFromSchemaState( K key, Class<V> value, Function<K, V> creator )
     {
         lockHolder.acquireSchemaReadLock();
-        return delegate.getOrCreateFromSchemaState( key, creator );
+        return delegate.getOrCreateFromSchemaState( key, value, creator );
     }
 
     @Override

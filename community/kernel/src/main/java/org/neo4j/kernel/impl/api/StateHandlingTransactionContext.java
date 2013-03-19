@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.api;
 
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.TransactionContext;
+import org.neo4j.kernel.api.operations.SchemaOperations;
 import org.neo4j.kernel.impl.api.state.OldTxStateBridgeImpl;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.core.TransactionState;
@@ -39,14 +40,14 @@ public class StateHandlingTransactionContext extends DelegatingTransactionContex
     private final SchemaStateHolder holder;
 
     public StateHandlingTransactionContext( TransactionContext actual, PersistenceCache persistenceCache,
-            TransactionState oldTransactionState, SchemaCache schemaCache, SchemaStateHolder holder )
+            TransactionState oldTransactionState, SchemaCache schemaCache, KernelSchemaStateHolder holder )
     {
         super(actual);
         this.persistenceCache = persistenceCache;
         this.oldTransactionState = oldTransactionState;
         this.schemaCache = schemaCache;
-        this.state = new TxState(new OldTxStateBridgeImpl( oldTransactionState ));
-        this.holder = holder;
+        this.holder = new TransactionAwareSchemaStateHolder( holder );
+        this.state = new TxState( new OldTxStateBridgeImpl( oldTransactionState ) );
     }
 
     @Override
@@ -56,8 +57,10 @@ public class StateHandlingTransactionContext extends DelegatingTransactionContex
         StatementContext result = super.newStatementContext();
         // + Caching
         result = new CachingStatementContext( result, persistenceCache, schemaCache );
+        // + Schema state flushing
+        SchemaOperations schemaStateFlushing = new SchemaStateOperations( result, holder );
         // + Transaction-local state awareness
-        result = new TransactionStateAwareStatementContext( result, state );
+        result = new TransactionStateAwareStatementContext( result, schemaStateFlushing, state );
         // + Old transaction state bridge
         result = new OldBridgingTransactionStateStatementContext( result, oldTransactionState );
 
@@ -70,14 +73,12 @@ public class StateHandlingTransactionContext extends DelegatingTransactionContex
     {
         // - Ensure transaction is committed to disk at this point
         super.commit();
+
         // - commit changes from tx state to the cache
         // TODO: This should *not* be done here, it should be done as part of transaction application (eg WriteTransaction)
         persistenceCache.apply( state );
 
-//        if ( state.hasSchemaChanges() )
-//            holder.flush();
-
-//        if ( state.hasSchemaStateChanges() )
-//            holder.apply( state.getSchemaStateUpdates() );
+        // - discard and/or update schema state
+        holder.commit();
     }
 }

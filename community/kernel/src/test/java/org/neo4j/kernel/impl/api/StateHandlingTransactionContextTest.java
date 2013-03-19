@@ -1,5 +1,8 @@
 package org.neo4j.kernel.impl.api;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+
 import org.junit.Test;
 import org.neo4j.helpers.Function;
 import org.neo4j.kernel.api.StatementContext;
@@ -13,26 +16,36 @@ public class StateHandlingTransactionContextTest
     {
         //GIVEN
 
-        TransactionContext inner = null;
+        TransactionContext inner = mock(TransactionContext.class);
         PersistenceCache persistenceCache = null;
         TransactionState transactionState = null;
         SchemaCache schemaCache = null;
-        SchemaStateHolder schemaStateHolder = null;
+        KernelSchemaStateHolder schemaStateHolder = new KernelSchemaStateHolder();
         StateHandlingTransactionContext transactionContext =
                 new StateHandlingTransactionContext( inner, persistenceCache, transactionState, schemaCache,
                         schemaStateHolder );
 
         // WHEN
         StatementContext statementContext = transactionContext.newStatementContext();
-        statementContext.getOrCreateFromSchemaState( "key", new Function<Void, Object>()
+        statementContext.getOrCreateFromSchemaState( "key", String.class, new Function<String, String>()
         {
             @Override
-            public Object apply( Void aVoid )
+            public String apply( String key )
             {
                 return "value";
             }
         } );
 
+        // THEN
+        String result = schemaStateHolder.getOrCreate( "key", String.class, new Function<String, String>()
+        {
+            @Override
+            public String apply( String key )
+            {
+                return "default";
+            }
+        } );
 
+        assertEquals("default", result);
     }
 }

@@ -70,5 +70,5 @@ public interface SchemaOperations
      * the rely on the current state of the schema, use this to make sure you don't use
      * outdated schema information.
      */
-    <T> T getOrCreateFromSchemaState( Object key, Function<Void, T> creator );
+    <K, V> V getOrCreateFromSchemaState( K key, Class<V> clazz, Function<K, V> creator );
 }

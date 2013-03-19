@@ -1,29 +1,16 @@
+/*
+ * Copyright (C) 2012 Neo Technology
+ * All rights reserved
+ */
 package org.neo4j.kernel.impl.api;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import org.neo4j.helpers.Function;
 
-public class SchemaStateHolder
+public interface SchemaStateHolder
 {
-    private Map<Object, Object> state = new HashMap<Object, Object>();
+    public <K, V> V getOrCreate( K key, Class<V> clazz, Function<K, V> creator );
 
-    public <T> T getOrCreateFromSchemaState( Object key, Function<Object, T> creator )
-    {
-        if(state.containsKey( key ))
-        {
-            return (T) state.get( key );
-        }
+    public void flush();
 
-        T value = creator.apply( key );
-        state.put( key, value );
-
-        return value;
-    }
-
-    public void flush()
-    {
-
-    }
+    public void commit();
 }
