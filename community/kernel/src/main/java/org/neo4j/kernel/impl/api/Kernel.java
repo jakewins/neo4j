@@ -68,7 +68,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
     private final DependencyResolver dependencyResolver;
     private final PersistenceCache persistenceCache;
     private final SchemaCache schemaCache;
-    private final KernelSchemaStateHolder schemaStateHolder;
+    private final UpdateableSchemaStateHolder schemaStateHolder;
 
     // These non-final components are all circular dependencies in various configurations.
     // As we work towards refactoring the old kernel, we should work to remove these.
@@ -79,7 +79,8 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
 
     public Kernel( AbstractTransactionManager transactionManager, PropertyIndexManager propertyIndexManager,
             PersistenceManager persistenceManager, XaDataSourceManager dataSourceManager, LockManager lockManager,
-            SchemaCache schemaCache, DependencyResolver dependencyResolver )
+            SchemaCache schemaCache, UpdateableSchemaStateHolder schemaStateHolder,
+            DependencyResolver dependencyResolver )
     {
         this.transactionManager = transactionManager;
         this.propertyIndexManager = propertyIndexManager;
@@ -89,7 +90,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         this.dependencyResolver = dependencyResolver;
         this.persistenceCache = new PersistenceCache( new NodeCacheLoader( persistenceManager ) );
         this.schemaCache = schemaCache;
-        this.schemaStateHolder = new KernelSchemaStateHolder();
+        this.schemaStateHolder = schemaStateHolder;
     }
     
     @Override

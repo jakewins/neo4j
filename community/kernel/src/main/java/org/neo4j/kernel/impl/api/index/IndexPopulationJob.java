@@ -37,6 +37,7 @@ import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
+import org.neo4j.kernel.impl.api.SchemaStateHolder;
 import org.neo4j.kernel.impl.api.index.IndexingService.StoreScan;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.logging.Logging;
@@ -57,6 +58,7 @@ public class IndexPopulationJob implements Runnable
     private final IndexDescriptor descriptor;
     private final IndexPopulator populator;
     private final FlippableIndexProxy flipper;
+    private final SchemaStateHolder stateHolder;
     private final StringLogger log;
     private final CountDownLatch doneSignal = new CountDownLatch( 1 );
 
@@ -64,12 +66,14 @@ public class IndexPopulationJob implements Runnable
     private volatile boolean cancelled;
 
     public IndexPopulationJob( IndexDescriptor descriptor, IndexPopulator populator, FlippableIndexProxy flipper,
-                               IndexingService.IndexStoreView storeView, Logging logging )
+                               IndexingService.IndexStoreView storeView, SchemaStateHolder stateHolder,
+                               Logging logging )
     {
         this.descriptor = descriptor;
         this.populator = populator;
         this.flipper = flipper;
         this.storeView = storeView;
+        this.stateHolder = stateHolder;
         this.log = logging.getLogger( getClass() );
     }
     
@@ -95,6 +99,7 @@ public class IndexPopulationJob implements Runnable
                 {
                     populateFromQueueIfAvailable( Long.MAX_VALUE );
                     populator.close( true );
+                    stateHolder.flush();
                     return null;
                 }
             };

@@ -18,7 +18,7 @@ public class SchemaStateOperations extends DelegatingSchemaOperations
     @Override
     public IndexRule addIndexRule( long labelId, long propertyKey ) throws ConstraintViolationKernelException
     {
-        stateHolder.flush();
+        // stateHolder.flush() is called only when the index actually goes online
         return delegate.addIndexRule( labelId, propertyKey );
     }
 

@@ -40,6 +40,7 @@ import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.impl.api.SchemaStateHolder;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.util.JobScheduler;
@@ -73,15 +74,20 @@ public class IndexingService extends LifecycleAdapter
     private final IndexStoreView storeView;
     private final Logging logging;
     private final StringLogger logger;
+    private final SchemaStateHolder stateHolder;
 
-    public IndexingService( JobScheduler scheduler, SchemaIndexProvider provider,
-            IndexStoreView storeView, Logging logging )
+    public IndexingService( JobScheduler scheduler,
+                            SchemaIndexProvider provider,
+                            IndexStoreView storeView,
+                            SchemaStateHolder stateHolder,
+                            Logging logging )
     {
         this.scheduler = scheduler;
         this.provider = provider;
         this.storeView = storeView;
         this.logging = logging;
         this.logger = logging.getLogger( getClass() );
+        this.stateHolder = stateHolder;
 
         if ( provider == null )
         {
@@ -284,17 +290,17 @@ public class IndexingService extends LifecycleAdapter
 
     private IndexProxy createPopulatingIndexProxy( final long ruleId, final IndexDescriptor descriptor )
     {
-        FlippableIndexProxy flippableIndex = new FlippableIndexProxy( );
+        FlippableIndexProxy flipper = new FlippableIndexProxy( );
 
         // TODO: This is here because there is a circular dependency from PopulatingIndexProxy to FlippableIndexProxy
         IndexPopulator populator = getPopulatorFromProvider( ruleId );
         PopulatingIndexProxy populatingIndex =
-                new PopulatingIndexProxy( scheduler, descriptor, populator, flippableIndex, storeView, logging );
-        flippableIndex.setFlipTarget( singleProxy( populatingIndex ) );
-        flippableIndex.flip();
+            new PopulatingIndexProxy( scheduler, descriptor, populator, flipper, storeView, stateHolder, logging );
+        flipper.setFlipTarget( singleProxy( populatingIndex ) );
+        flipper.flip();
 
         // Prepare for flipping to online mode
-        flippableIndex.setFlipTarget( new IndexProxyFactory()
+        flipper.setFlipTarget( new IndexProxyFactory()
         {
             @Override
             public IndexProxy create()
@@ -303,7 +309,7 @@ public class IndexingService extends LifecycleAdapter
             }
         } );
 
-        IndexProxy result = contractCheckedProxy( flippableIndex, false );
+        IndexProxy result = contractCheckedProxy( flipper, false );
         return serviceDecoratedProxy( ruleId, result );
     }
 

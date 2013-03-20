@@ -77,7 +77,10 @@ import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.extension.KernelExtensions;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.impl.api.Kernel;
+import org.neo4j.kernel.impl.api.KernelSchemaStateHolder;
 import org.neo4j.kernel.impl.api.SchemaCache;
+import org.neo4j.kernel.impl.api.SchemaStateHolder;
+import org.neo4j.kernel.impl.api.UpdateableSchemaStateHolder;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.cache.Cache;
 import org.neo4j.kernel.impl.cache.CacheProvider;
@@ -221,6 +224,7 @@ public abstract class InternalAbstractGraphDatabase
     protected ThreadToStatementContextBridge statementContextProvider;
     protected BridgingCacheAccess cacheBridge;
     protected JobScheduler jobScheduler;
+    protected UpdateableSchemaStateHolder stateHolder;
 
     protected final LifeSupport life = new LifeSupport();
     private final Map<String,CacheProvider> cacheProviders;
@@ -445,8 +449,9 @@ public abstract class InternalAbstractGraphDatabase
         
         SchemaCache schemaCache = new SchemaCache( Collections.<SchemaRule>emptyList() );
 
+        stateHolder = new KernelSchemaStateHolder();
         kernelAPI = life.add( new Kernel( txManager, propertyIndexManager, persistenceManager,
-                xaDataSourceManager, lockManager, schemaCache, dependencyResolver ) );
+                xaDataSourceManager, lockManager, schemaCache, stateHolder, dependencyResolver ) );
         // XXX: Circular dependency, temporary during transition to KernelAPI - TxManager should not depend on KernelAPI
         txManager.setKernel(kernelAPI);
 
@@ -821,7 +826,7 @@ public abstract class InternalAbstractGraphDatabase
             neoDataSource = new NeoStoreXaDataSource( config,
                     storeFactory, lockManager, logging.getLogger( NeoStoreXaDataSource.class ),
                     xaFactory, stateFactory, cacheBridge,
-                    transactionInterceptorProviders, jobScheduler, logging, dependencyResolver );
+                    transactionInterceptorProviders, jobScheduler, logging, stateHolder, dependencyResolver );
             xaDataSourceManager.registerDataSource( neoDataSource );
 
         }

@@ -1,8 +1,8 @@
 package org.neo4j.kernel.impl.api;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +24,7 @@ public class SchemaStateOperationsTest
         stateOperations.addIndexRule( 0L, 1L );
 
         // THEN
-        verify( stateHolder ).flush();
+        verifyZeroInteractions( stateOperations );
     }
 
     @Test
@@ -38,7 +38,7 @@ public class SchemaStateOperationsTest
         stateOperations.dropIndexRule( rule );
 
         // THEN
-        verify( stateHolder, times(2) ).flush();
+        verify( stateHolder).flush();
     }
 
     @Before

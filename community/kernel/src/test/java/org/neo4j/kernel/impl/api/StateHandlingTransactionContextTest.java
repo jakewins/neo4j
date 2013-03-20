@@ -70,7 +70,6 @@ public class StateHandlingTransactionContextTest
         // GIVEN AN INNER STATEMENT CONTEXT
         IndexRule rule = new IndexRule( 0L, 0L, 1L );
         StatementContext innerStatementContext = mock( StatementContext.class );
-        when( innerStatementContext.addIndexRule( 0L, 1L ) ).thenReturn( rule );
 
         // GIVEN A TRANSACTION CONTEXT
         TransactionContext inner = mock(TransactionContext.class);
@@ -86,7 +85,7 @@ public class StateHandlingTransactionContextTest
         StatementContext statementContext = transactionContext.newStatementContext();
 
         // WHEN UPDATING THE SCHEMA
-        statementContext.addIndexRule( 0L, 1L );
+        statementContext.dropIndexRule( rule );
 
         // THEN
         verifyZeroInteractions( stateHolder );
