@@ -9,8 +9,9 @@ public class TransactionAwareSchemaStateHolder implements SchemaStateHolder
 {
     private final UpdateableSchemaStateHolder delegate;
 
-    private final Map<Object, Object> map = new HashMap<Object, Object>();
+    private Map<Object, Object> map = new HashMap<Object, Object>();
     private boolean wasFlushed = false;
+    private boolean wasCommited = false;
 
     public TransactionAwareSchemaStateHolder( UpdateableSchemaStateHolder delegate )
     {
@@ -20,12 +21,14 @@ public class TransactionAwareSchemaStateHolder implements SchemaStateHolder
     @Override
     public <K, V> V getOrCreate( K key, Class<V> clazz, Function<K, V> creator )
     {
+        ensureNotCommitted();
         return getOrCreateAndPut( key, clazz, creator, map );
     }
 
     @Override
     public <K, V> V getOrCreateAndPut( K key, Class<V> clazz, Function<K, V> creator, Map<Object, Object> targetMap )
     {
+        ensureNotCommitted();
         if ( map.containsKey( key ) )
         {
             return clazz.cast( map.get( key ) );
@@ -45,6 +48,7 @@ public class TransactionAwareSchemaStateHolder implements SchemaStateHolder
     @Override
     public void flush()
     {
+        ensureNotCommitted();
         wasFlushed = true;
         map.clear();
     }
@@ -62,7 +66,13 @@ public class TransactionAwareSchemaStateHolder implements SchemaStateHolder
         }
         finally {
             wasFlushed = false;
-            map.clear();
+            wasCommited = true;
         }
+    }
+
+    private void ensureNotCommitted()
+    {
+        if (wasCommited)
+            throw new IllegalStateException( getClass().getSimpleName() + " has already been commited" );
     }
 }

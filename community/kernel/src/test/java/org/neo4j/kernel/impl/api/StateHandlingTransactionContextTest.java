@@ -1,51 +1,116 @@
 package org.neo4j.kernel.impl.api;
 
-import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.anyMap;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
+import static org.neo4j.helpers.Functions.constant;
+
+import java.util.Map;
 
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.neo4j.helpers.Function;
+import org.neo4j.helpers.Functions;
+import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.api.ConstraintViolationKernelException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.TransactionContext;
 import org.neo4j.kernel.impl.core.TransactionState;
+import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class StateHandlingTransactionContextTest
 {
     @Test
     public void should_not_apply_schema_state_changes_until_commit()
     {
-        //GIVEN
+        // GIVEN A STATE HOLDER
+        final Function<Object,String> valueCreator = constant( "created_value" );
+        KernelSchemaStateHolder stateHolder = mock( KernelSchemaStateHolder.class );
+        when( stateHolder.getOrCreateAndPut( eq( "key" ), eq( String.class ), eq( valueCreator ), anyMap() ) )
+                .thenAnswer( new UpdateHolderMap() );
 
+        // GIVEN A TRANSACTION CONTEXT
         TransactionContext inner = mock(TransactionContext.class);
-        PersistenceCache persistenceCache = null;
-        TransactionState transactionState = null;
+        PersistenceCache persistenceCache = mock(PersistenceCache.class);
+        TransactionState txState = null;
         SchemaCache schemaCache = null;
-        KernelSchemaStateHolder schemaStateHolder = new KernelSchemaStateHolder();
+
         StateHandlingTransactionContext transactionContext =
-                new StateHandlingTransactionContext( inner, persistenceCache, transactionState, schemaCache,
-                        schemaStateHolder );
+            new StateHandlingTransactionContext( inner, persistenceCache, txState, schemaCache, stateHolder );
+
+        // GIVEN A STATEMENT CONTEXT
+        StatementContext statementContext = transactionContext.newStatementContext();
 
         // WHEN
-        StatementContext statementContext = transactionContext.newStatementContext();
-        statementContext.getOrCreateFromSchemaState( "key", String.class, new Function<String, String>()
-        {
-            @Override
-            public String apply( String key )
-            {
-                return "value";
-            }
-        } );
+        statementContext.getOrCreateFromSchemaState( "key", String.class, valueCreator );
 
         // THEN
-        String result = schemaStateHolder.getOrCreate( "key", String.class, new Function<String, String>()
-        {
-            @Override
-            public String apply( String key )
-            {
-                return "default";
-            }
-        } );
+        verify( stateHolder ).getOrCreateAndPut( eq( "key" ), eq( String.class ), eq( valueCreator ), anyMap() );
+        verifyNoMoreInteractions( stateHolder );
 
-        assertEquals("default", result);
+        // WHEN
+        transactionContext.commit();
+
+        // THEN
+        verify( stateHolder ).apply( eq( MapUtil.stringMap( "key", "created_value" ) ) );
+    }
+
+    @Test
+    public void should_not_flush_schema_state_changes_until_commit() throws ConstraintViolationKernelException
+    {
+        // GIVEN A STATE HOLDER
+        KernelSchemaStateHolder stateHolder = mock( KernelSchemaStateHolder.class );
+
+        // GIVEN AN INNER STATEMENT CONTEXT
+        IndexRule rule = new IndexRule( 0L, 0L, 1L );
+        StatementContext innerStatementContext = mock( StatementContext.class );
+        when( innerStatementContext.addIndexRule( 0L, 1L ) ).thenReturn( rule );
+
+        // GIVEN A TRANSACTION CONTEXT
+        TransactionContext inner = mock(TransactionContext.class);
+        when( inner.newStatementContext() ).thenReturn( innerStatementContext );
+        PersistenceCache persistenceCache = mock(PersistenceCache.class);
+        TransactionState txState = null;
+        SchemaCache schemaCache = null;
+
+        StateHandlingTransactionContext transactionContext =
+            new StateHandlingTransactionContext( inner, persistenceCache, txState, schemaCache, stateHolder );
+
+        // GIVEN A STATEMENT CONTEXT DERIVED FROM THE TRANSACTION CONTEXT
+        StatementContext statementContext = transactionContext.newStatementContext();
+
+        // WHEN UPDATING THE SCHEMA
+        statementContext.addIndexRule( 0L, 1L );
+
+        // THEN
+        verifyZeroInteractions( stateHolder );
+
+        // WHEN
+        transactionContext.commit();
+
+        // THEN
+        verify( stateHolder ).flush();
+    }
+
+    private static class UpdateHolderMap implements Answer<String>
+    {
+        @Override
+        public String answer( InvocationOnMock invocation ) throws Throwable
+        {
+            Object[] arguments = invocation.getArguments();
+            String key = (String) arguments[0];
+            Function<String, String> creator = (Function<String, String>) arguments[2];
+            Map<Object, Object> targetMap = (Map<Object, Object>) arguments[3];
+
+            String value = creator.apply( key );
+            targetMap.put( key, value );
+            return value;
+        }
     }
 }

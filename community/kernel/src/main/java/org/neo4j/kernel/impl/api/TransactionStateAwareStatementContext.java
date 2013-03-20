@@ -47,6 +47,7 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
 {
     private final TxState state;
     private final StatementContext delegate;
+    private final SchemaOperations schemaOperations;
 
     public TransactionStateAwareStatementContext( StatementContext actual,
                                                   SchemaOperations schemaOperations,
@@ -55,6 +56,7 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
         super( actual, schemaOperations );
         this.state = state;
         this.delegate = actual;
+        this.schemaOperations = schemaOperations;
     }
 
     public TransactionStateAwareStatementContext( StatementContext actual, TxState state )
@@ -148,7 +150,7 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
     @Override
     public IndexRule addIndexRule( long labelId, long propertyKey ) throws ConstraintViolationKernelException
     {
-        IndexRule rule = delegate.addIndexRule( labelId, propertyKey ); 
+        IndexRule rule = schemaOperations.addIndexRule( labelId, propertyKey );
         state.addIndexRule( rule );
         return rule;
     }
@@ -157,7 +159,7 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
     public void dropIndexRule( IndexRule indexRule ) throws ConstraintViolationKernelException
     {
         state.removeIndexRule( indexRule );
-        delegate.dropIndexRule( indexRule );
+        schemaOperations.dropIndexRule( indexRule );
     }
     
     @Override
@@ -166,7 +168,7 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
         Iterable<IndexRule> committedRules;
         try
         {
-            committedRules = option( delegate.getIndexRule( labelId, propertyKey ) );
+            committedRules = option( schemaOperations.getIndexRule( labelId, propertyKey ) );
         }
         catch ( SchemaRuleNotFoundException e )
         {

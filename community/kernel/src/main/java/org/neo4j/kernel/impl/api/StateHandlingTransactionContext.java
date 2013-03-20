@@ -40,7 +40,7 @@ public class StateHandlingTransactionContext extends DelegatingTransactionContex
     private final SchemaStateHolder holder;
 
     public StateHandlingTransactionContext( TransactionContext actual, PersistenceCache persistenceCache,
-            TransactionState oldTransactionState, SchemaCache schemaCache, KernelSchemaStateHolder holder )
+            TransactionState oldTransactionState, SchemaCache schemaCache, UpdateableSchemaStateHolder holder )
     {
         super(actual);
         this.persistenceCache = persistenceCache;
