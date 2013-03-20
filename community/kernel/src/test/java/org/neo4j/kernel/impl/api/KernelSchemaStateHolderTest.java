@@ -14,63 +14,62 @@ public class KernelSchemaStateHolderTest
     private KernelSchemaStateHolder holder;
 
     @Test
-    public void should_create_missing_state() {
-        // GIVEN
-        String result = holder.getOrCreate( "key", String.class, constant( "value" ) );
-
-        // THEN
-        assertEquals("value", result);
-    }
-
-
-    @Test
-    public void should_return_existing_state() {
-        // GIVEN
-        holder.getOrCreate( "key", String.class, constant( "value" ) );
-
-        // WHEN
-        String result = holder.getOrCreate( "key", String.class, constant( "update" ) );
-
-
-        // THEN
-        assertEquals("value", result);
-    }
-
-
-    @Test
-    public void should_clear_existing_state_on_flush()
+    public void should_create_missing_state()
     {
         // GIVEN
-        holder.getOrCreate( "key", String.class, constant( "value" ) );
+        String result = holder.getOrCreate( "key", String.class, constant( "created_value" ) );
+
+        // THEN
+        assertEquals( "created_value", result );
+    }
+
+    @Test
+    public void should_return_original_state()
+    {
+        // GIVEN
+        holder.getOrCreate( "key", String.class, constant( "original_value" ) );
+
+        // WHEN
+        String result = holder.getOrCreate( "key", String.class, constant( "updated_value" ) );
+
+        // THEN
+        assertEquals( "original_value", result );
+    }
+
+    @Test
+    public void should_clear_original_state_on_flush()
+    {
+        // GIVEN
+        holder.getOrCreate( "key", String.class, constant( "original_value" ) );
 
         // WHEN
         holder.flush();
-        String result = holder.getOrCreate( "key", String.class, constant( "update" ) );
+        String result = holder.getOrCreate( "key", String.class, constant( "updated_value" ) );
 
         // THEN
-        assertEquals("update", result);
+        assertEquals( "updated_value", result );
     }
 
     @Test
     public void should_apply_updates()
     {
         // GIVEN
-        Map<String, String> update = MapUtil.stringMap( "key", "value" );
+        Map<String, String> update = MapUtil.stringMap( "key", "original_value" );
 
         // WHEN
         holder.apply( update );
-        String result = holder.getOrCreate( "key", String.class, constant( "update" ) );
 
         // THEN
-        assertEquals( "value", result );
+        String result = holder.getOrCreate( "key", String.class, constant( "updated_value" ) );
+        assertEquals( "original_value", result );
     }
 
     @Test(expected = /* THEN */ IllegalArgumentException.class)
     public void should_throw_when_updates_overwrite()
     {
         // GIVEN
-        holder.getOrCreate( "key", String.class, constant( "value" ) );
-        Map<String, String> update = MapUtil.stringMap( "key", "update" );
+        holder.getOrCreate( "key", String.class, constant( "original_value" ) );
+        Map<String, String> update = MapUtil.stringMap( "key", "updated_value" );
 
         // WHEN
         holder.apply( update );

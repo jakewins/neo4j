@@ -4,13 +4,17 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.util.Map;
+
 import org.neo4j.helpers.Function;
 
 public interface SchemaStateHolder
 {
-    public <K, V> V getOrCreate( K key, Class<V> clazz, Function<K, V> creator );
+    <K, V> V getOrCreate( K key, Class<V> clazz, Function<K, V> creator );
 
-    public void flush();
+    <K, V> V getOrCreateAndPut( K key, Class<V> clazz, Function<K, V> creator, Map<Object, Object> targetMap );
 
-    public void commit();
+    void flush();
+
+    void commit();
 }

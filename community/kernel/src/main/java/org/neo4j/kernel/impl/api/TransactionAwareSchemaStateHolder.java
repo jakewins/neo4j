@@ -7,23 +7,39 @@ import org.neo4j.helpers.Function;
 
 public class TransactionAwareSchemaStateHolder implements SchemaStateHolder
 {
-    private final KernelSchemaStateHolder holder;
+    private final UpdateableSchemaStateHolder delegate;
 
     private final Map<Object, Object> map = new HashMap<Object, Object>();
     private boolean wasFlushed = false;
 
-    public TransactionAwareSchemaStateHolder( KernelSchemaStateHolder holder )
+    public TransactionAwareSchemaStateHolder( UpdateableSchemaStateHolder delegate )
     {
-        this.holder = holder;
+        this.delegate = delegate;
     }
 
     @Override
     public <K, V> V getOrCreate( K key, Class<V> clazz, Function<K, V> creator )
     {
+        return getOrCreateAndPut( key, clazz, creator, map );
+    }
+
+    @Override
+    public <K, V> V getOrCreateAndPut( K key, Class<V> clazz, Function<K, V> creator, Map<Object, Object> targetMap )
+    {
         if ( map.containsKey( key ) )
+        {
             return clazz.cast( map.get( key ) );
-        else
-            return holder.getOrCreateAndPut( key, clazz, creator, map );
+        }
+        else {
+            if (wasFlushed)
+            {
+                V value = creator.apply( key );
+                targetMap.put( key, value );
+                return value;
+            }
+            else
+                return delegate.getOrCreateAndPut( key, clazz, creator, targetMap );
+        }
     }
 
     @Override
@@ -39,8 +55,10 @@ public class TransactionAwareSchemaStateHolder implements SchemaStateHolder
         try
         {
             if (wasFlushed)
-                holder.flush();
-            holder.apply( map );
+            {
+                delegate.flush();
+            }
+            delegate.apply( map );
         }
         finally {
             wasFlushed = false;

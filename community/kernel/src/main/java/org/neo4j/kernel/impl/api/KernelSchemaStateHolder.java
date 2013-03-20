@@ -5,7 +5,7 @@ import java.util.Map;
 
 import org.neo4j.helpers.Function;
 
-public class KernelSchemaStateHolder implements SchemaStateHolder
+public class KernelSchemaStateHolder implements UpdateableSchemaStateHolder
 {
     private Map<Object, Object> state = new HashMap<Object, Object>();
 
