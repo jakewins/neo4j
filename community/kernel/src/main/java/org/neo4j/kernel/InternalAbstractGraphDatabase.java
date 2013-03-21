@@ -64,6 +64,7 @@ import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.Service;
 import org.neo4j.helpers.Settings;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.helpers.collection.LruMap;
 import org.neo4j.kernel.api.KernelAPI;
 import org.neo4j.kernel.api.KernelException;
 import org.neo4j.kernel.api.SchemaRuleNotFoundException;
@@ -449,7 +450,9 @@ public abstract class InternalAbstractGraphDatabase
         
         SchemaCache schemaCache = new SchemaCache( Collections.<SchemaRule>emptyList() );
 
-        stateHolder = new KernelSchemaStateHolder();
+        int queryCacheSize = config.get( GraphDatabaseSettings.query_cache_size );
+        stateHolder = new KernelSchemaStateHolder( new LruMap<Object, Object>(queryCacheSize) );
+
         kernelAPI = life.add( new Kernel( txManager, propertyIndexManager, persistenceManager,
                 xaDataSourceManager, lockManager, schemaCache, stateHolder, dependencyResolver ) );
         // XXX: Circular dependency, temporary during transition to KernelAPI - TxManager should not depend on KernelAPI

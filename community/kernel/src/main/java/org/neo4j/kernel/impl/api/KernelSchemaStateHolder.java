@@ -7,7 +7,17 @@ import org.neo4j.helpers.Function;
 
 public class KernelSchemaStateHolder implements UpdateableSchemaStateHolder
 {
-    private Map<Object, Object> state = new HashMap<Object, Object>();
+    private Map<Object, Object> state;
+
+    public KernelSchemaStateHolder()
+    {
+        this(new HashMap<Object, Object>());
+    }
+
+    public KernelSchemaStateHolder( Map<Object, Object> state )
+    {
+        this.state = state;
+    }
 
     public <K, V> V getOrCreate( K key, Class<V> clazz, Function<K, V> creator ) {
         return getOrCreateAndPut( key, clazz, creator, state );
