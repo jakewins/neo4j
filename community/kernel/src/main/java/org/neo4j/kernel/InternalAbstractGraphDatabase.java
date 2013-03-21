@@ -391,8 +391,7 @@ public abstract class InternalAbstractGraphDatabase
 
         stateFactory = createTransactionStateFactory();
 
-        int queryCacheSize = config.get(GraphDatabaseSettings.query_cache_size);
-        updateableSchemaState = new KernelSchemaStateStore( new LruMap<Object, Object>(queryCacheSize) );
+        updateableSchemaState = new KernelSchemaStateStore( newSchemaStateMap() );
 
         if ( readOnly )
         {
@@ -523,6 +522,11 @@ public abstract class InternalAbstractGraphDatabase
 
         // TODO This is probably too coarse-grained and we should have some strategy per user of config instead
         life.add( new ConfigurationChangedRestarter() );
+    }
+
+    private Map<Object, Object> newSchemaStateMap() {
+        int queryCacheSize = config.get(GraphDatabaseSettings.query_cache_size);
+        return new LruMap<Object, Object>(queryCacheSize);
     }
 
     protected TransactionStateFactory createTransactionStateFactory()

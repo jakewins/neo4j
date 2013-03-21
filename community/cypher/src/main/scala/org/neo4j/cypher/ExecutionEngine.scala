@@ -22,6 +22,7 @@ package org.neo4j.cypher
 import internal.commands._
 import internal.executionplan.ExecutionPlanBuilder
 import internal.executionplan.verifiers.{IndexHintVerifier, Verifier}
+import internal.LRUCache
 import internal.spi.gdsimpl.TransactionBoundQueryContext
 import internal.spi.QueryContext
 import scala.collection.JavaConverters._
@@ -38,8 +39,10 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
 
   val parser = createCorrectParser()
   val planBuilder = new ExecutionPlanBuilder(graph)
-
   val verifiers:Seq[Verifier] = Seq(IndexHintVerifier)
+
+  private val queryCache = new LRUCache[String, AbstractQuery](getQueryCacheSize)
+
 
   @throws(classOf[SyntaxException])
   def profile(query: String, params: Map[String, Any]): ExecutionResult = {
@@ -79,9 +82,9 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
 
   @throws(classOf[SyntaxException])
   def prepare(query: String): ExecutionPlan =  {
-    val parsedQuery: AbstractQuery = parser.parse(query)
-    verify(parsedQuery)
+    val parsedQuery: AbstractQuery = queryCache.getOrElseUpdate(query, { parser.parse(query) })
     withQueryContext { (ctx:QueryContext) =>
+      verify(parsedQuery)
       ctx.getOrCreateFromSchemaState(query, (_) => planBuilder.build(parsedQuery))
     }
   }
