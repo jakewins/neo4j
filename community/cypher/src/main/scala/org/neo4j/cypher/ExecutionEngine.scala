@@ -24,6 +24,7 @@ import internal.executionplan.ExecutionPlanBuilder
 import internal.executionplan.verifiers.{IndexHintVerifier, Verifier}
 import internal.LRUCache
 import internal.spi.gdsimpl.TransactionBoundQueryContext
+import internal.spi.QueryContext
 import scala.collection.JavaConverters._
 import java.util.{Map => JavaMap}
 import org.neo4j.kernel.{ThreadToStatementContextBridge, GraphDatabaseAPI, InternalAbstractGraphDatabase}
@@ -92,7 +93,9 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
   def prepare(query: String): ExecutionPlan =  {
     val parsedQuery: AbstractQuery = parser.parse(query)
     verify(parsedQuery)
-    executionPlanCache.getOrElseUpdate(query, planBuilder.build(parsedQuery))
+    withQueryContext { (ctx:QueryContext) =>
+      ctx.getOrCreateFromSchemaState(query, (_) => planBuilder.build(parsedQuery))
+    }
   }
 
   def verify(query: AbstractQuery) {
@@ -100,29 +103,33 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
       verifier.verify(query)
   }
 
-  def isPrepared(query : String) : Boolean =
-    executionPlanCache.containsKey(query)
+  def isPrepared(query : String) : Boolean = withQueryContext {
+    (ctx:QueryContext) => ctx.schemaStateContains(query)
+  }
 
   def execute(query: AbstractQuery, params: Map[String, Any]): ExecutionResult =
     planBuilder.build(query).execute(queryContext, params)
+
+  private def withQueryContext[T]( f: QueryContext => T ) : T = {
+    val ctx = queryContext
+    var success = true
+    try {
+      f(ctx)
+    } catch {
+      case t : Throwable =>
+        success = false
+        throw t
+    } finally
+    {
+      ctx.close(success)
+    }
+  }
 
   private def checkScalaVersion() {
     if (util.Properties.versionString.matches("^version 2.9.0")) {
       throw new Error("Cypher can only run with Scala 2.9.0. It looks like the Scala version is: " +
         util.Properties.versionString)
     }
-  }
-
-  private val executionPlanCache = new LRUCache[String, ExecutionPlan]( getQueryCacheSize() ) {}
-
-  private def getQueryCacheSize() : Int = if (graph.isInstanceOf[InternalAbstractGraphDatabase]) {
-    val database = graph.asInstanceOf[InternalAbstractGraphDatabase]
-    database.getConfig.get(GraphDatabaseSettings.query_cache_size) match {
-      case v:java.lang.Integer => v
-      case _ => 100
-    }
-  } else {
-    100
   }
 
   val verifiers:Seq[Verifier] = Seq(IndexHintVerifier)

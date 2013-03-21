@@ -69,6 +69,17 @@ public class TransactionalSchemaStateImpl implements TransactionalSchemaState
     }
 
     @Override
+    public <K, V> V get( K key )
+    {
+        ensureNotCommitted();
+        if(map.containsKey( key ))
+        {
+            return (V) map.get( key );
+        }
+        return delegate.get( key );
+    }
+
+    @Override
     public void flush()
     {
         ensureNotCommitted();

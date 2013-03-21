@@ -77,4 +77,9 @@ public interface SchemaOperations
      * a more generic facility in teh future
      */
     <K, V> V getOrCreateFromSchemaState( K key, Function<K, V> creator );
+
+    /**
+     * Check if some key is in the schema state.
+     */
+    <K> boolean schemaStateContains( K key );
 }

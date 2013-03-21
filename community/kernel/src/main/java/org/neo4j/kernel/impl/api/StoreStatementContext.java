@@ -383,4 +383,10 @@ public class StoreStatementContext implements StatementContext
     {
         throw new UnsupportedOperationException( "Schema state is not handled by the stores" );
     }
+
+    @Override
+    public <K> boolean schemaStateContains( K key )
+    {
+        throw new UnsupportedOperationException( "Schema state is not handled by the stores" );
+    }
 }

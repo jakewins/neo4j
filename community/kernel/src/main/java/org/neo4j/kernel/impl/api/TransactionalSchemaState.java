@@ -28,4 +28,6 @@ public interface TransactionalSchemaState
     void flush();
 
     void commit();
+
+    <K,V> V get( K key );
 }

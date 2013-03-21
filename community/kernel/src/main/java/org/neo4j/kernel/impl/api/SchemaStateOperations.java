@@ -53,4 +53,10 @@ public class SchemaStateOperations extends DelegatingSchemaOperations
     {
         return stateHolder.getOrCreate( key, creator );
     }
+
+    @Override
+    public <K> boolean schemaStateContains( K key )
+    {
+        return null != stateHolder.get( key );
+    }
 }

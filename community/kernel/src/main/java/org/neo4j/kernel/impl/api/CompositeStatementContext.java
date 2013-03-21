@@ -288,12 +288,12 @@ public abstract class CompositeStatementContext implements StatementContext
     }
 
     @Override
-    public <K, V> V getOrCreateFromSchemaState( K key, Function<K, V> creator )
+    public <K> boolean schemaStateContains( K key )
     {
         beforeOperation();
         beforeReadOperation();
 
-        V result = schemaOperations.getOrCreateFromSchemaState( key, creator );
+        boolean result = schemaOperations.schemaStateContains( key );
 
         afterReadOperation();
         afterOperation();
@@ -379,5 +379,18 @@ public abstract class CompositeStatementContext implements StatementContext
 
         afterWriteOperation();
         afterOperation();
+    }
+
+    @Override
+    public <K, V> V getOrCreateFromSchemaState( K key, Function<K, V> creator )
+    {
+        beforeOperation();
+        beforeWriteOperation();
+
+        V result = schemaOperations.getOrCreateFromSchemaState( key, creator );
+
+        afterWriteOperation();
+        afterOperation();
+        return result;
     }
 }

@@ -75,6 +75,13 @@ public class LockingStatementContext extends CompositeStatementContext
     }
 
     @Override
+    public <K> boolean schemaStateContains( K key )
+    {
+        lockHolder.acquireSchemaReadLock();
+        return super.schemaStateContains( key );
+    }
+
+    @Override
     public Iterable<IndexRule> getIndexRules( long labelId )
     {
         lockHolder.acquireSchemaReadLock();

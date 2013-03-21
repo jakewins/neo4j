@@ -84,4 +84,10 @@ public class DelegatingSchemaOperations implements SchemaOperations
     {
         return delegate.getOrCreateFromSchemaState( key, creator );
     }
+
+    @Override
+    public <K> boolean schemaStateContains( K key )
+    {
+        return delegate.schemaStateContains( key );
+    }
 }
