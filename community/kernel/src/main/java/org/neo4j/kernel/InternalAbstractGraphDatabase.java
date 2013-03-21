@@ -391,9 +391,13 @@ public abstract class InternalAbstractGraphDatabase
 
         stateFactory = createTransactionStateFactory();
 
+        int queryCacheSize = config.get(GraphDatabaseSettings.query_cache_size);
+        updateableSchemaState = new KernelSchemaStateStore( new LruMap<Object, Object>(queryCacheSize) );
+
         if ( readOnly )
         {
-            txManager = new ReadOnlyTxManager( xaDataSourceManager, logging.getLogger( ReadOnlyTxManager.class ) );
+            StringLogger roTxManagerLogging = logging.getLogger(ReadOnlyTxManager.class);
+            txManager = new ReadOnlyTxManager( xaDataSourceManager, updateableSchemaState, roTxManagerLogging);
         }
         else
         {
@@ -429,7 +433,7 @@ public abstract class InternalAbstractGraphDatabase
 
         relationshipTypeCreator = createRelationshipTypeCreator();
 
-        persistenceSource = life.add( new NioNeoDbPersistenceSource( xaDataSourceManager ) );
+        persistenceSource = life.add(new NioNeoDbPersistenceSource(xaDataSourceManager));
 
         syncHook = new DefaultTxEventSyncHookFactory();
 
@@ -448,9 +452,6 @@ public abstract class InternalAbstractGraphDatabase
         Cache<RelationshipImpl> relCache = diagnosticsManager.tryAppendProvider( caches.relationship() );
         
         SchemaCache schemaCache = new SchemaCache( Collections.<SchemaRule>emptyList() );
-
-        int queryCacheSize = config.get( GraphDatabaseSettings.query_cache_size );
-        updateableSchemaState = new KernelSchemaStateStore( new LruMap<Object, Object>(queryCacheSize) );
 
         kernelAPI = life.add( new Kernel( txManager, propertyIndexManager, persistenceManager,
                 xaDataSourceManager, lockManager, schemaCache, updateableSchemaState, dependencyResolver ) );

@@ -59,7 +59,7 @@ public class KernelSchemaStateStore implements UpdateableSchemaState
         V currentValue = get(key);
         if (currentValue == null)
         {
-            lock.writeLock();
+            lock.writeLock().lock();
             try {
                 V lockedValue = (V) state.get( key );
                 if (lockedValue == null)

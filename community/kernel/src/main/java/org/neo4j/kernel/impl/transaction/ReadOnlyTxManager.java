@@ -31,6 +31,10 @@ import javax.transaction.xa.XAResource;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelAPI;
 import org.neo4j.kernel.api.StatementContext;
+import org.neo4j.kernel.api.operations.SchemaOperations;
+import org.neo4j.kernel.impl.api.CompositeStatementContext;
+import org.neo4j.kernel.impl.api.SchemaState;
+import org.neo4j.kernel.impl.api.SchemaStateOperations;
 import org.neo4j.kernel.impl.core.ReadOnlyDbException;
 import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.transaction.xaframework.XaResource;
@@ -46,13 +50,15 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
     private int eventIdentifierCounter = 0;
 
     private XaDataSourceManager xaDsManager = null;
+    private final SchemaState schemaState;
     private final StringLogger logger;
     private KernelAPI kernel;
     private StatementContext readOnlyStatementContext;
 
-    public ReadOnlyTxManager( XaDataSourceManager xaDsManagerToUse, StringLogger logger )
+    public ReadOnlyTxManager( XaDataSourceManager xaDsManagerToUse, SchemaState schemaState, StringLogger logger )
     {
         xaDsManager = xaDsManagerToUse;
+        this.schemaState = schemaState;
         this.logger = logger;
     }
 
@@ -329,7 +335,9 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
     {
         if(readOnlyStatementContext == null)
         {
-            readOnlyStatementContext = kernel.newReadOnlyStatementContext();
+            StatementContext statementContext = kernel.newReadOnlyStatementContext();
+            SchemaOperations schemaOps = new SchemaStateOperations(statementContext, schemaState);
+            readOnlyStatementContext = new CompositeStatementContext(statementContext, schemaOps);
         }
         return readOnlyStatementContext;
     }

@@ -41,7 +41,7 @@ import org.neo4j.kernel.impl.nioneo.store.IndexRule;
  * This is syntax sugar, it helps implementing statement contexts that either just want to delegate
  * to some other context, or wants to split it's own implementation into multiple parts to minimize clutter.
  */
-public abstract class CompositeStatementContext implements StatementContext
+public class CompositeStatementContext implements StatementContext
 {
     private final EntityOperations entityOperations;
     private final PropertyOperations propertyOperations;
