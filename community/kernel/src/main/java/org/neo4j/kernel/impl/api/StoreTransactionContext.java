@@ -53,7 +53,7 @@ public class StoreTransactionContext implements TransactionContext
     public StatementContext newStatementContext()
     {
         return new StoreStatementContext( propertyIndexManager, persistenceManager, nodeManager, neoStore, indexingService,
-                new IndexReaderFactory.Caching( indexingService ), indexManager );
+                new IndexReaderFactory.Caching( indexingService ) );
     }
 
     @Override

@@ -38,7 +38,7 @@ import org.neo4j.kernel.api.operations.SchemaOperations;
  * whereas write locks will live for the entire transaction.
  */
 public interface StatementContext extends
-        EntityOperations, PropertyOperations, LabelOperations, SchemaOperations, LegacyOperations
+        EntityOperations, PropertyOperations, LabelOperations, SchemaOperations
 {
     /**
      * Closes this statement. Statements must be closed when done and before

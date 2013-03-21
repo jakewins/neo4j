@@ -382,7 +382,7 @@ public class StoreStatementContextTest
         when( mockIndexService.getIndexDescriptor( 1337l ) ).thenReturn( idxDesc );
 
         StoreStatementContext ctx = new StoreStatementContext( null, null, null, mock( NeoStore.class ),
-                mockIndexService, null, null );
+                mockIndexService, null );
 
         // WHEN
         IndexDescriptor idx = ctx.getIndexDescriptor( 1337l );
@@ -424,8 +424,7 @@ public class StoreStatementContextTest
                 db.getDependencyResolver().resolveDependency( PersistenceManager.class ),
                 db.getDependencyResolver().resolveDependency( NodeManager.class ),
                 neoStoreDataSource.getNeoStore(),
-                indexingService, new IndexReaderFactory.Caching( indexingService ),
-                null );
+                indexingService, new IndexReaderFactory.Caching( indexingService ));
     }
 
     @After

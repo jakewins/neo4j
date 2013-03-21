@@ -22,8 +22,9 @@ package org.neo4j.cypher.internal.spi.gdsimpl
 import org.neo4j.cypher.internal.spi.PlanContext
 import org.neo4j.cypher.MissingIndexException
 import org.neo4j.kernel.api.{KernelException, StatementContext}
+import org.neo4j.graphdb.GraphDatabaseService
 
-class TransactionBoundPlanContext(ctx: StatementContext) extends PlanContext {
+class TransactionBoundPlanContext(ctx: StatementContext, gdb:GraphDatabaseService) extends PlanContext {
 
   def getIndexRuleId(labelName: String, propertyKey: String): Option[Long] = tryGet {
     val labelId = ctx.getLabelId(labelName)
@@ -33,12 +34,12 @@ class TransactionBoundPlanContext(ctx: StatementContext) extends PlanContext {
   }
 
   def checkNodeIndex(idxName: String) {
-    if (!ctx.hasLegacyNodeIndex(idxName))
+    if (!gdb.index().existsForNodes(idxName))
       throw new MissingIndexException(idxName)
   }
 
   def checkRelIndex(idxName: String) {
-    if (!ctx.hasLegacyRelationshipIndex(idxName))
+    if (!gdb.index().existsForRelationships(idxName))
       throw new MissingIndexException(idxName)
   }
 

@@ -161,7 +161,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         // I/O
         StatementContext result = new StoreStatementContext(
                 propertyIndexManager, persistenceManager, nodeManager, neoStore, indexService,
-                new IndexReaderFactory.NonCaching( indexService ), indexManager );
+                new IndexReaderFactory.NonCaching( indexService ) );
         // + Cache
         result = new CachingStatementContext( result, persistenceCache, schemaCache );
         // + Read only access
