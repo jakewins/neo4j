@@ -26,37 +26,37 @@ import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class SchemaStateOperations extends DelegatingSchemaOperations
 {
-    private final TransactionalSchemaState stateHolder;
+    private final SchemaState schemaState;
 
-    public SchemaStateOperations( SchemaOperations inner, TransactionalSchemaState stateHolder )
+    public SchemaStateOperations( SchemaOperations inner, SchemaState schemaState)
     {
         super( inner );
-        this.stateHolder = stateHolder;
+        this.schemaState = schemaState;
     }
 
     @Override
     public IndexRule addIndexRule( long labelId, long propertyKey ) throws ConstraintViolationKernelException
     {
-        // stateHolder.flush() is called only when the index actually goes online
+        // schemaState.flush() is called only when the index actually goes online
         return delegate.addIndexRule( labelId, propertyKey );
     }
 
     @Override
     public void dropIndexRule( IndexRule indexRule ) throws ConstraintViolationKernelException
     {
-        stateHolder.flush();
+        schemaState.flush();
         delegate.dropIndexRule( indexRule );
     }
 
     @Override
     public <K, V> V getOrCreateFromSchemaState( K key, Function<K, V> creator )
     {
-        return stateHolder.getOrCreate( key, creator );
+        return schemaState.getOrCreate( key, creator );
     }
 
     @Override
     public <K> boolean schemaStateContains( K key )
     {
-        return null != stateHolder.get( key );
+        return null != schemaState.get( key );
     }
 }

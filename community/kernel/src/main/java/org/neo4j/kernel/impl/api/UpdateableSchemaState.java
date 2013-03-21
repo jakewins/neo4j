@@ -21,11 +21,7 @@ package org.neo4j.kernel.impl.api;
 
 import java.util.Map;
 
-public interface SchemaStateStore
+public interface UpdateableSchemaState extends SchemaState
 {
-    <K, V>V get( K key );
-
-    <K, V> void apply( Map<K, V> updates );
-
-    void flush();
+    <K, V> void apply(Map<K, V> updates);
 }

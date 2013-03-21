@@ -26,13 +26,13 @@ import org.neo4j.helpers.Function;
 
 public class TransactionalSchemaStateImpl implements TransactionalSchemaState
 {
-    private final SchemaStateStore delegate;
+    private final UpdateableSchemaState delegate;
 
     private Map<Object, Object> map = new HashMap<Object, Object>();
     private boolean wasFlushed = false;
     private boolean wasCommited = false;
 
-    public TransactionalSchemaStateImpl( SchemaStateStore delegate )
+    public TransactionalSchemaStateImpl( UpdateableSchemaState delegate )
     {
         this.delegate = delegate;
     }

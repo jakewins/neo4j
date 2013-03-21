@@ -19,12 +19,14 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import org.neo4j.helpers.Function;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class KernelSchemaStateStore implements SchemaStateStore
+public class KernelSchemaStateStore implements UpdateableSchemaState
 {
     private Map<Object, Object> state;
     private ReadWriteLock lock = new ReentrantReadWriteLock( true );
@@ -51,7 +53,33 @@ public class KernelSchemaStateStore implements SchemaStateStore
         }
     }
 
-    public <K, V> void apply( Map<K, V> updates )
+    @SuppressWarnings("unchecked")
+    @Override
+    public <K, V> V getOrCreate(K key, Function<K, V> creator) {
+        V currentValue = get(key);
+        if (currentValue == null)
+        {
+            lock.writeLock();
+            try {
+                V lockedValue = (V) state.get( key );
+                if (lockedValue == null)
+                {
+                    V newValue = creator.apply( key );
+                    state.put( key, newValue );
+                    return newValue;
+                }
+                else
+                    return lockedValue;
+            }
+            finally {
+                lock.writeLock().unlock();
+            }
+        }
+        else
+            return currentValue;
+    }
+
+    public <K, V> void apply(Map<K, V> updates)
     {
         lock.writeLock().lock();
         try {

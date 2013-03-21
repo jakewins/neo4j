@@ -20,9 +20,6 @@
 package org.neo4j.kernel.impl.api;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.helpers.Functions.constant;
-
-import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;

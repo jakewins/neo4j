@@ -80,7 +80,7 @@ import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.impl.api.Kernel;
 import org.neo4j.kernel.impl.api.KernelSchemaStateStore;
 import org.neo4j.kernel.impl.api.SchemaCache;
-import org.neo4j.kernel.impl.api.SchemaStateStore;
+import org.neo4j.kernel.impl.api.UpdateableSchemaState;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.cache.Cache;
 import org.neo4j.kernel.impl.cache.CacheProvider;
@@ -224,7 +224,7 @@ public abstract class InternalAbstractGraphDatabase
     protected ThreadToStatementContextBridge statementContextProvider;
     protected BridgingCacheAccess cacheBridge;
     protected JobScheduler jobScheduler;
-    protected SchemaStateStore schemaStateStore;
+    protected UpdateableSchemaState updateableSchemaState;
 
     protected final LifeSupport life = new LifeSupport();
     private final Map<String,CacheProvider> cacheProviders;
@@ -450,10 +450,10 @@ public abstract class InternalAbstractGraphDatabase
         SchemaCache schemaCache = new SchemaCache( Collections.<SchemaRule>emptyList() );
 
         int queryCacheSize = config.get( GraphDatabaseSettings.query_cache_size );
-        schemaStateStore = new KernelSchemaStateStore( new LruMap<Object, Object>(queryCacheSize) );
+        updateableSchemaState = new KernelSchemaStateStore( new LruMap<Object, Object>(queryCacheSize) );
 
         kernelAPI = life.add( new Kernel( txManager, propertyIndexManager, persistenceManager,
-                xaDataSourceManager, lockManager, schemaCache, schemaStateStore, dependencyResolver ) );
+                xaDataSourceManager, lockManager, schemaCache, updateableSchemaState, dependencyResolver ) );
         // XXX: Circular dependency, temporary during transition to KernelAPI - TxManager should not depend on KernelAPI
         txManager.setKernel(kernelAPI);
 
@@ -828,7 +828,7 @@ public abstract class InternalAbstractGraphDatabase
             neoDataSource = new NeoStoreXaDataSource( config,
                     storeFactory, lockManager, logging.getLogger( NeoStoreXaDataSource.class ),
                     xaFactory, stateFactory, cacheBridge,
-                    transactionInterceptorProviders, jobScheduler, logging, schemaStateStore, dependencyResolver );
+                    transactionInterceptorProviders, jobScheduler, logging, updateableSchemaState, dependencyResolver );
             xaDataSourceManager.registerDataSource( neoDataSource );
         }
         catch ( IOException e )
