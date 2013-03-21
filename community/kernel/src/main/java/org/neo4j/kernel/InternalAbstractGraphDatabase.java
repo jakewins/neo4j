@@ -1463,6 +1463,7 @@ public abstract class InternalAbstractGraphDatabase
         public void start()
                 throws Throwable
         {
+            updateableSchemaState.replace( newSchemaStateMap() );
             config.addConfigurationChangeListener( listener );
         }
 
