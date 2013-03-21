@@ -7,9 +7,9 @@ import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class SchemaStateOperations extends DelegatingSchemaOperations
 {
-    private final SchemaStateHolder stateHolder;
+    private final TransactionalSchemaState stateHolder;
 
-    public SchemaStateOperations( SchemaOperations inner, SchemaStateHolder stateHolder )
+    public SchemaStateOperations( SchemaOperations inner, TransactionalSchemaState stateHolder )
     {
         super( inner );
         this.stateHolder = stateHolder;
@@ -30,8 +30,8 @@ public class SchemaStateOperations extends DelegatingSchemaOperations
     }
 
     @Override
-    public <K, V> V getOrCreateFromSchemaState( K key, Class<V> clazz, Function<K, V> creator )
+    public <K, V> V getOrCreateFromSchemaState( K key, Function<K, V> creator )
     {
-        return stateHolder.getOrCreate( key, clazz, creator );
+        return stateHolder.getOrCreate( key, creator );
     }
 }

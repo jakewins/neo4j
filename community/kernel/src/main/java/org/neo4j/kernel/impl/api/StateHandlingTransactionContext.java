@@ -37,16 +37,16 @@ public class StateHandlingTransactionContext extends DelegatingTransactionContex
      */
     @Deprecated
     private final TransactionState oldTransactionState;
-    private final SchemaStateHolder holder;
+    private final TransactionalSchemaState holder;
 
     public StateHandlingTransactionContext( TransactionContext actual, PersistenceCache persistenceCache,
-            TransactionState oldTransactionState, SchemaCache schemaCache, UpdateableSchemaStateHolder holder )
+            TransactionState oldTransactionState, SchemaCache schemaCache, SchemaStateStore holder )
     {
         super(actual);
         this.persistenceCache = persistenceCache;
         this.oldTransactionState = oldTransactionState;
         this.schemaCache = schemaCache;
-        this.holder = new TransactionAwareSchemaStateHolder( holder );
+        this.holder = new TransactionalSchemaStateImpl( holder );
         this.state = new TxState( new OldTxStateBridgeImpl( oldTransactionState ) );
     }
 

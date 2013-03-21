@@ -58,7 +58,7 @@ import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.TransactionInterceptorProviders;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.KernelSchemaStateHolder;
+import org.neo4j.kernel.impl.api.KernelSchemaStateStore;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaConnection;
@@ -165,7 +165,7 @@ public class TestNeoStore
                         LogPruneStrategies.NO_PRUNING ), TransactionStateFactory.noStateFactory( new DevNullLoggingService() ),
                         noCacheAccess(), new TransactionInterceptorProviders( Collections.<TransactionInterceptorProvider>emptyList(),
                                 dependencyResolverForConfig( config ) ), null, new SingleLoggingService( DEV_NULL ),
-                                new KernelSchemaStateHolder(),
+                                new KernelSchemaStateStore(),
                                 dependencyResolverForNoIndexProvider() );
         ds.init();
         ds.start();

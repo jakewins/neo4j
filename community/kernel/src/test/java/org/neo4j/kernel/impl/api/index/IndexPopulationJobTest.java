@@ -50,7 +50,6 @@ import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.Functions;
 import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.helpers.collection.Visitor;
@@ -61,7 +60,7 @@ import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
-import org.neo4j.kernel.impl.api.KernelSchemaStateHolder;
+import org.neo4j.kernel.impl.api.KernelSchemaStateStore;
 import org.neo4j.kernel.impl.api.index.IndexingService.IndexStoreView;
 import org.neo4j.kernel.impl.api.index.IndexingService.StoreScan;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
@@ -102,15 +101,15 @@ public class IndexPopulationJobTest
         // GIVEN
         String value = "Taylor";
         long nodeId = createNode( map( name, value ), FIRST );
-        stateHolder.getOrCreate( "key", String.class, Functions.constant("original_value") );
+        stateHolder.apply( MapUtil.stringMap( "key", "original_value" ) );
         IndexPopulationJob job = newIndexPopulationJob( FIRST, name, populator, new FlippableIndexProxy() );
 
         // WHEN
         job.run();
 
         // THEN
-        String result = stateHolder.getOrCreate( "key", String.class, Functions.constant("new_value") );
-        assertEquals( "new_value", result );
+        String result = stateHolder.get( "key" );
+        assertEquals( null, result );
     }
 
     @Test
@@ -394,7 +393,7 @@ public class IndexPopulationJobTest
     private ThreadToStatementContextBridge ctxProvider;
     private StatementContext context;
     private IndexPopulator populator;
-    private KernelSchemaStateHolder stateHolder;
+    private KernelSchemaStateStore stateHolder;
 
     private long firstLabelId, secondLabelId;
 
@@ -405,7 +404,7 @@ public class IndexPopulationJobTest
         ctxProvider = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         context = ctxProvider.getCtxForReading();
         populator = mock( IndexPopulator.class );
-        stateHolder = new KernelSchemaStateHolder();
+        stateHolder = new KernelSchemaStateStore();
         
         Transaction tx = db.beginTx();
         firstLabelId = ctxProvider.getCtxForWriting().getOrCreateLabelId( FIRST.name() );

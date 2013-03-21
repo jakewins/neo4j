@@ -5,43 +5,47 @@ import java.util.Map;
 
 import org.neo4j.helpers.Function;
 
-public class TransactionAwareSchemaStateHolder implements SchemaStateHolder
+public class TransactionalSchemaStateImpl implements TransactionalSchemaState
 {
-    private final UpdateableSchemaStateHolder delegate;
+    private final SchemaStateStore delegate;
 
     private Map<Object, Object> map = new HashMap<Object, Object>();
     private boolean wasFlushed = false;
     private boolean wasCommited = false;
 
-    public TransactionAwareSchemaStateHolder( UpdateableSchemaStateHolder delegate )
+    public TransactionalSchemaStateImpl( SchemaStateStore delegate )
     {
         this.delegate = delegate;
     }
 
     @Override
-    public <K, V> V getOrCreate( K key, Class<V> clazz, Function<K, V> creator )
-    {
-        ensureNotCommitted();
-        return getOrCreateAndPut( key, clazz, creator, map );
-    }
-
-    @Override
-    public <K, V> V getOrCreateAndPut( K key, Class<V> clazz, Function<K, V> creator, Map<Object, Object> targetMap )
+    public <K, V> V getOrCreate( K key, Function<K, V> creator )
     {
         ensureNotCommitted();
         if ( map.containsKey( key ) )
         {
-            return clazz.cast( map.get( key ) );
+            return (V) map.get( key );
         }
         else {
             if (wasFlushed)
             {
                 V value = creator.apply( key );
-                targetMap.put( key, value );
+                map.put( key, value );
                 return value;
             }
-            else
-                return delegate.getOrCreateAndPut( key, clazz, creator, targetMap );
+            else {
+                V value = delegate.get( key );
+                if ( value == null )
+                {
+                    V newValue = creator.apply( key );
+                    map.put( key, newValue );
+                    return newValue;
+                }
+                else
+                {
+                    return value;
+                }
+            }
         }
     }
 

@@ -12,7 +12,7 @@ import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 public class SchemaStateOperationsTest
 {
     private SchemaStateOperations inner;
-    private SchemaStateHolder stateHolder;
+    private TransactionalSchemaState stateHolder;
 
     @Test
     public void addIndexRuleShouldFlushStateHolder() throws ConstraintViolationKernelException
@@ -45,6 +45,6 @@ public class SchemaStateOperationsTest
     public void before()
     {
         inner = mock( SchemaStateOperations.class );
-        stateHolder = mock( SchemaStateHolder.class );
+        stateHolder = mock( TransactionalSchemaState.class );
     }
 }

@@ -61,8 +61,8 @@ public class DelegatingSchemaOperations implements SchemaOperations
     }
 
     @Override
-    public <K, V> V getOrCreateFromSchemaState( K key, Class<V> clazz, Function<K, V> creator )
+    public <K, V> V getOrCreateFromSchemaState( K key, Function<K, V> creator )
     {
-        return delegate.getOrCreateFromSchemaState( key, clazz, creator );
+        return delegate.getOrCreateFromSchemaState( key, creator );
     }
 }

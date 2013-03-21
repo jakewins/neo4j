@@ -40,7 +40,8 @@ import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
-import org.neo4j.kernel.impl.api.SchemaStateHolder;
+import org.neo4j.kernel.impl.api.SchemaStateStore;
+import org.neo4j.kernel.impl.api.TransactionalSchemaState;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.util.JobScheduler;
@@ -74,12 +75,12 @@ public class IndexingService extends LifecycleAdapter
     private final IndexStoreView storeView;
     private final Logging logging;
     private final StringLogger logger;
-    private final SchemaStateHolder stateHolder;
+    private final SchemaStateStore schemaStateStore;
 
     public IndexingService( JobScheduler scheduler,
                             SchemaIndexProvider provider,
                             IndexStoreView storeView,
-                            SchemaStateHolder stateHolder,
+                            SchemaStateStore schemaStateStore,
                             Logging logging )
     {
         this.scheduler = scheduler;
@@ -87,7 +88,7 @@ public class IndexingService extends LifecycleAdapter
         this.storeView = storeView;
         this.logging = logging;
         this.logger = logging.getLogger( getClass() );
-        this.stateHolder = stateHolder;
+        this.schemaStateStore = schemaStateStore;
 
         if ( provider == null )
         {
@@ -295,7 +296,7 @@ public class IndexingService extends LifecycleAdapter
         // TODO: This is here because there is a circular dependency from PopulatingIndexProxy to FlippableIndexProxy
         IndexPopulator populator = getPopulatorFromProvider( ruleId );
         PopulatingIndexProxy populatingIndex =
-            new PopulatingIndexProxy( scheduler, descriptor, populator, flipper, storeView, stateHolder, logging );
+            new PopulatingIndexProxy( scheduler, descriptor, populator, flipper, storeView, schemaStateStore, logging );
         flipper.setFlipTarget( singleProxy( populatingIndex ) );
         flipper.flip();
 

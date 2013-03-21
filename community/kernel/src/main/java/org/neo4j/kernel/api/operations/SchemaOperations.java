@@ -69,6 +69,12 @@ public interface SchemaOperations
      * The schema state is flushed when ever the schema is updated. If you build objects
      * the rely on the current state of the schema, use this to make sure you don't use
      * outdated schema information.
+     *
+     * Additionally, schema state entries are evicted using an LRU policy. The size
+     * of the LRU cache is determined by GraphDatabaseSettings.query_cache_size
+     *
+     * NOTE: This currently is solely used by Cypher and might or might not be turned into
+     * a more generic facility in teh future
      */
-    <K, V> V getOrCreateFromSchemaState( K key, Class<V> clazz, Function<K, V> creator );
+    <K, V> V getOrCreateFromSchemaState( K key, Function<K, V> creator );
 }
