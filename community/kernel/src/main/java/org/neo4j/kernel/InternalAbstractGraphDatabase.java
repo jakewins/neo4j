@@ -525,8 +525,7 @@ public abstract class InternalAbstractGraphDatabase
     }
 
     private Map<Object, Object> newSchemaStateMap() {
-        int queryCacheSize = config.get(GraphDatabaseSettings.query_cache_size);
-        return new LruMap<Object, Object>(queryCacheSize);
+        return new HashMap<Object, Object>();
     }
 
     protected TransactionStateFactory createTransactionStateFactory()
@@ -1463,7 +1462,6 @@ public abstract class InternalAbstractGraphDatabase
         public void start()
                 throws Throwable
         {
-            updateableSchemaState.replace( newSchemaStateMap() );
             config.addConfigurationChangeListener( listener );
         }
 

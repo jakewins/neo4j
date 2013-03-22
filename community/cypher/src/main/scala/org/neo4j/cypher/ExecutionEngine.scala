@@ -94,10 +94,6 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
       verifier.verify(query)
   }
 
-  def isPrepared(query : String) : Boolean = withQueryContext {
-    (ctx:QueryContext) => ctx.schemaStateContains(query)
-  }
-
   def execute(query: AbstractQuery, params: Map[String, Any]): ExecutionResult =
     planBuilder.build(query).execute(queryContext, params)
 
