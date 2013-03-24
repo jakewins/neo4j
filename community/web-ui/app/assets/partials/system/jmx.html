@@ -4,9 +4,14 @@
     <div ng-repeat="domain in domains">{{ domain }}</div>
   </div>
   <div class="span3">
-    <h1>Items</h1>
+    <div ng-repeat="bean in beans"> 
+      <p>{{ bean.name }}</p>
+    </div>
   </div>
   <div class="span6">
-    <h1>Details</h1>
+    <h1>{{ bean.name }}</h1>
+    <div ng-repeat="attr in bean.attributes">
+      <p>{{ attr.name }} = {{ attr.value }}</p>
+    </div>
   </div>
 </div>

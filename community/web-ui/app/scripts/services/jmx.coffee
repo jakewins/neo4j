@@ -12,6 +12,7 @@ angular.module('app.services.jmx', [])
     
       constructor : () ->
     
+    	
       
       
     new JmxService

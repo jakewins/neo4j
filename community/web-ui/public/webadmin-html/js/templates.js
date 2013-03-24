@@ -58,7 +58,7 @@ var buf = [];
 with (locals || {}) {
 var interp;
 var __indent = [];
-buf.push('\n<div class="row-fluid">\n  <div class="span3">\n    <div ng-repeat="domain in domains">{{ domain }}</div>\n  </div>\n  <div class="span3">\n    <h1>Items</h1>\n  </div>\n  <div class="span6">\n    <h1>Details</h1>\n  </div>\n</div>');
+buf.push('\n<div class="row-fluid">\n  <div class="span3">\n    <div ng-repeat="domain in domains">{{ domain }}</div>\n  </div>\n  <div class="span3">\n    <div ng-repeat="bean in beans"> \n      <p>{{ bean.name }}</p>\n    </div>\n  </div>\n  <div class="span6">\n    <h1>{{ bean.name }}</h1>\n    <div ng-repeat="attr in bean.attributes">\n      <p>{{ attr.name }} = {{ attr.value }}</p>\n    </div>\n  </div>\n</div>');
 }
 return buf.join("");
 };
