@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 import static org.neo4j.graphdb.DynamicLabel.label;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 
+import java.util.Iterator;
 import java.util.Set;
 
 import org.junit.After;
@@ -223,8 +224,8 @@ public class KernelIT
         statement.removeLabelFromNode( labelId2, node.getId() );
 
         // THEN
-        Iterable<Long> labelsIterable = statement.getLabelsForNode( node.getId() );
-        Set<Long> labels = asSet( labelsIterable );
+        Iterator<Long> labelsIterator = statement.getLabelsForNode( node.getId() );
+        Set<Long> labels = asSet( labelsIterator );
         assertFalse( statement.isLabelSetOnNode( labelId2, node.getId() ) );
         assertEquals( asSet( labelId1 ), labels );
         tx.success();

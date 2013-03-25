@@ -593,7 +593,21 @@ public abstract class IteratorUtil
             addUnique( set, item );
         return set;
     }
-    
+
+    /**
+     * Creates a {@link Set} from an array of items.
+     *
+     * @param items the items to add to the set.
+     * @return the {@link Set} containing the items.
+     */
+    public static <T> Set<T> asUniqueSet( Iterator<T> items )
+    {
+        HashSet<T> set = new HashSet<T>();
+        while( items.hasNext() )
+            addUnique( set, items.next() );
+        return set;
+    }
+
     /**
      * Function for converting Enum to String
      */
