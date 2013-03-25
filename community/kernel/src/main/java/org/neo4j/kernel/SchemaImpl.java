@@ -186,5 +186,9 @@ public class SchemaImpl implements Schema
             throw new NotFoundException( format( "No index for label %s on property %s",
                     index.getLabel().name(), propertyKey ), e );
         }
+        finally
+        {
+            context.close();
+        }
     }
 }

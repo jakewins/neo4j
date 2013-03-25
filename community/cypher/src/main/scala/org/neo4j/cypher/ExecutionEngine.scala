@@ -116,12 +116,14 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
       }
       catch {
         case (t: Throwable) =>
+          statementContext.close()
           tx.failure()
           tx.finish()
           throw t
       }
 
       if (touched) {
+        statementContext.close()
         tx.success()
         tx.finish()
       }

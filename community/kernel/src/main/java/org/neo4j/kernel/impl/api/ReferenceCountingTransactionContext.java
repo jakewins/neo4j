@@ -44,9 +44,22 @@ public class ReferenceCountingTransactionContext extends DelegatingTransactionCo
         return statementContext.getStatementContext();
     }
 
+    @Override
+    public void commit()
+    {
+        statementContext.assertAllClosed();
+        super.commit();
+    }
+
+    @Override
+    public void rollback()
+    {
+        statementContext.assertAllClosed();
+        super.rollback();
+    }
+
     private StatementContext createStatementContext()
     {
         return super.newStatementContext();
     }
-
 }

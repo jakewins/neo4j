@@ -72,7 +72,6 @@ class TransactionImpl implements Transaction
     private Thread owner;
 
     private final TransactionState state;
-    private StatementContext currentStatementContext;
     private TransactionContext transactionContext;
 
     TransactionImpl( TxManager txManager, ForceMode forceMode, TransactionStateFactory stateFactory, StringLogger logger )
@@ -127,21 +126,6 @@ class TransactionImpl implements Transaction
         // make sure tx not suspended
         txManager.commit();
         transactionContext.commit();
-    }
-
-    void ensureStatementContextClosed()
-    {
-        if ( currentStatementContext != null )
-        {
-            try
-            {
-                currentStatementContext.close();
-            }
-            finally
-            {
-                currentStatementContext = null;
-            }
-        }
     }
 
     boolean isGlobalStartRecordWritten()
@@ -608,14 +592,9 @@ class TransactionImpl implements Transaction
         status = Status.STATUS_ROLLEDBACK;
     }
 
-    public StatementContext getCurrentStatementContext()
+    public StatementContext newStatementContext()
     {
-        if ( currentStatementContext == null )
-        {
-            currentStatementContext = transactionContext.newStatementContext();
-        }
-
-        return currentStatementContext;
+        return transactionContext.newStatementContext();
     }
 
     /*

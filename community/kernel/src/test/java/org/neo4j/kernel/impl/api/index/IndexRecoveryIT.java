@@ -278,6 +278,7 @@ public class IndexRecoveryIT
                 updates.add( NodePropertyUpdate.add( node.getId(), context.getPropertyKeyId( key ), number,
                         new long[] {context.getLabelId( label.name() )} ) );
             }
+            context.close();
             tx.success();
             return updates;
         }

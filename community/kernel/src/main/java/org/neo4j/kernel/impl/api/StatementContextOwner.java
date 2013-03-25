@@ -24,7 +24,7 @@ import org.neo4j.kernel.api.StatementContext;
 public abstract class StatementContextOwner
 {
     private StatementContext statementContext;
-    private int count;
+    public int count;
 
     public StatementContext getStatementContext()
     {
@@ -57,4 +57,11 @@ public abstract class StatementContextOwner
         }
     }
 
+    public void assertAllClosed()
+    {
+        if ( count > 0 )
+        {
+            throw new IllegalStateException( "Tried to close transaction context but had statement context's open" );
+        }
+    }
 }

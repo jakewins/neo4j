@@ -92,7 +92,10 @@ public class KernelIT
         long labelId = statement.getOrCreateLabelId( "labello" );
         statement.addLabelToNode( labelId, node.getId() );
 
-        // 4: Commit through the beans API
+        // 4: Close the StatementContext
+        statement.close();
+
+        // 5: Commit through the beans API
         beansAPITx.success();
         beansAPITx.finish();
 
@@ -133,7 +136,7 @@ public class KernelIT
         Node node = db.createNode();
         long labelId = statement.getOrCreateLabelId( "labello" );
         statement.addLabelToNode( labelId, node.getId() );
-        //statement.close();  // Because we are currently using the statement context from the beans API, the Beans API will close it for us
+        statement.close();
         tx.finish();
 
         // THEN
@@ -151,7 +154,7 @@ public class KernelIT
         Node node = db.createNode();
         long labelId = statement.getOrCreateLabelId( "labello" );
         statement.addLabelToNode( labelId, node.getId() );
-        //statement.close();  // Because we are currently using the statement context from the beans API, the Beans API will close it for us
+        statement.close();
         tx.failure();
         tx.success();
         tx.finish();
@@ -174,6 +177,7 @@ public class KernelIT
         statement.addLabelToNode( labelId1, node.getId() );
         statement.addLabelToNode( labelId2, node.getId() );
         statement.removeLabelFromNode( labelId2, node.getId() );
+        statement.close();
         tx.success();
         tx.finish();
 
@@ -200,6 +204,7 @@ public class KernelIT
         assertFalse( statement.isLabelSetOnNode( labelId2, node.getId() ) );
         assertEquals( asSet( labelId1 ), asSet( statement.getLabelsForNode( node.getId() ) ) );
 
+        statement.close();
         tx.success();
         tx.finish();
     }
@@ -215,6 +220,7 @@ public class KernelIT
         long labelId2 = statement.getOrCreateLabelId( "labello2" );
         statement.addLabelToNode( labelId1, node.getId() );
         statement.addLabelToNode( labelId2, node.getId() );
+        statement.close();
         tx.success();
         tx.finish();
         tx = db.beginTx();
@@ -228,6 +234,7 @@ public class KernelIT
         Set<Long> labels = asSet( labelsIterator );
         assertFalse( statement.isLabelSetOnNode( labelId2, node.getId() ) );
         assertEquals( asSet( labelId1 ), labels );
+        statement.close();
         tx.success();
         tx.finish();
     }
@@ -241,6 +248,7 @@ public class KernelIT
         StatementContext statement = statementContextProvider.getCtxForWriting();
         long labelId = statement.getOrCreateLabelId( "mylabel" );
         statement.addLabelToNode( labelId, node.getId() );
+        statement.close();
         tx.success();
         tx.finish();
 
@@ -261,6 +269,7 @@ public class KernelIT
         Node node = db.createNode();
         StatementContext statement = statementContextProvider.getCtxForWriting();
         long labelId = statement.getOrCreateLabelId( "mylabel" );
+        statement.close();
         tx.success();
         tx.finish();
 
@@ -282,6 +291,7 @@ public class KernelIT
         StatementContext statement = statementContextProvider.getCtxForWriting();
         long labelId = statement.getOrCreateLabelId( "mylabel" );
         statement.addLabelToNode( labelId, node.getId() );
+        statement.close();
         tx.success();
         tx.finish();
 
@@ -302,6 +312,7 @@ public class KernelIT
         Node node = db.createNode();
         StatementContext statement = statementContextProvider.getCtxForWriting();
         long labelId = statement.getOrCreateLabelId( "mylabel" );
+        statement.close();
         tx.success();
         tx.finish();
 
@@ -332,6 +343,7 @@ public class KernelIT
         Set<Long> labels = asSet( statement.getLabelsForNode( node.getId() ) );
         boolean labelIsSet = statement.isLabelSetOnNode( labelId, node.getId() );
         Set<Long> nodes = asSet( statement.getNodesWithLabel( labelId ) );
+        statement.close();
         tx.success();
         tx.finish();
 

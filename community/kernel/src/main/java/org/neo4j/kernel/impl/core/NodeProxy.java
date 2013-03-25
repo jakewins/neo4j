@@ -306,43 +306,56 @@ public class NodeProxy implements Node
     @Override
     public void addLabel( Label label )
     {
+        StatementContext ctx = statementCtxProvider.getCtxForWriting();
         try
         {
-            StatementContext ctx = statementCtxProvider.getCtxForWriting();
             ctx.addLabelToNode( ctx.getOrCreateLabelId( label.name() ), getId() );
         }
         catch ( ConstraintViolationKernelException e )
         {
             throw new ConstraintViolationException( "Unable to add label.", e );
         }
+        finally
+        {
+            ctx.close();
+        }
     }
 
     @Override
     public void removeLabel( Label label )
     {
+        StatementContext ctx = statementCtxProvider.getCtxForWriting();
         try
         {
-            StatementContext ctx = statementCtxProvider.getCtxForWriting();
             ctx.removeLabelFromNode( ctx.getLabelId( label.name() ), getId() );
         }
         catch ( LabelNotFoundKernelException e )
         {
             // OK, no such label... cool
         }
+        finally
+        {
+            ctx.close();
+        }
     }
 
     @Override
     public boolean hasLabel( Label label )
     {
+        StatementContext ctx = statementCtxProvider.getCtxForReading();
         try
         {
-            StatementContext ctx = statementCtxProvider.getCtxForReading();
             return ctx.isLabelSetOnNode( ctx.getLabelId( label.name() ), getId() );
         }
         catch ( LabelNotFoundKernelException e )
         {
             return false;
         }
+        finally
+        {
+            ctx.close();
+        }
+
     }
     
     @Override

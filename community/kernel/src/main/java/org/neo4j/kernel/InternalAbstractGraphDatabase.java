@@ -461,8 +461,8 @@ public abstract class InternalAbstractGraphDatabase
         // XXX: Circular dependency, temporary during transition to KernelAPI - TxManager should not depend on KernelAPI
         txManager.setKernel(kernelAPI);
 
-        statementContextProvider = life.add( new ThreadToStatementContextBridge( kernelAPI, txManager,
-                xaDataSourceManager ) );
+        statementContextProvider = life.add( new ThreadToStatementContextBridge( kernelAPI, txManager
+        ) );
 
         nodeManager = guard != null ?
                 createGuardedNodeManager( readOnly, cacheProvider, nodeCache, relCache ) :

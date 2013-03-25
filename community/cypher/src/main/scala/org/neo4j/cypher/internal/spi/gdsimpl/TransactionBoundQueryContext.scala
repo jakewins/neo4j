@@ -37,6 +37,8 @@ class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction, ctx
   }
 
   def close(success: Boolean) {
+    ctx.close()
+
     if (success)
       tx.success()
     else
