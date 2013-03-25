@@ -21,14 +21,15 @@ package org.neo4j.kernel.impl.api;
 
 import static org.neo4j.helpers.collection.Iterables.filter;
 import static org.neo4j.helpers.collection.Iterables.map;
+import static org.neo4j.helpers.collection.IteratorUtil.contains;
 
-import java.util.Collections;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.helpers.Function;
 import org.neo4j.helpers.Predicate;
+import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
 import org.neo4j.kernel.api.EntityNotFoundException;
@@ -149,10 +150,7 @@ public class StoreStatementContext implements StatementContext
     {
         try
         {
-            for ( Long existingLabel : persistenceManager.getLabelsForNode( nodeId ) )
-                if ( existingLabel == labelId )
-                    return true;
-            return false;
+            return contains( persistenceManager.getLabelsForNode( nodeId ), labelId );
         }
         catch ( InvalidRecordException e )
         {
@@ -161,7 +159,7 @@ public class StoreStatementContext implements StatementContext
     }
     
     @Override
-    public Iterable<Long> getLabelsForNode( long nodeId )
+    public Iterator<Long> getLabelsForNode( long nodeId )
     {
         try
         {
@@ -170,7 +168,7 @@ public class StoreStatementContext implements StatementContext
         catch ( InvalidRecordException e )
         {   // TODO Might hide invalid dynamic record problem. It's here because this method
             // might get called with a nodeId that doesn't exist.
-            return Collections.emptyList();
+            return IteratorUtil.emptyIterator();
         }
     }
     
@@ -195,32 +193,25 @@ public class StoreStatementContext implements StatementContext
     }
     
     @Override
-    public Iterable<Long> getNodesWithLabel( final long labelId )
+    public Iterator<Long> getNodesWithLabel( final long labelId )
     {
         final NodeStore nodeStore = neoStore.getNodeStore();
         final long highestId = nodeStore.getHighestPossibleIdInUse();
-        return new Iterable<Long>()
+        return new PrefetchingIterator<Long>()
         {
+            private long id = 0;
+
             @Override
-            public Iterator<Long> iterator()
+            protected Long fetchNextOrNull()
             {
-                return new PrefetchingIterator<Long>()
+                while ( id <= highestId )
                 {
-                    private long id = 0;
-                    
-                    @Override
-                    protected Long fetchNextOrNull()
-                    {
-                        while ( id <= highestId )
-                        {
-                            NodeRecord node = nodeStore.forceGetRecord( id++ );
-                            for ( long label : nodeStore.getLabelsForNode( node ) )
-                                if ( label == labelId )
-                                    return node.getId();
-                        }
-                        return null;
-                    }
-                };
+                    NodeRecord node = nodeStore.forceGetRecord( id++ );
+                    for ( long label : nodeStore.getLabelsForNode( node ) )
+                        if ( label == labelId )
+                            return node.getId();
+                }
+                return null;
             }
         };
     }
@@ -255,7 +246,7 @@ public class StoreStatementContext implements StatementContext
                             && propertyKey == ((IndexRule)rule).getPropertyKey();
             }
 
-        }, neoStore.getSchemaStore().loadAll() ).iterator();
+        }, neoStore.getSchemaStore().loadAll() );
 
         if ( !filtered.hasNext() )
             throw new SchemaRuleNotFoundException( "Index rule for label:" + labelId + " and property:" +
@@ -275,7 +266,7 @@ public class StoreStatementContext implements StatementContext
     }
 
     @Override
-    public Iterable<IndexRule> getIndexRules( final long labelId )
+    public Iterator<IndexRule> getIndexRules( final long labelId )
     {
         return toIndexRules( new Predicate<SchemaRule>()
         {
@@ -288,7 +279,7 @@ public class StoreStatementContext implements StatementContext
     }
     
     @Override
-    public Iterable<IndexRule> getIndexRules()
+    public Iterator<IndexRule> getIndexRules()
     {
         return toIndexRules( new Predicate<SchemaRule>()
         {
@@ -300,9 +291,9 @@ public class StoreStatementContext implements StatementContext
         } );
     }
     
-    private Iterable<IndexRule> toIndexRules( Predicate<SchemaRule> filter )
+    private Iterator<IndexRule> toIndexRules( Predicate<SchemaRule> filter )
     {
-        Iterable<SchemaRule> filtered = filter( filter, neoStore.getSchemaStore().loadAll() );
+        Iterator<SchemaRule> filtered = filter( filter, neoStore.getSchemaStore().loadAll() );
         
         return map( new Function<SchemaRule, IndexRule>()
         {
@@ -373,7 +364,7 @@ public class StoreStatementContext implements StatementContext
     }
 
     @Override
-    public Iterable<Long> exactIndexLookup( long indexId, Object value ) throws IndexNotFoundKernelException
+    public Iterator<Long> exactIndexLookup( long indexId, Object value ) throws IndexNotFoundKernelException
     {
         return indexReaderFactory.newReader( indexId ).lookup( value );
     }

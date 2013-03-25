@@ -26,6 +26,8 @@ import static org.neo4j.helpers.collection.Iterables.option;
 import static org.neo4j.helpers.collection.IteratorUtil.singleOrNull;
 
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.Set;
 
 import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.ThisShouldNotHappenError;
@@ -85,9 +87,9 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
     }
 
     @Override
-    public Iterable<Long> getLabelsForNode( long nodeId )
+    public Iterator<Long> getLabelsForNode( long nodeId )
     {
-        Iterable<Long> committed = delegate.getLabelsForNode( nodeId );
+        Iterator<Long> committed = delegate.getLabelsForNode( nodeId );
         return state.getNodeStateLabelDiffSets( nodeId ).apply( committed );
     }
 
@@ -123,13 +125,13 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
     
     @SuppressWarnings( "unchecked" )
     @Override
-    public Iterable<Long> getNodesWithLabel( long labelId )
+    public Iterator<Long> getNodesWithLabel( long labelId )
     {
-        Iterable<Long> committed = delegate.getNodesWithLabel( labelId );
+        Iterator<Long> committed = delegate.getNodesWithLabel( labelId );
         if ( !state.hasChanges() )
             return committed;
-        
-        Iterable<Long> result = committed;
+
+        Iterator<Long> result = committed;
         final Collection<Long> removed = state.getNodesWithLabelRemoved( labelId );
         if ( !removed.isEmpty() )
         {
@@ -143,8 +145,8 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
             }, result );
         }
         
-        Iterable<Long> added = state.getNodesWithLabelAdded( labelId );
-        return concat( result, added );
+        Set<Long> added = state.getNodesWithLabelAdded( labelId );
+        return concat( result, added.iterator() );
     }
     
     @Override
@@ -175,7 +177,7 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
             committedRules = emptyList();
         }
         DiffSets<IndexRule> ruleDiffSet = state.getIndexRuleDiffSetsByLabel( labelId );
-        Iterable<IndexRule> rules = ruleDiffSet.apply( committedRules );
+        Iterator<IndexRule> rules = ruleDiffSet.apply( committedRules.iterator() );
         IndexRule single = singleOrNull( rules );
         if ( single == null )
             throw new SchemaRuleNotFoundException( "Index rule for label:" + labelId + " and property:" +
@@ -204,19 +206,19 @@ public class TransactionStateAwareStatementContext extends CompositeStatementCon
     }
 
     @Override
-    public Iterable<IndexRule> getIndexRules( long labelId )
+    public Iterator<IndexRule> getIndexRules( long labelId )
     {
         return state.getIndexRuleDiffSetsByLabel( labelId ).apply( delegate.getIndexRules( labelId ) );
     }
 
     @Override
-    public Iterable<IndexRule> getIndexRules()
+    public Iterator<IndexRule> getIndexRules()
     {
         return state.getIndexRuleDiffSets().apply( delegate.getIndexRules() );
     }
 
     @Override
-    public Iterable<Long> exactIndexLookup( long indexId, final Object value ) throws IndexNotFoundKernelException
+    public Iterator<Long> exactIndexLookup( long indexId, final Object value ) throws IndexNotFoundKernelException
     {
         IndexDescriptor idx = delegate.getIndexDescriptor( indexId );
 

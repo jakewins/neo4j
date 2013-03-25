@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import static org.neo4j.helpers.collection.IteratorUtil.loop;
+
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.kernel.api.KernelAPI;
@@ -116,8 +118,10 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
                 {
                     neoStore = ((NeoStoreXaDataSource) ds).getNeoStore();
                     indexService = ((NeoStoreXaDataSource) ds).getIndexService();
-                    for ( SchemaRule schemaRule : neoStore.getSchemaStore().loadAll() )
+                    for ( SchemaRule schemaRule : loop( neoStore.getSchemaStore().loadAll() ) )
+                    {
                         schemaCache.addSchemaRule( schemaRule );
+                    }
                 }
             }
 

@@ -19,11 +19,12 @@
  */
 package org.neo4j.kernel.impl.nioneo.xa;
 
-import static org.neo4j.helpers.collection.IteratorUtil.asIterable;
+import static org.neo4j.helpers.collection.IteratorUtil.asIterator;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -447,9 +448,9 @@ class ReadTransaction implements NeoStoreTransaction
     }
     
     @Override
-    public Iterable<Long> getLabelsForNode( long nodeId )
+    public Iterator<Long> getLabelsForNode( long nodeId )
     {
         NodeRecord node = getNodeStore().getRecord( nodeId );
-        return asIterable( getNodeStore().getLabelsForNode( node ) );
+        return asIterator( getNodeStore().getLabelsForNode( node ) );
     }
 }

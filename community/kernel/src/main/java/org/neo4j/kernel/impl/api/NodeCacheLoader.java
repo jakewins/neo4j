@@ -21,6 +21,8 @@ package org.neo4j.kernel.impl.api;
 
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 
+import java.util.Iterator;
+
 import org.neo4j.kernel.impl.api.PersistenceCache.CachedNodeEntity;
 import org.neo4j.kernel.impl.cache.LockStripedCache;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
@@ -40,7 +42,7 @@ class NodeCacheLoader implements LockStripedCache.Loader<CachedNodeEntity>
     {
         try
         {
-            Iterable<Long> labels = persistenceManager.getLabelsForNode( id );
+            Iterator<Long> labels = persistenceManager.getLabelsForNode( id );
             CachedNodeEntity result = new CachedNodeEntity( id );
             result.addLabels( asSet( labels ) );
             return result;

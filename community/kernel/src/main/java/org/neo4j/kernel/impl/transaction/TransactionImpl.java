@@ -114,19 +114,9 @@ class TransactionImpl implements Transaction
     @Override
     public String toString()
     {
-        StringBuffer txString = new StringBuffer( "Transaction(" +
-            eventIdentifier + ", owner:\"" + owner.getName() + "\")[" + txManager.getTxStatusAsString( status ) +
-            ",Resources=" + resourceList.size() + "]" );
-//        Iterator<ResourceElement> itr = resourceList.iterator();
-//        while ( itr.hasNext() )
-//        {
-//            txString.append( itr.next().toString() );
-//            if ( itr.hasNext() )
-//            {
-//                txString.append( "," );
-//            }
-//        }
-        return txString.toString();
+
+        return String.format( "Transaction(%d, owner:\"%s\")[%s,Resources=%d]",
+                eventIdentifier, owner.getName(), txManager.getTxStatusAsString( status ), resourceList.size() );
     }
 
     @Override

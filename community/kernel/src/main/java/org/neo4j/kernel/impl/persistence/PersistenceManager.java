@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.persistence;
 
+import java.util.Iterator;
 import java.util.Map;
 
 import javax.transaction.RollbackException;
@@ -404,7 +405,7 @@ public class PersistenceManager
         getResource( true ).removeLabelFromNode( labelId, nodeId );
     }
     
-    public Iterable<Long> getLabelsForNode( long nodeId )
+    public Iterator<Long> getLabelsForNode( long nodeId )
     {
         return getReadOnlyResourceIfPossible().getLabelsForNode( nodeId );
     }

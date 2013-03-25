@@ -20,7 +20,7 @@
 package org.neo4j.kernel.impl.nioneo.xa;
 
 import static java.util.Arrays.binarySearch;
-import static org.neo4j.helpers.collection.IteratorUtil.asIterable;
+import static org.neo4j.helpers.collection.IteratorUtil.asIterator;
 import static org.neo4j.helpers.collection.IteratorUtil.first;
 import static org.neo4j.kernel.impl.nioneo.store.PropertyStore.encodeString;
 import static org.neo4j.kernel.impl.nioneo.xa.Command.Mode.CREATE;
@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -1906,10 +1907,10 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     }
     
     @Override
-    public Iterable<Long> getLabelsForNode( long nodeId )
+    public Iterator<Long> getLabelsForNode( long nodeId )
     {
         // Don't consider changes in this transaction
         NodeRecord node = getNodeStore().getRecord( nodeId );
-        return asIterable( getNodeStore().getLabelsForNode( node ) );
+        return asIterator( getNodeStore().getLabelsForNode( node ) );
     }
 }

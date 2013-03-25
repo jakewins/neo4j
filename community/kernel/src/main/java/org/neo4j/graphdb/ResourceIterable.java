@@ -17,34 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.api.index;
+package org.neo4j.graphdb;
 
-import static org.neo4j.helpers.collection.IteratorUtil.emptyIterator;
-
-import java.util.Iterator;
-
-/**
- * Reader for an {@link IndexAccessor}.
- * Must honor repeatable reads, which means that if a lookup is executed multiple times the same result set
- * must be returned.
- */
-public interface IndexReader
+public interface ResourceIterable<T> extends Iterable<T>
 {
-    Iterator<Long> lookup( Object value );
-    
-    void close();
-    
-    public static class Empty implements IndexReader
-    {
-        @Override
-        public Iterator<Long> lookup( Object value )
-        {
-            return emptyIterator();
-        }
-        
-        @Override
-        public void close()
-        {
-        }
-    }
+    @Override
+    ResourceIterator<T> iterator();
 }
