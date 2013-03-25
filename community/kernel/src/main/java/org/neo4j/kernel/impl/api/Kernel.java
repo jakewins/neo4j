@@ -149,7 +149,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         // + Locking
         result = new LockingTransactionContext( result, lockManager, transactionManager );
         // + Single statement at a time
-        result = new SingleStatementTransactionContext( result );
+        result = new ReferenceCountingTransactionContext( result );
         
         // done
         return result;
