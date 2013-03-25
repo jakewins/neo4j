@@ -20,33 +20,41 @@
 package org.neo4j.kernel.impl.api;
 
 import org.neo4j.kernel.api.StatementContext;
-import org.neo4j.kernel.api.TransactionContext;
 
-public class ReferenceCountingTransactionContext extends DelegatingTransactionContext
+public abstract class StatementContextOwner
 {
-    private final StatementContextOwner statementContext = new StatementContextOwner()
+    private StatementContext statementContext;
+    private int count;
+
+    public StatementContext getStatementContext()
     {
-        @Override
-        protected StatementContext createStatementContext()
+        if ( statementContext == null )
         {
-            return ReferenceCountingTransactionContext.this.createStatementContext();
+            statementContext = createStatementContext();
         }
-    };
-
-    public ReferenceCountingTransactionContext( TransactionContext inner )
-    {
-        super( inner );
+        count++;
+        return new StatementContextReference( statementContext );
     }
 
-    @Override
-    public StatementContext newStatementContext()
-    {
-        return statementContext.getStatementContext();
-    }
+    protected abstract StatementContext createStatementContext();
 
-    private StatementContext createStatementContext()
+    private class StatementContextReference extends InteractionStoppingStatementContext
     {
-        return super.newStatementContext();
+        public StatementContextReference( StatementContext delegate )
+        {
+            super( delegate );
+        }
+
+        @Override
+        public void close()
+        {
+            markAsClosed();
+            if ( --count == 0 )
+            {
+                statementContext.close();
+                statementContext = null;
+            }
+        }
     }
 
 }

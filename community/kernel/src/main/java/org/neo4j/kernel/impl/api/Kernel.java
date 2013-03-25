@@ -69,6 +69,14 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
     private final PersistenceCache persistenceCache;
     private final SchemaCache schemaCache;
     private final UpdateableSchemaState schemaStateHolder;
+    private final StatementContextOwner statementContext = new StatementContextOwner()
+    {
+        @Override
+        protected StatementContext createStatementContext()
+        {
+            return Kernel.this.createReadOnlyStatementContext();
+        }
+    };
 
     // These non-final components are all circular dependencies in various configurations.
     // As we work towards refactoring the old kernel, we should work to remove these.
@@ -157,6 +165,11 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
 
     @Override
     public StatementContext newReadOnlyStatementContext()
+    {
+        return statementContext.getStatementContext();
+    }
+
+    private StatementContext createReadOnlyStatementContext()
     {
         // I/O
         StatementContext result = new StoreStatementContext(
