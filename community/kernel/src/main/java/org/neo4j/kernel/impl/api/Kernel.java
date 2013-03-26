@@ -26,6 +26,7 @@ import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.kernel.api.KernelAPI;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.TransactionContext;
+import org.neo4j.kernel.api.operations.SchemaOperations;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.core.PropertyIndexManager;
@@ -70,7 +71,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
     private final DependencyResolver dependencyResolver;
     private final PersistenceCache persistenceCache;
     private final SchemaCache schemaCache;
-    private final UpdateableSchemaState schemaStateHolder;
+    private final UpdateableSchemaState schemaState;
     private final StatementContextOwner statementContext = new StatementContextOwner()
     {
         @Override
@@ -100,7 +101,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         this.dependencyResolver = dependencyResolver;
         this.persistenceCache = new PersistenceCache( new NodeCacheLoader( persistenceManager ) );
         this.schemaCache = schemaCache;
-        this.schemaStateHolder = schemaStateHolder;
+        this.schemaState = schemaStateHolder;
     }
     
     @Override
@@ -155,7 +156,7 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         // + Transaction state and caching
         TransactionState transactionState = transactionManager.getTransactionState();
         result = new StateHandlingTransactionContext( result,
-                persistenceCache, transactionState, schemaCache, schemaStateHolder );
+                persistenceCache, transactionState, schemaCache, schemaState );
         // + Constraints evaluation
         result = new ConstraintEvaluatingTransactionContext( result );
         // + Locking
@@ -179,11 +180,23 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         StatementContext result = new StoreStatementContext(
                 propertyIndexManager, persistenceManager, nodeManager, neoStore, indexService,
                 new IndexReaderFactory.NonCaching( indexService ) );
+
         // + Cache
         result = new CachingStatementContext( result, persistenceCache, schemaCache );
+
         // + Read only access
         result = new ReadOnlyStatementContext( result );
 
+        // + Schema state handling
+        result = createSchemaStateStatementContext( result );
+
+        return result;
+    }
+
+    private StatementContext createSchemaStateStatementContext( StatementContext result )
+    {
+        SchemaOperations schemaOps = new SchemaStateOperations( result, schemaState );
+        result = new CompositeStatementContext( result, schemaOps );
         return result;
     }
 }
