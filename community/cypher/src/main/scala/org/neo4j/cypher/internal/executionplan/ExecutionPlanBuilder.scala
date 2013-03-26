@@ -23,15 +23,12 @@ import builders._
 import org.neo4j.cypher.internal.pipes._
 import org.neo4j.cypher._
 import internal.profiler.Profiler
-import internal.spi.gdsimpl.TransactionBoundPlanContext
 import internal.spi.{PlanContext, QueryContext}
 import internal.{ExecutionContext, ClosingIterator}
 import internal.commands._
 import internal.symbols.SymbolTable
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.cypher.ExecutionResult
-import org.neo4j.kernel.{GraphDatabaseAPI, ThreadToStatementContextBridge}
-import util.Try
 import values.ResolvedLabel
 
 class ExecutionPlanBuilder(graph: GraphDatabaseService) extends PatternGraphBuilder {
@@ -66,7 +63,7 @@ class ExecutionPlanBuilder(graph: GraphDatabaseService) extends PatternGraphBuil
   def buildIndexQuery(op: IndexOperation): (Pipe, Boolean) = (new IndexOperationPipe(op), true)
 
   def buildQuery(inputQuery: Query, context: PlanContext): (Pipe, Boolean) = {
-    val initialPSQ = PartiallySolvedQuery(inputQuery).rewrite(LabelResolution( (name) => resolveLabel(name, context)))
+    val initialPSQ = PartiallySolvedQuery(inputQuery).rewrite(LabelResolution((name) => resolveLabel(name, context)))
 
     var continue = true
     var planInProgress = ExecutionPlanInProgress(initialPSQ, NullPipe, isUpdating = false)
