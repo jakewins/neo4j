@@ -58,7 +58,7 @@ var buf = [];
 with (locals || {}) {
 var interp;
 var __indent = [];
-buf.push('\n<div class="row-fluid">\n  <div class="span3">\n    <div ng-repeat="domain in domains">{{ domain }}</div>\n  </div>\n  <div class="span3">\n    <div ng-repeat="bean in beans"> \n      <p>{{ bean.name }}</p>\n    </div>\n  </div>\n  <div class="span6">\n    <h1>{{ bean.name }}</h1>\n    <div ng-repeat="attr in bean.attributes">\n      <p>{{ attr.name }} = {{ attr.value }}</p>\n    </div>\n  </div>\n</div>');
+buf.push('\n<div class="row-fluid">\n  <div class="span3">\n    <h4>Domains</h4>\n    <ul class="nav nav-tabs nav-stacked">\n      <li ng-repeat="(domain, beans) in domains"> <a ng-click="setDomain(domain)">{{ domain }}</a></li>\n    </ul>\n  </div>\n  <div class="span3">\n    <div ng-show="beans.length">\n      <h4>Domain - {{ domain }}</h4>\n      <ul ng-show="beans.length" class="nav nav-tabs nav-stacked">\n        <li ng-repeat="bean in beans"> <a ng-click="setBean(bean)">{{ bean.simpleName }} </a></li>\n      </ul>\n    </div>\n    <div ng-show="!beans.length">\n      <h4>Domain</h4>\n      <h5>No domain selected</h5>\n    </div>\n  </div>\n  <div class="span6">\n    <div ng-show="bean">\n      <h4>Bean - {{ bean.simpleName }}</h4>\n      <p>{{ bean.description }}</p>\n      <dl class="dl-horizontal">\n        <div ng-repeat="attr in simpleAttributes">\n          <dt>{{ attr.name }}</dt>\n          <dd>{{ attr.value }}</dd>\n        </div>\n      </dl>\n      <div ng-repeat="attr in complexAttributes">\n        <h5>{{ attr.name }}</h5>\n        <pre>{{ attr.value }}</pre>\n      </div>\n    </div>\n    <div ng-show="!bean">\n      <h4>Bean</h4>\n      <h5>No bean selected</h5>\n    </div>\n  </div>\n</div>');
 }
 return buf.join("");
 };

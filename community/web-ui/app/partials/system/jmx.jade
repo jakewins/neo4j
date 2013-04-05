@@ -1,10 +1,29 @@
 .row-fluid
   .span3
-    div(ng-repeat='domain in domains') {{ domain }}
+    h4 Domains
+    ul.nav.nav-tabs.nav-stacked
+      li(ng-repeat='(domain, beans) in domains') 
+        a(ng-click='setDomain(domain)') {{ domain }}
   .span3
-    div(ng-repeat='bean in beans') 
-      p {{ bean.name }}
+    div(ng-show='beans.length')
+      h4 Domain - {{ domain }}
+      ul.nav.nav-tabs.nav-stacked(ng-show='beans.length')
+        li(ng-repeat='bean in beans') 
+          a(ng-click='setBean(bean)') {{ bean.simpleName }} 
+    div(ng-show='!beans.length')
+      h4 Domain
+      h5 No domain selected
   .span6
-    h1 {{ bean.name }}
-    div(ng-repeat='attr in bean.attributes')
-        p {{ attr.name }} = {{ attr.value }}
+    div(ng-show='bean')
+      h4 Bean - {{ bean.simpleName }}
+      p {{ bean.description }}
+      dl.dl-horizontal
+        div(ng-repeat='attr in simpleAttributes')
+          dt {{ attr.name }}
+          dd {{ attr.value }}
+      div(ng-repeat='attr in complexAttributes')
+        h5 {{ attr.name }}
+        pre {{ attr.value }}
+    div(ng-show='!bean')
+      h4 Bean
+      h5 No bean selected

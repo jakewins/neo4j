@@ -30,7 +30,7 @@ angular.module('app.services.jmx', [])
         for bean in data
 
           params = @beanParameters(bean.name)
-          bean.simpleName = params.name
+          bean.simpleName = if params.name? then params.name else params.type
 
           domain = bean.name.split ":", 1
           @domains[domain] ?= []

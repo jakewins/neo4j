@@ -1,17 +1,41 @@
 
 <div class="row-fluid">
   <div class="span3">
-    <div ng-repeat="domain in domains">{{ domain }}</div>
+    <h4>Domains</h4>
+    <ul class="nav nav-tabs nav-stacked">
+      <li ng-repeat="(domain, beans) in domains"> <a ng-click="setDomain(domain)">{{ domain }}</a></li>
+    </ul>
   </div>
   <div class="span3">
-    <div ng-repeat="bean in beans"> 
-      <p>{{ bean.name }}</p>
+    <div ng-show="beans.length">
+      <h4>Domain - {{ domain }}</h4>
+      <ul ng-show="beans.length" class="nav nav-tabs nav-stacked">
+        <li ng-repeat="bean in beans"> <a ng-click="setBean(bean)">{{ bean.simpleName }} </a></li>
+      </ul>
+    </div>
+    <div ng-show="!beans.length">
+      <h4>Domain</h4>
+      <h5>No domain selected</h5>
     </div>
   </div>
   <div class="span6">
-    <h1>{{ bean.name }}</h1>
-    <div ng-repeat="attr in bean.attributes">
-      <p>{{ attr.name }} = {{ attr.value }}</p>
+    <div ng-show="bean">
+      <h4>Bean - {{ bean.simpleName }}</h4>
+      <p>{{ bean.description }}</p>
+      <dl class="dl-horizontal">
+        <div ng-repeat="attr in simpleAttributes">
+          <dt>{{ attr.name }}</dt>
+          <dd>{{ attr.value }}</dd>
+        </div>
+      </dl>
+      <div ng-repeat="attr in complexAttributes">
+        <h5>{{ attr.name }}</h5>
+        <pre>{{ attr.value }}</pre>
+      </div>
+    </div>
+    <div ng-show="!bean">
+      <h4>Bean</h4>
+      <h5>No bean selected</h5>
     </div>
   </div>
 </div>

@@ -226,24 +226,76 @@ RETURN myNode';
 'use strict';
 
 angular.module('app.controllers.system.jmx', ['app.services.jmx']).controller('JmxController', [
-  '$scope', 'jmxService', function($scope, jmxService) {
-    $scope.domains = ["org.neo4j", "java.lang", "java.util.logging"];
-    $scope.beans = [
-      {
-        instance: "kernel#0",
-        name: "Kernel"
+  '$scope', '$rootScope', 'jmxService', function($scope, $rootScope, jmxService) {
+    $scope.domains = jmxService.domains;
+    $scope.beans = [];
+    $scope.domain = null;
+    $scope.bean = null;
+    $scope.setDomain = function(domain) {
+      if ($scope.domains[domain] != null) {
+        $scope.beans = $scope.domains[domain];
+        $scope.domain = $rootScope.currentJmxDomain = domain;
+        return $scope.bean = null;
       }
-    ];
-    return $scope.bean = {
-      name: "Kernel",
-      attributes: [
-        {
-          name: "ReadOnly",
-          value: false,
-          description: "Hello"
-        }
-      ]
     };
+    $scope.setBean = function(bean) {
+      var attr, complex, simple, _i, _len, _ref, _ref1;
+      $scope.bean = $rootScope.currentJmxBean = bean;
+      $scope.simpleAttributes = simple = [];
+      $scope.complexAttributes = complex = [];
+      _ref = bean.attributes;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        attr = _ref[_i];
+        if ((_ref1 = attr.type) === "java.lang.String" || _ref1 === "boolean" || _ref1 === "long" || _ref1 === "int" || _ref1 === "float" || _ref1 === "double") {
+          simple.push(attr);
+        } else {
+          complex.push(attr);
+        }
+      }
+      simple.sort(function(a, b) {
+        if (a.name < b.name) {
+          return -1;
+        } else {
+          return 1;
+        }
+      });
+      return complex.sort(function(a, b) {
+        if (a.name < b.name) {
+          return -1;
+        } else {
+          return 1;
+        }
+      });
+    };
+    $scope.$on('jmxService.changed', function(ev, args) {
+      var b, _i, _len, _ref, _results;
+      $scope.domains = args[0];
+      if ($scope.domain === null) {
+        $scope.setDomain("org.neo4j");
+      }
+      if ($scope.bean === null) {
+        _ref = $scope.domains["org.neo4j"];
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          b = _ref[_i];
+          if (b.name.indexOf('Kernel') !== -1) {
+            $scope.setBean(b);
+            break;
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      }
+    });
+    if ($rootScope.currentJmxDomain != null) {
+      $scope.setDomain($rootScope.currentJmxDomain);
+    } else {
+      $scope.setDomain("org.neo4j");
+    }
+    if ($rootScope.currentJmxBean != null) {
+      return $scope.setBean($rootScope.currentJmxBean);
+    }
   }
 ]);
 'use strict';
@@ -589,7 +641,7 @@ angular.module('app.services.jmx', []).factory('jmxService', [
         for (_i = 0, _len = data.length; _i < _len; _i++) {
           bean = data[_i];
           params = this.beanParameters(bean.name);
-          bean.simpleName = params.name;
+          bean.simpleName = params.name != null ? params.name : params.type;
           domain = bean.name.split(":", 1);
           if ((_ref = (_base = this.domains)[domain]) == null) {
             _base[domain] = [];
