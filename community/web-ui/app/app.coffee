@@ -25,10 +25,15 @@ App.config([
 
   $routeProvider
 
-    .when('/',             goTo "splash", "SplashController")
+    .when('/',             goTo "splash",       "SplashController")
     .when('/data/browser', goTo "data/browser", "DatabrowserController")
     .when('/data/console', goTo "data/console", "ConsoleController")
-    
+
+    .when('/schema/indexes',        goTo "schema/indexes",
+                                         "IndexController")
+    .when('/schema/legacy-indexes', goTo "schema/legacyIndexes",
+                                          "LegacyIndexController")
+
     .when('/system/jmx',   goTo "system/jmx", "JmxController")
 
     # Catch all

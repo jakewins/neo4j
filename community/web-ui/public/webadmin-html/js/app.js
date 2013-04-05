@@ -13,7 +13,7 @@ App.config([
         controller: ctrl
       };
     };
-    $routeProvider.when('/', goTo("splash", "SplashController")).when('/data/browser', goTo("data/browser", "DatabrowserController")).when('/data/console', goTo("data/console", "ConsoleController")).when('/system/jmx', goTo("system/jmx", "JmxController")).otherwise({
+    $routeProvider.when('/', goTo("splash", "SplashController")).when('/data/browser', goTo("data/browser", "DatabrowserController")).when('/data/console', goTo("data/console", "ConsoleController")).when('/schema/indexes', goTo("schema/indexes", "IndexController")).when('/schema/legacy-indexes', goTo("schema/legacyIndexes", "LegacyIndexController")).when('/system/jmx', goTo("system/jmx", "JmxController")).otherwise({
       redirectTo: '/'
     });
     $locationProvider.html5Mode(false);
@@ -25,7 +25,7 @@ App.config([
 /* Controllers
 */
 
-angular.module('app.controllers', ['app.controllers.sidebar', 'app.controllers.data.browser', 'app.controllers.data.console', 'app.controllers.system.jmx', 'app.controllers.splash']).controller('AppCtrl', ['$scope', '$location', '$resource', '$rootScope', function($scope, $location, $resource, $rootScope) {}]);
+angular.module('app.controllers', ['app.controllers.sidebar', 'app.controllers.data.browser', 'app.controllers.data.console', 'app.controllers.schema.indexes', 'app.controllers.system.jmx', 'app.controllers.splash']).controller('AppCtrl', ['$scope', '$location', '$resource', '$rootScope', function($scope, $location, $resource, $rootScope) {}]);
 'use strict';
 
 angular.module('app.controllers.data.browser', ['app.services.graph', 'app.services.paginator']).controller('DatabrowserController', [
@@ -131,6 +131,9 @@ angular.module('app.controllers.data.console', []).controller('ConsoleController
     };
   }
 ]);
+'use strict';
+
+angular.module('app.controllers.schema.indexes', ['app.services.indexes']).controller('IndexController', ['$scope', '$rootScope', 'indexService', function($scope, $rootScope, indexService) {}]).controller('LegacyIndexController', ['$scope', '$rootScope', 'legacyIndexService', function($scope, $rootScope, legacyIndexService) {}]);
 'use strict';
 
 angular.module('app.controllers.sidebar', []).controller('SidebarController', [
@@ -380,7 +383,8 @@ angular.module('app.services.console', []).factory('consoleService', [
             data: data
           }, {
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
             }
           }).success(this._onResponse(statement)).error(this._onResponse(statement));
         } else {
@@ -603,6 +607,98 @@ angular.module('app.services.graph', []).factory('graphService', [
 
     })();
     return new GraphService;
+  }
+]);
+'use strict';
+
+/* A service that manages a common view of the graph for the entire app
+*/
+
+var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+angular.module('app.services.indexes', []).factory('legacyIndexService', [
+  '$http', '$rootScope', function($http, $rootScope) {
+    var LegacyIndexService;
+    return new (LegacyIndexService = (function() {
+
+      function LegacyIndexService() {
+        this._updateRelationshipIndexes = __bind(this._updateRelationshipIndexes, this);
+
+        this._updateNodeIndexes = __bind(this._updateNodeIndexes, this);
+        this.nodeIndexes = {};
+        this.relationshipIndexes = {};
+        $http.get("/db/data/index/node").success(this._updateNodeIndexes);
+        $http.get("/db/data/index/relationship").success(this._updateRelationshipIndexes);
+      }
+
+      LegacyIndexService.prototype.newNodeIndex = function(name) {
+        var _this = this;
+        return $http.post("/db/data/index/node", {
+          'name': name
+        }).success(function() {
+          return $http.get("/db/data/index/node/" + name).success(function(idx) {
+            _this.nodeIndexes[name] = idx;
+            return _this._triggerChangedEvent();
+          });
+        });
+      };
+
+      LegacyIndexService.prototype.newRelationshipIndex = function(name) {
+        var _this = this;
+        return $http.post("/db/data/index/relationship", {
+          'name': name
+        }).success(function() {
+          return $http.get("/db/data/index/relationship/" + name).success(function(idx) {
+            _this.relationshipIndexes[name] = idx;
+            return _this._triggerChangedEvent();
+          });
+        });
+      };
+
+      LegacyIndexService.prototype.deleteNodeIndex = function(name) {
+        var _this = this;
+        return $http["delete"]("/db/data/index/node/" + name).success(function() {
+          delete _this.nodeIndexes[name];
+          return _this._triggerChangedEvent();
+        });
+      };
+
+      LegacyIndexService.prototype.deleteRelationshipIndex = function(name) {
+        var _this = this;
+        return $http["delete"]("/db/data/index/relationship/" + name).success(function() {
+          delete _this.relationshipIndexes[name];
+          return _this._triggerChangedEvent();
+        });
+      };
+
+      LegacyIndexService.prototype._updateNodeIndexes = function(indexes) {
+        this.nodeIndexes = indexes;
+        return this._triggerChangedEvent();
+      };
+
+      LegacyIndexService.prototype._updateRelationshipIndexes = function(indexes) {
+        this.relationshipIndexes = indexes;
+        return this._triggerChangedEvent();
+      };
+
+      LegacyIndexService.prototype._triggerChangedEvent = function() {
+        return $rootScope.$broadcast("legacyIndexService.changed");
+      };
+
+      return LegacyIndexService;
+
+    })());
+  }
+]).factory('indexService', [
+  '$http', '$rootScope', function($http, $rootScope) {
+    var IndexService;
+    return new (IndexService = (function() {
+
+      function IndexService() {}
+
+      return IndexService;
+
+    })());
   }
 ]);
 'use strict';

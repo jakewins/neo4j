@@ -6,6 +6,7 @@ angular.module('app.controllers', [
   'app.controllers.sidebar'
   'app.controllers.data.browser'
   'app.controllers.data.console'
+  'app.controllers.schema.indexes'
   'app.controllers.system.jmx'
   'app.controllers.splash'
 ])

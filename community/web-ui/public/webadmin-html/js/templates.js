@@ -40,6 +40,24 @@ var buf = [];
 with (locals || {}) {
 var interp;
 var __indent = [];
+buf.push('\n<h1>Indexes</h1>');
+}
+return buf.join("");
+};module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
+var buf = [];
+with (locals || {}) {
+var interp;
+var __indent = [];
+buf.push('\n<h1>Legacy indexes</h1>');
+}
+return buf.join("");
+};module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
+var buf = [];
+with (locals || {}) {
+var interp;
+var __indent = [];
 buf.push('\n<div ng-controller="SidebarController" class="sidebar">\n  <ul ng-include="\'partials/menu_recursive.html\'" ng-init="items=menuItems" class="main-menu"></ul>\n  <div class="sidebar-resources"><small>Resources</small><br/><a href="http://docs.neo4j.org/chunked/stable/tutorials-rest.html" class="btn btn-link btn-mini">Getting started</a><a href="http://docs.neo4j.org/chunked/stable/" class="btn btn-link btn-mini">Documentation</a></a><a href="https://github.com/neo4j/neo4j/issues/new" class="btn btn-link btn-mini">Report an issue</a></div>\n</div>');
 }
 return buf.join("");
