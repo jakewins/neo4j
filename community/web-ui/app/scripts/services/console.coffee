@@ -27,7 +27,8 @@ angular.module('app.services.console', [])
             catch e
               @_out(@_engineKey, statement, ["Invalid JSON payload."])
               return
-          $http(method:method, url:url, data:data)
+          $http(method:method, url:url, data:data,
+                headers:{'Content-Type': 'application/json'})
             .success(@_onResponse(statement))
             .error(  @_onResponse(statement))
         else
