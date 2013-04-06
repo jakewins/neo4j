@@ -49,7 +49,7 @@ var buf = [];
 with (locals || {}) {
 var interp;
 var __indent = [];
-buf.push('\n<h1>Legacy indexes</h1>');
+buf.push('\n<h1>Legacy indexes</h1>\n<select ng-model="newIndexType">\n  <option value="node">Node Index</option>\n  <option value="rel">Relationship Index</option>\n</select>\n<input ng-model="newIndexName"/>\n<div ng-click="newIndex()" class="btn">Create Index</div>\n<div ng-show="showIndexDropWarning" class="alert alert-block alert-warning">\n  <h4>Warning!</h4>\n  <p>Dropping an index cannot be undone, are you sure you want to drop the {{ toDropType }} index named \'{{ toDropName }}\'?</p>\n  <div ng-click="dropIndex(toDropType, toDropName)" class="btn btn-warning">Drop it</div>\n  <div ng-click="showIndexDropWarning = false" class="btn">Get me out of here</div>\n</div>\n<h4>Node indexes</h4>\n<ul>\n  <li ng-repeat="(name, index) in nodeIndexes">{{ name }}\n    <div ng-click="promptDropNodeIndex(name)" class="btn btn-danger btn-small">Drop</div>\n  </li>\n</ul>\n<h4>Relationship indexes</h4>\n<ul>\n  <li ng-repeat="(name, index) in relationshipIndexes">{{ name }}\n    <div ng-click="promptDropRelationshipIndex(name)" class="btn btn-danger btn-small">Drop</div>\n  </li>\n</ul>');
 }
 return buf.join("");
 };module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {

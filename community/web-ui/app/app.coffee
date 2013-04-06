@@ -3,6 +3,7 @@
 # Declare app level module which depends on filters, and services
 App = angular.module('app', [
   'ui'
+  'ui.bootstrap'
   'ngCookies'
   'ngResource'
   'app.controllers'
@@ -44,4 +45,13 @@ App.config([
   
   # Common HTTP headers for the networking layer
   $httpProvider.defaults.headers.common['X-stream'] = true
+  $httpProvider.defaults.headers.common['Content-Type'] = 'application/json'
+
+  $httpProvider.defaults.transformRequest.push (payload, headers) ->
+    headers()['Content-Type'] = 'application/json'
+    console.log headers()
+    payload
+
+  for a in $httpProvider.defaults.transformRequest
+    console.log a.toString()
 ])

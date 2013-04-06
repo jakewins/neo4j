@@ -8692,9 +8692,9 @@ function $HttpProvider() {
           promise;
 
       // strip content-type if data is undefined
-      if (isUndefined(config.data)) {
-        delete reqHeaders['Content-Type'];
-      }
+      // if (isUndefined(config.data)) {
+      //   delete reqHeaders['Content-Type'];
+      // }
 
       // send request
       promise = sendReq(config, reqData, reqHeaders);

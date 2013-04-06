@@ -2,11 +2,11 @@
 
 var App;
 
-App = angular.module('app', ['ui', 'ngCookies', 'ngResource', 'app.controllers', 'app.directives', 'app.filters', 'app.services']);
+App = angular.module('app', ['ui', 'ui.bootstrap', 'ngCookies', 'ngResource', 'app.controllers', 'app.directives', 'app.filters', 'app.services']);
 
 App.config([
   '$routeProvider', '$locationProvider', '$httpProvider', function($routeProvider, $locationProvider, $httpProvider, config) {
-    var goTo;
+    var a, goTo, _i, _len, _ref, _results;
     goTo = function(tmpl, ctrl) {
       return {
         templateUrl: "partials/" + tmpl + ".html",
@@ -17,7 +17,20 @@ App.config([
       redirectTo: '/'
     });
     $locationProvider.html5Mode(false);
-    return $httpProvider.defaults.headers.common['X-stream'] = true;
+    $httpProvider.defaults.headers.common['X-stream'] = true;
+    $httpProvider.defaults.headers.common['Content-Type'] = 'application/json';
+    $httpProvider.defaults.transformRequest.push(function(payload, headers) {
+      headers()['Content-Type'] = 'application/json';
+      console.log(headers());
+      return payload;
+    });
+    _ref = $httpProvider.defaults.transformRequest;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      a = _ref[_i];
+      _results.push(console.log(a.toString()));
+    }
+    return _results;
   }
 ]);
 'use strict';
@@ -133,7 +146,44 @@ angular.module('app.controllers.data.console', []).controller('ConsoleController
 ]);
 'use strict';
 
-angular.module('app.controllers.schema.indexes', ['app.services.indexes']).controller('IndexController', ['$scope', '$rootScope', 'indexService', function($scope, $rootScope, indexService) {}]).controller('LegacyIndexController', ['$scope', '$rootScope', 'legacyIndexService', function($scope, $rootScope, legacyIndexService) {}]);
+angular.module('app.controllers.schema.indexes', ['app.services.indexes']).controller('IndexController', ['$scope', '$rootScope', 'indexService', function($scope, $rootScope, indexService) {}]).controller('LegacyIndexController', [
+  '$scope', '$rootScope', 'legacyIndexService', function($scope, $rootScope, legacyIndexService) {
+    var refreshIndexes;
+    $scope.newIndexType = 'node';
+    refreshIndexes = function() {
+      $scope.nodeIndexes = legacyIndexService.nodeIndexes;
+      return $scope.relationshipIndexes = legacyIndexService.relationshipIndexes;
+    };
+    $scope.newIndex = function() {
+      if ($scope.newIndexType === 'node') {
+        legacyIndexService.newNodeIndex($scope.newIndexName);
+      } else {
+        legacyIndexService.newRelationshipIndex($scope.newIndexName);
+      }
+      return $scope.newIndexName = '';
+    };
+    $scope.dropIndex = function(type, name) {
+      $scope.showIndexDropWarning = false;
+      if (type === 'node') {
+        return legacyIndexService.deleteNodeIndex(name);
+      } else {
+        return legacyIndexService.deleteRelationshipIndex(name);
+      }
+    };
+    $scope.promptDropRelationshipIndex = function(indexName) {
+      $scope.toDropName = indexName;
+      $scope.toDropType = "relationship";
+      return $scope.showIndexDropWarning = true;
+    };
+    $scope.promptDropNodeIndex = function(indexName) {
+      $scope.toDropName = indexName;
+      $scope.toDropType = "node";
+      return $scope.showIndexDropWarning = true;
+    };
+    $scope.$on("legacyIndexService.changed", refreshIndexes);
+    return refreshIndexes();
+  }
+]);
 'use strict';
 
 angular.module('app.controllers.sidebar', []).controller('SidebarController', [

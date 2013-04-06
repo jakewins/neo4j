@@ -1,2 +1,26 @@
 
 <h1>Legacy indexes</h1>
+<select ng-model="newIndexType">
+  <option value="node">Node Index</option>
+  <option value="rel">Relationship Index</option>
+</select>
+<input ng-model="newIndexName"/>
+<div ng-click="newIndex()" class="btn">Create Index</div>
+<div ng-show="showIndexDropWarning" class="alert alert-block alert-warning">
+  <h4>Warning!</h4>
+  <p>Dropping an index cannot be undone, are you sure you want to drop the {{ toDropType }} index named '{{ toDropName }}'?</p>
+  <div ng-click="dropIndex(toDropType, toDropName)" class="btn btn-warning">Drop it</div>
+  <div ng-click="showIndexDropWarning = false" class="btn">Get me out of here</div>
+</div>
+<h4>Node indexes</h4>
+<ul>
+  <li ng-repeat="(name, index) in nodeIndexes">{{ name }}
+    <div ng-click="promptDropNodeIndex(name)" class="btn btn-danger btn-small">Drop</div>
+  </li>
+</ul>
+<h4>Relationship indexes</h4>
+<ul>
+  <li ng-repeat="(name, index) in relationshipIndexes">{{ name }}
+    <div ng-click="promptDropRelationshipIndex(name)" class="btn btn-danger btn-small">Drop</div>
+  </li>
+</ul>
