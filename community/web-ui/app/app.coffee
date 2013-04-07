@@ -26,9 +26,10 @@ App.config([
 
   $routeProvider
 
-    .when('/',             goTo "splash",       "SplashController")
-    .when('/data/browser', goTo "data/browser", "DatabrowserController")
-    .when('/data/console', goTo "data/console", "ConsoleController")
+    .when('/',             goTo "splash",        "SplashController")
+    .when('/data/browser', goTo "data/query",    "QueryToolController")
+    .when('/data/explore', goTo "data/explorer", "ExplorerController")
+    .when('/data/console', goTo "data/console",  "ConsoleController")
 
     .when('/schema/indexes',        goTo "schema/indexes",
                                          "IndexController")

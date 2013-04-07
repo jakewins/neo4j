@@ -33,7 +33,6 @@ angular.module('app.controllers.schema.indexes', [
       indexService.dropIndex idx.label, idx.propertyKeys[0]
       $scope.showIndexDropWarning = false
 
-
     $scope.$on "indexService.changed", refreshIndexes
     refreshIndexes()
     indexService.refresh()

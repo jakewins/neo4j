@@ -21,7 +21,7 @@ angular.module('app.controllers.sidebar', [])
           }
           
           { # BROWSER
-            href: '#/data/visualizer',
+            href: '#/data/explore',
             title: 'Explorer',
             icon: 'map-marker', active: no,
           }

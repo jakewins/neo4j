@@ -1,6 +1,9 @@
 'use strict'
 
-### A service that manages a common view of the graph for the entire app ###
+###
+A stateful service for executing statements and reading results,
+used by the query tool.
+###
 
 angular.module('app.services.graph', [])
 

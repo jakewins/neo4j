@@ -1,0 +1,47 @@
+
+.data-browser
+  .data-browser-dash 
+    .data-browser-query-wrap
+      .btn.btn-primary.data-browser-exec(ng-click='execute()') Execute &raquo;
+      .code-mirror-wrap
+        textarea(ui-codemirror="{theme:'eclipse',mode:'cypher', extraKeys:{'Ctrl-Space': 'cypherAutoComplete','Ctrl-Enter': execute}}", ng-model="query")
+      .muted.text-small 
+        code CTRL RETURN
+        |  Executes statement 
+        code CTRL SPACE
+        |  Auto-completes
+  
+  .row-fluid(ng-show='isLoading')
+    .loading-screen.well
+      h3 Hold on to your chair!
+      p Neo4j is executing your statement..
+  
+  div(ng-show='!isLoading')
+    .row-fluid(ng-show='error')
+      .span12
+        h4 {{ error.exception }}
+        pre {{ error.message }}
+        p
+          .btn.btn-mini(data-toggle='collapse', data-target='.data-browser ul.stacktrace') Stacktrace
+        ul.stacktrace.collapse
+          li(ng-repeat="stack in error.stacktrace") 
+            pre {{ stack }}
+    
+    .row-fluid(ng-show='rows.length')
+      .span10
+        table.table.table-striped.table-bordered
+          tr
+            th(ng-repeat='column in columns') {{ column }}
+          tr(ng-repeat='row in rows')
+            td(ng-repeat='cell in row') {{ cell }}
+      .span2
+        .pagination.pagination-small.pagination-centered
+          ul
+            li.disabled
+              a Page {{ page }} of {{ numberOfPages }}
+            li(ng-repeat='button in pageButtons', ng-class='{disabled:button.disabled}') 
+              a(ng-click='updatePagination(button.action)') {{ button.text }}
+            
+    .row-fluid(ng-show='!rows.length && !error')
+      .span12.well The result set is empty
+          

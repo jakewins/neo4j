@@ -13,7 +13,7 @@ App.config([
         controller: ctrl
       };
     };
-    $routeProvider.when('/', goTo("splash", "SplashController")).when('/data/browser', goTo("data/browser", "DatabrowserController")).when('/data/console', goTo("data/console", "ConsoleController")).when('/schema/indexes', goTo("schema/indexes", "IndexController")).when('/schema/legacy-indexes', goTo("schema/legacyIndexes", "LegacyIndexController")).when('/system/jmx', goTo("system/jmx", "JmxController")).otherwise({
+    $routeProvider.when('/', goTo("splash", "SplashController")).when('/data/browser', goTo("data/query", "QueryToolController")).when('/data/explore', goTo("data/explorer", "ExplorerController")).when('/data/console', goTo("data/console", "ConsoleController")).when('/schema/indexes', goTo("schema/indexes", "IndexController")).when('/schema/legacy-indexes', goTo("schema/legacyIndexes", "LegacyIndexController")).when('/system/jmx', goTo("system/jmx", "JmxController")).otherwise({
       redirectTo: '/'
     });
     $locationProvider.html5Mode(false);
@@ -26,49 +26,7 @@ App.config([
 /* Controllers
 */
 
-angular.module('app.controllers', ['app.controllers.sidebar', 'app.controllers.data.browser', 'app.controllers.data.console', 'app.controllers.schema.indexes', 'app.controllers.system.jmx', 'app.controllers.splash']).controller('AppCtrl', ['$scope', '$location', '$resource', '$rootScope', function($scope, $location, $resource, $rootScope) {}]);
-'use strict';
-
-angular.module('app.controllers.data.browser', ['app.services.graph', 'app.services.paginator']).controller('DatabrowserController', [
-  '$scope', 'graphService', 'paginatorService', function($scope, graphService, paginatorService) {
-    var PAGE_SIZE, synchronizeWithGraphData;
-    PAGE_SIZE = 20;
-    $scope.query = graphService.query;
-    $scope.page = 1;
-    $scope.execute = function() {
-      return graphService.executeQuery($scope.query);
-    };
-    $scope.updatePagination = function(page) {
-      var buttons, end, numberOfPages, numberOfRows, start;
-      if (page === '_PREV') {
-        page = $scope.page - 1;
-      }
-      if (page === '_NEXT') {
-        page = $scope.page + 1;
-      }
-      numberOfRows = $scope.allRows.length;
-      numberOfPages = Math.ceil(numberOfRows / PAGE_SIZE);
-      buttons = paginatorService.calculateNiceButtons(page, numberOfPages);
-      start = PAGE_SIZE * (page - 1);
-      end = start + PAGE_SIZE;
-      end = end < numberOfRows ? end : numberOfRows;
-      $scope.page = page;
-      $scope.numberOfPages = numberOfPages;
-      $scope.pageButtons = buttons;
-      return $scope.rows = $scope.allRows.slice(start, end);
-    };
-    synchronizeWithGraphData = function() {
-      $scope.allRows = graphService.rows;
-      $scope.columns = graphService.columns;
-      $scope.error = graphService.error;
-      $scope.isLoading = graphService.isLoading;
-      return $scope.updatePagination(1);
-    };
-    $scope.graphService = graphService;
-    $scope.$on('graphService.changed', synchronizeWithGraphData);
-    return synchronizeWithGraphData();
-  }
-]);
+angular.module('app.controllers', ['app.controllers.sidebar', 'app.controllers.data.querytool', 'app.controllers.data.explorer', 'app.controllers.data.console', 'app.controllers.schema.indexes', 'app.controllers.system.jmx', 'app.controllers.splash']).controller('AppCtrl', ['$scope', '$location', '$resource', '$rootScope', function($scope, $location, $resource, $rootScope) {}]);
 'use strict';
 
 angular.module('app.controllers.data.console', []).controller('ConsoleController', [
@@ -130,6 +88,51 @@ angular.module('app.controllers.data.console', []).controller('ConsoleController
     return setStatement = function(s) {
       return state.statement = $scope.statement = s;
     };
+  }
+]);
+'use strict';
+
+angular.module('app.controllers.data.explorer', []).controller('ExplorerController', ['$scope', function($scope) {}]);
+'use strict';
+
+angular.module('app.controllers.data.querytool', ['app.services.graph', 'app.services.paginator']).controller('QueryToolController', [
+  '$scope', 'graphService', 'paginatorService', function($scope, graphService, paginatorService) {
+    var PAGE_SIZE, synchronizeWithGraphData;
+    PAGE_SIZE = 20;
+    $scope.query = graphService.query;
+    $scope.page = 1;
+    $scope.execute = function() {
+      return graphService.executeQuery($scope.query);
+    };
+    $scope.updatePagination = function(page) {
+      var buttons, end, numberOfPages, numberOfRows, start;
+      if (page === '_PREV') {
+        page = $scope.page - 1;
+      }
+      if (page === '_NEXT') {
+        page = $scope.page + 1;
+      }
+      numberOfRows = $scope.allRows.length;
+      numberOfPages = Math.ceil(numberOfRows / PAGE_SIZE);
+      buttons = paginatorService.calculateNiceButtons(page, numberOfPages);
+      start = PAGE_SIZE * (page - 1);
+      end = start + PAGE_SIZE;
+      end = end < numberOfRows ? end : numberOfRows;
+      $scope.page = page;
+      $scope.numberOfPages = numberOfPages;
+      $scope.pageButtons = buttons;
+      return $scope.rows = $scope.allRows.slice(start, end);
+    };
+    synchronizeWithGraphData = function() {
+      $scope.allRows = graphService.rows;
+      $scope.columns = graphService.columns;
+      $scope.error = graphService.error;
+      $scope.isLoading = graphService.isLoading;
+      return $scope.updatePagination(1);
+    };
+    $scope.graphService = graphService;
+    $scope.$on('graphService.changed', synchronizeWithGraphData);
+    return synchronizeWithGraphData();
   }
 ]);
 'use strict';
@@ -231,7 +234,7 @@ angular.module('app.controllers.sidebar', []).controller('SidebarController', [
             icon: 'list',
             active: false
           }, {
-            href: '#/data/visualizer',
+            href: '#/data/explore',
             title: 'Explorer',
             icon: 'map-marker',
             active: false
@@ -404,6 +407,50 @@ angular.module('app.directives', ['app.services']).directive('appVersion', [
         }
       }), 0);
     });
+  };
+}).directive('visualization', function() {
+  return function(scope, el, attrs) {
+    var addInterval, graph, graphics, i, layout, m, n, renderer;
+    graph = Viva.Graph.graph();
+    layout = Viva.Graph.Layout.forceDirected(graph, {
+      springLength: 10,
+      springCoeff: 0.0008,
+      dragCoeff: 0.02,
+      gravity: -1.2
+    });
+    graphics = Viva.Graph.View.svgGraphics();
+    graphics.node(function(node) {
+      return Viva.Graph.svg('rect').attr('width', 10).attr('height', 10).attr('fill', '#00a2e8');
+    });
+    renderer = Viva.Graph.View.renderer(graph, {
+      layout: layout,
+      graphics: graphics,
+      container: el[0],
+      renderLinks: true
+    });
+    renderer.run(50);
+    i = 0;
+    m = 10;
+    n = 20;
+    return addInterval = setInterval((function() {
+      var j, node, _i;
+      graph.beginUpdate();
+      for (j = _i = 0; 0 <= m ? _i <= m : _i >= m; j = 0 <= m ? ++_i : --_i) {
+        node = i + j * n;
+        if (i > 0) {
+          graph.addLink(node, i - 1 + j * n);
+          graph.addLink(node, i - 1 + j * n);
+        }
+        if (j > 0) {
+          graph.addLink(node, i + (j - 1) * n);
+        }
+      }
+      i++;
+      graph.endUpdate();
+      if (i >= n) {
+        return clearInterval(addInterval);
+      }
+    }), 100);
   };
 });
 'use strict';
@@ -616,7 +663,9 @@ angular.module('app.services.console', []).factory('consoleService', [
 ]);
 'use strict';
 
-/* A service that manages a common view of the graph for the entire app
+/*
+A stateful service for executing statements and reading results,
+used by the query tool.
 */
 
 var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
