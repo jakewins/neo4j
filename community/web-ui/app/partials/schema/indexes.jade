@@ -1,13 +1,42 @@
+
+.alert.alert-block.alert-warning(ng-show='showIndexDropWarning')
+  h4 Warning!
+  p Dropping an index cannot be undone, are you sure you want to 
+  | drop the index for nodes labelled '{{ indexToDrop.label }}' on property key '{{ indexToDrop.propertyKeys[0] }}'?
+  p
+    .btn.btn-warning(ng-click='dropIndex(indexToDrop)') Drop it
+    .btn(ng-click='showIndexDropWarning = false') Get me out of here
+
 table.table.table-striped.table-bordered
   tr
     th Label
     th Property
     th Status
     th
-  tr(ng-repeat='(name, index) in relationshipIndexes') 
-    td {{ name }}
-    td {{ index }}
+  tr(ng-repeat='index in indexes') 
+    td {{ index.label }}
+    td {{ index.propertyKeys }}
+    td {{ index.state }}
     td 
-      .btn.btn-danger.btn-small(ng-click='promptDropRelationshipIndex(name)') 
+      .btn.btn-danger.btn-small(ng-click='promptDropIndex(index)') 
         i.icon-fire.icon-white
         |  Drop
+
+p
+  .btn.btn-small(ng-click='showCreateIndex()')
+    i.icon-plus
+    |  New index
+
+div(modal="showCreateModal")
+  .modal-header
+    h4 Create new index
+
+  .modal-body
+    p Create a new index for all nodes labelled
+    input.input-xlarge(ng-model='newIndexLabel', placeholder='Label', type='text')
+    p On the property
+    input.input-xlarge(ng-model='newIndexProperty', placeholder='Property', type='text')
+
+  .modal-footer
+    .btn.btn-primary(ng-click='newIndex()') Create
+    .btn.cancel(ng-click='showCreateModal=false') Cancel

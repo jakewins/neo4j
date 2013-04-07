@@ -15,7 +15,8 @@ describe "app.services.indexes.IndexService", ->
         "label": "User",
         "property-keys": [
           "name"
-        ]
+        ],
+        "state" : "ONLINE"
       }]
       $httpBackend.expect 'GET', INDEX_URI
       $httpBackend.whenGET(INDEX_URI).respond(indexes)
@@ -32,9 +33,10 @@ describe "app.services.indexes.IndexService", ->
       # THEN
       expect(indexService.indexes).toEqual [{
         "label": "User",
-        "property-keys": [
+        "propertyKeys": [
           "name"
-        ]
+        ],
+        "state" : "ONLINE"
       }]
       expect(events.length).toEqual 1
 
@@ -81,7 +83,7 @@ describe "app.services.indexes.IndexService", ->
       $httpBackend.flush()
 
       # THEN
-      expect(indexService.indexes).toEqual [ { label : 'User', 'property-keys' : [ 'name' ] }, { label : 'SomeLabel', 'property-keys' : [ 'name' ] } ]
+      expect(indexService.indexes).toEqual [ { label : 'User', 'propertyKeys' : [ 'name' ], "state" : "ONLINE" }, { label : 'SomeLabel', 'propertyKeys' : [ 'name' ], "state" : "POPULATING" } ]
       expect(events.length).toEqual 2
       
     )
@@ -105,7 +107,7 @@ describe "app.services.indexes.IndexService", ->
       $httpBackend.flush()
 
       # THEN
-      expect(indexService.indexes).toEqual [ { label : 'User', 'property-keys' : [ 'name' ] } ]
+      expect(indexService.indexes).toEqual [ { label : 'User', 'propertyKeys' : [ 'name' ], "state" : "ONLINE" } ]
       expect(events.length).toEqual 1
       expect(errors).toEqual [[{ code:1, message:"Hello, world!" }]]
       

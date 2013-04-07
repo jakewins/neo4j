@@ -11,7 +11,32 @@ angular.module('app.controllers.schema.indexes', [
 
   ($scope, $rootScope, indexService) ->
 
+    refreshIndexes = ->
+      $scope.indexes = idx = indexService.indexes
+      if _(idx).any( (i) -> i.state == "POPULATING" )
+        setTimeout(indexService.refresh, 1000)
 
+    $scope.showCreateIndex = ->
+      $scope.newIndexLabel = ''
+      $scope.newIndexProperty = ''
+      $scope.showCreateModal = true
+
+    $scope.newIndex = ->
+      indexService.createIndex $scope.newIndexLabel, $scope.newIndexProperty
+      $scope.showCreateModal = false
+
+    $scope.promptDropIndex = (idx) ->
+      $scope.indexToDrop = idx
+      $scope.showIndexDropWarning = true
+
+    $scope.dropIndex = (idx) ->
+      indexService.dropIndex idx.label, idx.propertyKeys[0]
+      $scope.showIndexDropWarning = false
+
+
+    $scope.$on "indexService.changed", refreshIndexes
+    refreshIndexes()
+    indexService.refresh()
 ])
 
 .controller('LegacyIndexController', [
@@ -24,7 +49,7 @@ angular.module('app.controllers.schema.indexes', [
     $scope.newIndexType = 'node'
 
     refreshIndexes = ->
-      $scope.nodeIndexes = legacyIndexService.nodeIndexes
+      $scope.nodeIndexes         = legacyIndexService.nodeIndexes
       $scope.relationshipIndexes = legacyIndexService.relationshipIndexes
 
     $scope.newIndex = ->

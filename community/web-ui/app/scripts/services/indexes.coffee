@@ -65,44 +65,53 @@ angular.module('app.services.indexes', [])
   '$http'
   '$rootScope'
   ($http, $rootScope)->
+
+    networkRepresentationToLocal = (idx) -> {
+        label        : idx.label,
+        propertyKeys : idx['property-keys'],
+        state        : idx.state
+      }
+
     new class IndexService
     
       constructor : () ->
         @indexes = []
+        @refresh()
 
+      refresh : =>
         $http.get("/db/data/schema/index")
           .success (idx) =>
-            @indexes = idx
+            @indexes = _(idx).map networkRepresentationToLocal
             @_triggerChangedEvent()
 
       createIndex : (label, property, cb=(->)) ->
         $http.post("/db/data/transaction/commit", [{
           "statement" : "CREATE INDEX ON :#{label}(#{property})"
           }]).success (r) =>
-            if r.errors.length > 0
-              cb(r.errors)
-            else
+            if r.errors.length is 0
               @_addIndexLocally(label, property)
               @_triggerChangedEvent()
+            cb(r.errors)
 
       dropIndex : (label, property, cb=(->)) ->
         $http.post("/db/data/transaction/commit", [{
-          "statement" : "DROP INDEX :#{label}(#{property})"
+          "statement" : "DROP INDEX ON :#{label}(#{property})"
           }]).success (r) =>
-            if r.errors.length > 0
-              cb(r.errors)
-            else
+            if r.errors.length == 0
               @_removeIndexLocally(label, property)
               @_triggerChangedEvent()
-            
+            cb(r.errors)
+
       _removeIndexLocally : (label, prop) ->
         @indexes = _(@indexes).reject (i) ->
-          i.label ==label && i['property-keys'].length == 1
+          k = i['propertyKeys']
+          i.label ==label && k.length is 1 && k[0] == prop
             
       _addIndexLocally : (label, prop) ->
         @indexes.push({
-          "label" : label,
-          "property-keys" : [prop]
+          label        : label,
+          propertyKeys : [prop],
+          state        : "POPULATING"
         })
 
       _triggerChangedEvent : ->

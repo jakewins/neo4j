@@ -134,7 +134,40 @@ angular.module('app.controllers.data.console', []).controller('ConsoleController
 ]);
 'use strict';
 
-angular.module('app.controllers.schema.indexes', ['app.services.indexes']).controller('IndexController', ['$scope', '$rootScope', 'indexService', function($scope, $rootScope, indexService) {}]).controller('LegacyIndexController', [
+angular.module('app.controllers.schema.indexes', ['app.services.indexes']).controller('IndexController', [
+  '$scope', '$rootScope', 'indexService', function($scope, $rootScope, indexService) {
+    var refreshIndexes;
+    refreshIndexes = function() {
+      var idx;
+      $scope.indexes = idx = indexService.indexes;
+      if (_(idx).any(function(i) {
+        return i.state === "POPULATING";
+      })) {
+        return setTimeout(indexService.refresh, 1000);
+      }
+    };
+    $scope.showCreateIndex = function() {
+      $scope.newIndexLabel = '';
+      $scope.newIndexProperty = '';
+      return $scope.showCreateModal = true;
+    };
+    $scope.newIndex = function() {
+      indexService.createIndex($scope.newIndexLabel, $scope.newIndexProperty);
+      return $scope.showCreateModal = false;
+    };
+    $scope.promptDropIndex = function(idx) {
+      $scope.indexToDrop = idx;
+      return $scope.showIndexDropWarning = true;
+    };
+    $scope.dropIndex = function(idx) {
+      indexService.dropIndex(idx.label, idx.propertyKeys[0]);
+      return $scope.showIndexDropWarning = false;
+    };
+    $scope.$on("indexService.changed", refreshIndexes);
+    refreshIndexes();
+    return indexService.refresh();
+  }
+]).controller('LegacyIndexController', [
   '$scope', '$rootScope', 'legacyIndexService', function($scope, $rootScope, legacyIndexService) {
     var refreshIndexes;
     $scope.newIndexType = 'node';
@@ -739,17 +772,29 @@ angular.module('app.services.indexes', []).factory('legacyIndexService', [
   }
 ]).factory('indexService', [
   '$http', '$rootScope', function($http, $rootScope) {
-    var IndexService;
+    var IndexService, networkRepresentationToLocal;
+    networkRepresentationToLocal = function(idx) {
+      return {
+        label: idx.label,
+        propertyKeys: idx['property-keys'],
+        state: idx.state
+      };
+    };
     return new (IndexService = (function() {
 
       function IndexService() {
-        var _this = this;
+        this.refresh = __bind(this.refresh, this);
         this.indexes = [];
-        $http.get("/db/data/schema/index").success(function(idx) {
-          _this.indexes = idx;
+        this.refresh();
+      }
+
+      IndexService.prototype.refresh = function() {
+        var _this = this;
+        return $http.get("/db/data/schema/index").success(function(idx) {
+          _this.indexes = _(idx).map(networkRepresentationToLocal);
           return _this._triggerChangedEvent();
         });
-      }
+      };
 
       IndexService.prototype.createIndex = function(label, property, cb) {
         var _this = this;
@@ -761,12 +806,11 @@ angular.module('app.services.indexes', []).factory('legacyIndexService', [
             "statement": "CREATE INDEX ON :" + label + "(" + property + ")"
           }
         ]).success(function(r) {
-          if (r.errors.length > 0) {
-            return cb(r.errors);
-          } else {
+          if (r.errors.length === 0) {
             _this._addIndexLocally(label, property);
-            return _this._triggerChangedEvent();
+            _this._triggerChangedEvent();
           }
+          return cb(r.errors);
         });
       };
 
@@ -777,28 +821,30 @@ angular.module('app.services.indexes', []).factory('legacyIndexService', [
         }
         return $http.post("/db/data/transaction/commit", [
           {
-            "statement": "DROP INDEX :" + label + "(" + property + ")"
+            "statement": "DROP INDEX ON :" + label + "(" + property + ")"
           }
         ]).success(function(r) {
-          if (r.errors.length > 0) {
-            return cb(r.errors);
-          } else {
+          if (r.errors.length === 0) {
             _this._removeIndexLocally(label, property);
-            return _this._triggerChangedEvent();
+            _this._triggerChangedEvent();
           }
+          return cb(r.errors);
         });
       };
 
       IndexService.prototype._removeIndexLocally = function(label, prop) {
         return this.indexes = _(this.indexes).reject(function(i) {
-          return i.label === label && i['property-keys'].length === 1;
+          var k;
+          k = i['propertyKeys'];
+          return i.label === label && k.length === 1 && k[0] === prop;
         });
       };
 
       IndexService.prototype._addIndexLocally = function(label, prop) {
         return this.indexes.push({
-          "label": label,
-          "property-keys": [prop]
+          label: label,
+          propertyKeys: [prop],
+          state: "POPULATING"
         });
       };
 
