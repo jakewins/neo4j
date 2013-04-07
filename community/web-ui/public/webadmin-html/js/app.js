@@ -742,7 +742,69 @@ angular.module('app.services.indexes', []).factory('legacyIndexService', [
     var IndexService;
     return new (IndexService = (function() {
 
-      function IndexService() {}
+      function IndexService() {
+        var _this = this;
+        this.indexes = [];
+        $http.get("/db/data/schema/index").success(function(idx) {
+          _this.indexes = idx;
+          return _this._triggerChangedEvent();
+        });
+      }
+
+      IndexService.prototype.createIndex = function(label, property, cb) {
+        var _this = this;
+        if (cb == null) {
+          cb = (function() {});
+        }
+        return $http.post("/db/data/transaction/commit", [
+          {
+            "statement": "CREATE INDEX ON :" + label + "(" + property + ")"
+          }
+        ]).success(function(r) {
+          if (r.errors.length > 0) {
+            return cb(r.errors);
+          } else {
+            _this._addIndexLocally(label, property);
+            return _this._triggerChangedEvent();
+          }
+        });
+      };
+
+      IndexService.prototype.dropIndex = function(label, property, cb) {
+        var _this = this;
+        if (cb == null) {
+          cb = (function() {});
+        }
+        return $http.post("/db/data/transaction/commit", [
+          {
+            "statement": "DROP INDEX :" + label + "(" + property + ")"
+          }
+        ]).success(function(r) {
+          if (r.errors.length > 0) {
+            return cb(r.errors);
+          } else {
+            _this._removeIndexLocally(label, property);
+            return _this._triggerChangedEvent();
+          }
+        });
+      };
+
+      IndexService.prototype._removeIndexLocally = function(label, prop) {
+        return this.indexes = _(this.indexes).reject(function(i) {
+          return i.label === label && i['property-keys'].length === 1;
+        });
+      };
+
+      IndexService.prototype._addIndexLocally = function(label, prop) {
+        return this.indexes.push({
+          "label": label,
+          "property-keys": [prop]
+        });
+      };
+
+      IndexService.prototype._triggerChangedEvent = function() {
+        return $rootScope.$broadcast("indexService.changed");
+      };
 
       return IndexService;
 

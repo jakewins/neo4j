@@ -68,5 +68,44 @@ angular.module('app.services.indexes', [])
     new class IndexService
     
       constructor : () ->
-  
+        @indexes = []
+
+        $http.get("/db/data/schema/index")
+          .success (idx) =>
+            @indexes = idx
+            @_triggerChangedEvent()
+
+      createIndex : (label, property, cb=(->)) ->
+        $http.post("/db/data/transaction/commit", [{
+          "statement" : "CREATE INDEX ON :#{label}(#{property})"
+          }]).success (r) =>
+            if r.errors.length > 0
+              cb(r.errors)
+            else
+              @_addIndexLocally(label, property)
+              @_triggerChangedEvent()
+
+      dropIndex : (label, property, cb=(->)) ->
+        $http.post("/db/data/transaction/commit", [{
+          "statement" : "DROP INDEX :#{label}(#{property})"
+          }]).success (r) =>
+            if r.errors.length > 0
+              cb(r.errors)
+            else
+              @_removeIndexLocally(label, property)
+              @_triggerChangedEvent()
+            
+      _removeIndexLocally : (label, prop) ->
+        @indexes = _(@indexes).reject (i) ->
+          i.label ==label && i['property-keys'].length == 1
+            
+      _addIndexLocally : (label, prop) ->
+        @indexes.push({
+          "label" : label,
+          "property-keys" : [prop]
+        })
+
+      _triggerChangedEvent : ->
+        $rootScope.$broadcast "indexService.changed"
+
 ])

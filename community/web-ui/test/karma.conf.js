@@ -10,10 +10,11 @@ files = [
   JASMINE_ADAPTER,
 
   // Application Code //
+  'vendor/scripts/underscore-*.js',
   'vendor/scripts/angular/angular.js',
   'vendor/scripts/angular/angular-*.js',
   'vendor/scripts/codemirror/*.js',
-  
+
   'vendor/scripts/**/*.coffee',
   //'app/scripts/**/*.js',
   'app/scripts/**/*.coffee',
