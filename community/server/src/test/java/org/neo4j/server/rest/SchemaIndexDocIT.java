@@ -85,14 +85,37 @@ public class SchemaIndexDocIT extends AbstractRestFunctionalTestBase
         
         String labelName = "user", propertyKey = "name";
         createSchemaIndex( labelName, propertyKey );
-        Map<String, Object> definition = map( "property_keys", asList( propertyKey ) );
 
         String result = gen.get()
             .expectedStatus( 200 )
-            .payload( createJsonFrom( definition ) )
             .get( getSchemaIndexLabelUri( labelName ) )
             .entity();
         
+        List<Map<String, Object>> serializedList = jsonToList( result );
+        assertEquals( 1, serializedList.size() );
+        Map<String, Object> serialized = serializedList.get( 0 );
+        assertEquals( labelName, serialized.get( "label" ) );
+        assertEquals( asList( propertyKey ), serialized.get( "property-keys" ) );
+    }
+
+    /**
+     * List all indexes.
+     */
+    @Documented
+    @Test
+    @GraphDescription.Graph( nodes = {} )
+    public void get_all_schema_indexes() throws PropertyValueException
+    {
+        data.get();
+
+        String labelName = "user", propertyKey = "name";
+        createSchemaIndex( labelName, propertyKey );
+
+        String result = gen.get()
+                .expectedStatus( 200 )
+                .get( getSchemaIndexUri() )
+                .entity();
+
         List<Map<String, Object>> serializedList = jsonToList( result );
         assertEquals( 1, serializedList.size() );
         Map<String, Object> serialized = serializedList.get( 0 );

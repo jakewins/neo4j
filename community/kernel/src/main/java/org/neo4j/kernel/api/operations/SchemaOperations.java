@@ -29,6 +29,10 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
+/**
+ * Operations that concern the database schema, such as indexes and constraints.
+ * TODO: The {@link IndexRule} class should not leak through here, use ids and {@link IndexDescriptor} instead.
+ */
 public interface SchemaOperations
 {
     /**
@@ -68,7 +72,7 @@ public interface SchemaOperations
     void dropIndexRule( IndexRule indexRule ) throws ConstraintViolationKernelException;
 
     /**
-     * The schema state is flushed when ever the schema is updated. If you build objects
+     * The schema state is flushed whenever the schema is updated. If you build objects
      * the rely on the current state of the schema, use this to make sure you don't use
      * outdated schema information.
      *

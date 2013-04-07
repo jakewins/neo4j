@@ -1645,6 +1645,13 @@ public class RestfulGraphDatabase
         return output.ok( actions.getSchemaIndexes( labelName ) );
     }
 
+    @GET
+    @Path( PATH_SCHEMA_INDEX )
+    public Response getSchemaIndexes()
+    {
+        return output.ok( actions.getSchemaIndexes() );
+    }
+
 
     private Function<Map.Entry<String,List<String>>,Pair<String,Object>> queryParamsToProperties =
             new Function<Map.Entry<String, List<String>>, Pair<String, Object>>()

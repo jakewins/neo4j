@@ -1630,6 +1630,20 @@ public class DatabaseActions
             tx.finish();
         }
     }
+
+    public ListRepresentation getSchemaIndexes()
+    {
+        Iterable<IndexDefinition> definitions = graphDb.schema().getIndexes();
+        Iterable<IndexDefinitionRepresentation> representations = map( new Function<IndexDefinition, IndexDefinitionRepresentation>()
+        {
+            @Override
+            public IndexDefinitionRepresentation apply( IndexDefinition definition )
+            {
+                return new IndexDefinitionRepresentation( definition );
+            }
+        }, definitions );
+        return new ListRepresentation( RepresentationType.INDEX_DEFINITION, representations );
+    }
     
     public ListRepresentation getSchemaIndexes( String labelName )
     {
