@@ -1,1 +1,13 @@
-h1 Indexes
+table.table.table-striped.table-bordered
+  tr
+    th Label
+    th Property
+    th Status
+    th
+  tr(ng-repeat='(name, index) in relationshipIndexes') 
+    td {{ name }}
+    td {{ index }}
+    td 
+      .btn.btn-danger.btn-small(ng-click='promptDropRelationshipIndex(name)') 
+        i.icon-fire.icon-white
+        |  Drop

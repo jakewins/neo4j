@@ -23,17 +23,17 @@ angular.module('app.services.indexes', [])
       newNodeIndex : (name) ->
         $http.post("/db/data/index/node", {'name':name})
           .success =>
-            $http.get("/db/data/index/node/#{name}")
+            $http.get("/db/data/index/node")
               .success (idx) =>
-                @nodeIndexes[name] = idx
+                @nodeIndexes[name] = idx[name]
                 @_triggerChangedEvent()
 
       newRelationshipIndex : (name) ->
         $http.post("/db/data/index/relationship", {'name':name})
           .success =>
-            $http.get("/db/data/index/relationship/#{name}")
+            $http.get("/db/data/index/relationship")
               .success (idx) =>
-                @relationshipIndexes[name] = idx
+                @relationshipIndexes[name] = idx[name]
                 @_triggerChangedEvent()
 
       deleteNodeIndex : (name) ->
@@ -49,11 +49,11 @@ angular.module('app.services.indexes', [])
             @_triggerChangedEvent()
 
       _updateNodeIndexes : (indexes) =>
-        @nodeIndexes = indexes
+        @nodeIndexes         = if indexes then indexes else {}
         @_triggerChangedEvent()
 
       _updateRelationshipIndexes : (indexes) =>
-        @relationshipIndexes = indexes
+        @relationshipIndexes = if indexes then indexes else {}
         @_triggerChangedEvent()
 
       _triggerChangedEvent : ->

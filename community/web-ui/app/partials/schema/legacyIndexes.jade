@@ -1,24 +1,56 @@
-h1 Legacy indexes
 
-select(ng-model='newIndexType')
-  option(value='node') Node Index
-  option(value='rel' ) Relationship Index
-input(ng-model='newIndexName')
-div.btn(ng-click='newIndex()') Create Index
 
 .alert.alert-block.alert-warning(ng-show='showIndexDropWarning')
   h4 Warning!
   p Dropping an index cannot be undone, are you sure you want to drop the {{ toDropType }} index named '{{ toDropName }}'?
-  .btn.btn-warning(ng-click='dropIndex(toDropType, toDropName)') Drop it
-  .btn(ng-click='showIndexDropWarning = false') Get me out of here
+  p
+    .btn.btn-warning(ng-click='dropIndex(toDropType, toDropName)') Drop it
+    .btn(ng-click='showIndexDropWarning = false') Get me out of here
+
 
 h4 Node indexes
-ul
-  li(ng-repeat='(name, index) in nodeIndexes') {{ name }}
-    .btn.btn-danger.btn-small(ng-click='promptDropNodeIndex(name)') Drop
+  .btn.btn-small(ng-click='showCreateNodeIndex()')
+    i.icon-plus
+    |  New index
+table.table.table-striped.table-bordered
+  tr
+    th Index name
+    th Configuration
+    th
+  tr(ng-repeat='(name, index) in nodeIndexes') 
+    td {{ name }}
+    td {{ index }}
+    td 
+      .btn.btn-danger.btn-small(ng-click='promptDropNodeIndex(name)')
+        i.icon-fire.icon-white
+        |  Drop
 
 
 h4 Relationship indexes
-ul
-  li(ng-repeat='(name, index) in relationshipIndexes') {{ name }}
-    .btn.btn-danger.btn-small(ng-click='promptDropRelationshipIndex(name)') Drop
+  .btn.btn-small(ng-click='showCreateRelationshipIndex()')
+    i.icon-plus
+    |  New index
+
+table.table.table-striped.table-bordered
+  tr
+    th Index name
+    th Configuration
+    th
+  tr(ng-repeat='(name, index) in relationshipIndexes') 
+    td {{ name }}
+    td {{ index }}
+    td 
+      .btn.btn-danger.btn-small(ng-click='promptDropRelationshipIndex(name)') 
+        i.icon-fire.icon-white
+        |  Drop
+
+div(modal="showCreateModal")
+  .modal-header
+    h4 Create new index
+
+  .modal-body
+    input.input-xlarge(ng-model='newIndexName', placeholder='Enter index name', type='text')
+
+  .modal-footer
+    .btn.btn-primary(ng-click='newIndex()') Create
+    .btn.cancel(ng-click='showCreateModal=false') Cancel

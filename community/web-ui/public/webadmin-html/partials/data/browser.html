@@ -31,16 +31,8 @@
       </div>
     </div>
     <div ng-show="rows.length" class="row-fluid">
-      <div class="span12 results">
-        <div class="header">
-          <div class="pagination pagination-small pagination-right">
-            <ul>
-              <li class="disabled"><a>Page {{ page }} of {{ numberOfPages }}</a></li>
-              <li ng-repeat="button in pageButtons" ng-class="{disabled:button.disabled}"> <a ng-click="updatePagination(button.action)">{{ button.text }}</a></li>
-            </ul>
-          </div>
-        </div>
-        <table class="table">
+      <div class="span10">
+        <table class="table table-striped table-bordered">
           <tr>
             <th ng-repeat="column in columns">{{ column }}</th>
           </tr>
@@ -48,6 +40,14 @@
             <td ng-repeat="cell in row">{{ cell }}</td>
           </tr>
         </table>
+      </div>
+      <div class="span2">
+        <div class="pagination pagination-small pagination-centered">
+          <ul>
+            <li class="disabled"><a>Page {{ page }} of {{ numberOfPages }}</a></li>
+            <li ng-repeat="button in pageButtons" ng-class="{disabled:button.disabled}"> <a ng-click="updatePagination(button.action)">{{ button.text }}</a></li>
+          </ul>
+        </div>
       </div>
     </div>
     <div ng-show="!rows.length &amp;&amp; !error" class="row-fluid">

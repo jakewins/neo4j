@@ -1,2 +1,16 @@
 
-<h1>Indexes</h1>
+<table class="table table-striped table-bordered">
+  <tr>
+    <th>Label</th>
+    <th>Property</th>
+    <th>Status</th>
+    <th></th>
+  </tr>
+  <tr ng-repeat="(name, index) in relationshipIndexes"> 
+    <td>{{ name }}</td>
+    <td>{{ index }}</td>
+    <td> 
+      <div ng-click="promptDropRelationshipIndex(name)" class="btn btn-danger btn-small"> <i class="icon-fire icon-white"></i> Drop</div>
+    </td>
+  </tr>
+</table>

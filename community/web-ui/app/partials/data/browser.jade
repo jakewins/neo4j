@@ -28,19 +28,19 @@
             pre {{ stack }}
     
     .row-fluid(ng-show='rows.length')
-      .span12.results
-        .header
-          .pagination.pagination-small.pagination-right
-            ul
-              li.disabled
-                a Page {{ page }} of {{ numberOfPages }}
-              li(ng-repeat='button in pageButtons', ng-class='{disabled:button.disabled}') 
-                a(ng-click='updatePagination(button.action)') {{ button.text }}
-        table.table
+      .span10
+        table.table.table-striped.table-bordered
           tr
             th(ng-repeat='column in columns') {{ column }}
           tr(ng-repeat='row in rows')
             td(ng-repeat='cell in row') {{ cell }}
+      .span2
+        .pagination.pagination-small.pagination-centered
+          ul
+            li.disabled
+              a Page {{ page }} of {{ numberOfPages }}
+            li(ng-repeat='button in pageButtons', ng-class='{disabled:button.disabled}') 
+              a(ng-click='updatePagination(button.action)') {{ button.text }}
             
     .row-fluid(ng-show='!rows.length && !error')
       .span12.well The result set is empty

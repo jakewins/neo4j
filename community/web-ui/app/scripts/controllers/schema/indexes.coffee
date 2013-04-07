@@ -32,7 +32,17 @@ angular.module('app.controllers.schema.indexes', [
         legacyIndexService.newNodeIndex($scope.newIndexName)
       else
         legacyIndexService.newRelationshipIndex($scope.newIndexName)
+      $scope.showCreateModal = false
+
+    $scope.showCreateNodeIndex = ->
       $scope.newIndexName = ''
+      $scope.newIndexType = 'node'
+      $scope.showCreateModal = true
+
+    $scope.showCreateRelationshipIndex = ->
+      $scope.newIndexName = ''
+      $scope.newIndexType = 'relationship'
+      $scope.showCreateModal = true
 
     $scope.dropIndex = (type, name) ->
       $scope.showIndexDropWarning = false

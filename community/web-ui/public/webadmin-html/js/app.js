@@ -6,7 +6,7 @@ App = angular.module('app', ['ui', 'ui.bootstrap', 'ngCookies', 'ngResource', 'a
 
 App.config([
   '$routeProvider', '$locationProvider', '$httpProvider', function($routeProvider, $locationProvider, $httpProvider, config) {
-    var a, goTo, _i, _len, _ref, _results;
+    var goTo;
     goTo = function(tmpl, ctrl) {
       return {
         templateUrl: "partials/" + tmpl + ".html",
@@ -18,19 +18,7 @@ App.config([
     });
     $locationProvider.html5Mode(false);
     $httpProvider.defaults.headers.common['X-stream'] = true;
-    $httpProvider.defaults.headers.common['Content-Type'] = 'application/json';
-    $httpProvider.defaults.transformRequest.push(function(payload, headers) {
-      headers()['Content-Type'] = 'application/json';
-      console.log(headers());
-      return payload;
-    });
-    _ref = $httpProvider.defaults.transformRequest;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      a = _ref[_i];
-      _results.push(console.log(a.toString()));
-    }
-    return _results;
+    return $httpProvider.defaults.headers.common['Content-Type'] = 'application/json';
   }
 ]);
 'use strict';
@@ -160,7 +148,17 @@ angular.module('app.controllers.schema.indexes', ['app.services.indexes']).contr
       } else {
         legacyIndexService.newRelationshipIndex($scope.newIndexName);
       }
-      return $scope.newIndexName = '';
+      return $scope.showCreateModal = false;
+    };
+    $scope.showCreateNodeIndex = function() {
+      $scope.newIndexName = '';
+      $scope.newIndexType = 'node';
+      return $scope.showCreateModal = true;
+    };
+    $scope.showCreateRelationshipIndex = function() {
+      $scope.newIndexName = '';
+      $scope.newIndexType = 'relationship';
+      return $scope.showCreateModal = true;
     };
     $scope.dropIndex = function(type, name) {
       $scope.showIndexDropWarning = false;
@@ -686,8 +684,8 @@ angular.module('app.services.indexes', []).factory('legacyIndexService', [
         return $http.post("/db/data/index/node", {
           'name': name
         }).success(function() {
-          return $http.get("/db/data/index/node/" + name).success(function(idx) {
-            _this.nodeIndexes[name] = idx;
+          return $http.get("/db/data/index/node").success(function(idx) {
+            _this.nodeIndexes[name] = idx[name];
             return _this._triggerChangedEvent();
           });
         });
@@ -698,8 +696,8 @@ angular.module('app.services.indexes', []).factory('legacyIndexService', [
         return $http.post("/db/data/index/relationship", {
           'name': name
         }).success(function() {
-          return $http.get("/db/data/index/relationship/" + name).success(function(idx) {
-            _this.relationshipIndexes[name] = idx;
+          return $http.get("/db/data/index/relationship").success(function(idx) {
+            _this.relationshipIndexes[name] = idx[name];
             return _this._triggerChangedEvent();
           });
         });
@@ -722,12 +720,12 @@ angular.module('app.services.indexes', []).factory('legacyIndexService', [
       };
 
       LegacyIndexService.prototype._updateNodeIndexes = function(indexes) {
-        this.nodeIndexes = indexes;
+        this.nodeIndexes = indexes ? indexes : {};
         return this._triggerChangedEvent();
       };
 
       LegacyIndexService.prototype._updateRelationshipIndexes = function(indexes) {
-        this.relationshipIndexes = indexes;
+        this.relationshipIndexes = indexes ? indexes : {};
         return this._triggerChangedEvent();
       };
 
