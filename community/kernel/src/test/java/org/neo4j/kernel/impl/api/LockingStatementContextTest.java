@@ -48,7 +48,7 @@ public class LockingStatementContextTest
         LockingStatementContext statementContext = new LockingStatementContext( inner, lockHolder );
 
         // WHEN
-        statementContext.deleteNode( lookup, nodeId );
+        statementContext.deleteNode( nodeId );
 
         //THEN
 //        verify( inner ).deleteNode( null, nodeId );

@@ -23,6 +23,8 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 
@@ -39,6 +41,9 @@ import org.neo4j.kernel.impl.persistence.PersistenceManager;
 
 public class TxStateTest
 {
+
+    private PersistenceManager persistenceManager;
+
     @Test
     public void shouldGetAddedLabels() throws Exception
     {
@@ -53,7 +58,7 @@ public class TxStateTest
         // THEN
         assertEquals( asSet( 1L, 2L ), addedLabels );
     }
-    
+
     @Test
     public void shouldGetRemovedLabels() throws Exception
     {
@@ -68,7 +73,7 @@ public class TxStateTest
         // THEN
         assertEquals( asSet( 1L, 2L ), removedLabels );
     }
-    
+
     @Test
     public void removeAddedLabelShouldRemoveFromAdded() throws Exception
     {
@@ -83,7 +88,7 @@ public class TxStateTest
         // THEN
         assertEquals( asSet( 2L ), state.getNodeStateLabelDiffSets( 1 ).getAdded() );
     }
-    
+
     @Test
     public void addRemovedLabelShouldRemoveFromRemoved() throws Exception
     {
@@ -98,7 +103,7 @@ public class TxStateTest
         // THEN
         assertEquals( asSet( 2L ), state.getNodeStateLabelDiffSets( 1 ).getRemoved() );
     }
-    
+
     @Test
     public void shouldMapFromAddedLabelToNodes() throws Exception
     {
@@ -110,7 +115,7 @@ public class TxStateTest
         state.addLabelToNode( 2, 2 );
 
         // WHEN
-        Iterable<Long> nodes = state.getNodesWithLabelAdded( 2 );
+        Set<Long> nodes = state.getNodesWithLabelAdded( 2 );
 
         // THEN
         assertEquals( asSet( 0L, 2L ), asSet( nodes ) );
@@ -127,12 +132,12 @@ public class TxStateTest
         state.removeLabelFromNode( 2, 2 );
 
         // WHEN
-        Iterable<Long> nodes = state.getNodesWithLabelRemoved( 2 );
+        Set<Long> nodes = state.getNodesWithLabelChanged( 2 ).getRemoved();
 
         // THEN
         assertEquals( asSet( 0L, 2L ), asSet( nodes ) );
     }
-    
+
     @Test
     public void shouldAddAndGetByLabel() throws Exception
     {
@@ -142,7 +147,7 @@ public class TxStateTest
         // WHEN
         IndexRule rule = state.addIndexRule( labelId, propertyKey );
         state.addIndexRule( labelId2, propertyKey );
-        
+
         // THEN
         assertEquals( asSet( rule ), state.getIndexRuleDiffSetsByLabel( labelId ).getAdded() );
     }
@@ -152,10 +157,10 @@ public class TxStateTest
     {
         // GIVEN
         long labelId = 2, propertyKey = 3;
-        
+
         // WHEN
         IndexRule rule = state.addIndexRule( labelId, propertyKey );
-        
+
         // THEN
         assertEquals( asSet( rule ), state.getIndexRuleDiffSets().getAdded() );
     }
@@ -168,7 +173,7 @@ public class TxStateTest
         int propertyKey = 2;
         int propValue = 42;
 
-        DiffSets<Long> nodesWithChangedProp = new DiffSets<Long>( asSet(nodeId), emptySet );
+        DiffSets<Long> nodesWithChangedProp = new DiffSets<Long>( asSet( nodeId ), emptySet );
         when( legacyState.getDeletedNodes() ).thenReturn( emptySet );
         when( legacyState.getNodesWithChangedProperty( propertyKey, propValue ) ).thenReturn( nodesWithChangedProp );
 
@@ -176,10 +181,10 @@ public class TxStateTest
         DiffSets<Long> diff = state.getNodesWithChangedProperty( propertyKey, propValue );
 
         // Then
-        assertThat( diff.getAdded(),   equalTo( asSet( nodeId ) ));
+        assertThat( diff.getAdded(), equalTo( asSet( nodeId ) ) );
         assertThat( diff.getRemoved(), equalTo( emptySet ) );
     }
-    
+
     @Test
     public void shouldExcludeNodesWithCorrectPropertyRemoved() throws Exception
     {
@@ -188,7 +193,7 @@ public class TxStateTest
         int propertyKey = 2;
         int propValue = 42;
 
-        DiffSets<Long> nodesWithChangedProp = new DiffSets<Long>( emptySet, asSet(nodeId) );
+        DiffSets<Long> nodesWithChangedProp = new DiffSets<Long>( emptySet, asSet( nodeId ) );
         when( legacyState.getNodesWithChangedProperty( propertyKey, propValue ) ).thenReturn( nodesWithChangedProp );
 
         // When
@@ -196,19 +201,36 @@ public class TxStateTest
 
         // Then
         assertThat( diff.getAdded(), equalTo( emptySet ) );
-        assertThat( diff.getRemoved(),   equalTo( asSet( nodeId ) ));
+        assertThat( diff.getRemoved(), equalTo( asSet( nodeId ) ) );
+    }
+
+    @Test
+    public void shouldListNodeAsDeletedIfItIsDeleted() throws Exception
+    {
+        // Given
+
+        // When
+        long nodeId = 1337l;
+        state.deleteNode( nodeId );
+
+        // Then
+        verify( persistenceManager ).nodeDelete( nodeId );
+        verifyNoMoreInteractions( legacyState, persistenceManager );
+
+        assertThat( asSet( state.getDeletedNodes().getRemoved() ), equalTo( asSet( nodeId ) ) );
     }
 
     private TxState state;
     private OldTxStateBridge legacyState;
     private final Set<Long> emptySet = Collections.<Long>emptySet();
-    
+
     @Before
     public void before() throws Exception
     {
         legacyState = mock( OldTxStateBridge.class );
-        state = new TxState(legacyState,
-                mock(PersistenceManager.class), mock(TxState.IdGeneration.class),
+        persistenceManager = mock( PersistenceManager.class );
+        state = new TxState( legacyState,
+                persistenceManager, mock( TxState.IdGeneration.class ),
                 new DefaultSchemaIndexProviderMap( SchemaIndexProvider.NO_INDEX_PROVIDER ) );
     }
 }

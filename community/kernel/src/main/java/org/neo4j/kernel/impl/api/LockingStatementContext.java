@@ -29,7 +29,6 @@ import org.neo4j.kernel.api.PropertyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
-import org.neo4j.kernel.impl.transaction.LockType;
 
 public class LockingStatementContext extends CompositeStatementContext
 {
@@ -56,7 +55,7 @@ public class LockingStatementContext extends CompositeStatementContext
         lockHolder.acquireNodeWriteLock( nodeId );
         return delegate.removeLabelFromNode( labelId, nodeId );
     }
-    
+
     @Override
     public IndexRule addIndexRule( long labelId, long propertyKey ) throws ConstraintViolationKernelException
     {
@@ -91,7 +90,7 @@ public class LockingStatementContext extends CompositeStatementContext
         lockHolder.acquireSchemaReadLock();
         return delegate.getIndexRules( labelId );
     }
-    
+
     @Override
     public Iterator<IndexRule> getIndexRules()
     {
@@ -111,7 +110,6 @@ public class LockingStatementContext extends CompositeStatementContext
     public void deleteNode( NodeProxy.NodeLookup lookup, long nodeId )
     {
         lockHolder.acquireNodeWriteLock( nodeId );
-        lookup.lookup(nodeId, LockType.WRITE).delete( lookup.getNodeManager() );
-//        delegate.deleteNode( lookup, nodeId );
+        delegate.deleteNode( lookup, nodeId );
     }
 }
