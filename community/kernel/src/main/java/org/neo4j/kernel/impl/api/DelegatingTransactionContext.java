@@ -24,7 +24,7 @@ import org.neo4j.kernel.api.TransactionContext;
 
 public class DelegatingTransactionContext implements TransactionContext
 {
-    private final TransactionContext delegate;
+    protected final TransactionContext delegate;
 
     public DelegatingTransactionContext( TransactionContext delegate )
     {

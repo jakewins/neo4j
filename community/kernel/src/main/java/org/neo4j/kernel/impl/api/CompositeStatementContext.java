@@ -25,6 +25,7 @@ import static java.lang.reflect.Proxy.newProxyInstance;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Iterator;
+
 import org.neo4j.helpers.Function;
 import org.neo4j.kernel.api.ConstraintViolationKernelException;
 import org.neo4j.kernel.api.EntityNotFoundException;
@@ -41,6 +42,7 @@ import org.neo4j.kernel.api.operations.LabelOperations;
 import org.neo4j.kernel.api.operations.PropertyOperations;
 import org.neo4j.kernel.api.operations.SchemaOperations;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
+import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 /**
@@ -415,5 +417,17 @@ public class CompositeStatementContext implements StatementContext
 
         afterOperation();
         return result;
+    }
+
+    @Override
+    public void deleteNode( NodeProxy.NodeLookup lookup, long nodeId )
+    {
+        beforeOperation();
+        beforeWriteOperation();
+
+        entityOperations.deleteNode( lookup, nodeId );
+
+        afterWriteOperation();
+        afterOperation();
     }
 }

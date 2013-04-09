@@ -320,11 +320,10 @@ public class NodeImpl extends ArrayBasedPrimitive
         return getAllRelationshipsOfType( nodeManager, wrap( dir ), new RelationshipType[] { type } );
     }
 
-    public void delete( NodeManager nodeManager, Node proxy )
+    public void delete( NodeManager nodeManager )
     {
         boolean success = false;
         TransactionState tx = nodeManager.getTransactionState();
-        tx.acquireWriteLock( proxy );
         try
         {
             ArrayMap<Integer,PropertyData> skipMap = tx.getOrCreateCowPropertyRemoveMap( this );

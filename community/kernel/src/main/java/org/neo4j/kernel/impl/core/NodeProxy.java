@@ -83,7 +83,16 @@ public class NodeProxy implements Node
     @Override
     public void delete()
     {
-        nodeLookup.lookup(nodeId, LockType.WRITE).delete( nodeLookup.getNodeManager(), this );
+        StatementContext ctxForWriting = statementCtxProvider.getCtxForWriting();
+        try
+        {
+            ctxForWriting.deleteNode( nodeLookup, getId() );
+        }
+        finally
+        {
+            ctxForWriting.close();
+        }
+//        nodeLookup.lookup(nodeId, LockType.WRITE).delete( nodeLookup.getNodeManager(), this );
     }
 
     @Override
