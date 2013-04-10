@@ -22,7 +22,6 @@ package org.neo4j.kernel.api.operations;
 import java.util.Iterator;
 
 import org.neo4j.kernel.api.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.impl.core.NodeProxy;
 
 /**
  * Node and Relationship creation, deletion and lookup.
@@ -40,9 +39,11 @@ public interface EntityOperations
 
     /**
      * Returns an iterable with the matched nodes.
-     * @throws org.neo4j.kernel.api.index.IndexNotFoundKernelException if no such index found.
+     *
+     * @throws org.neo4j.kernel.api.index.IndexNotFoundKernelException
+     *          if no such index found.
      */
     Iterator<Long> exactIndexLookup( long indexId, Object value ) throws IndexNotFoundKernelException;
 
-    void deleteNode( NodeProxy.NodeLookup lookup, long nodeId );
+    void deleteNode( long nodeId );
 }

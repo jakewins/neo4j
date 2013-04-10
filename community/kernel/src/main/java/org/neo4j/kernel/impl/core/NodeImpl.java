@@ -329,36 +329,6 @@ public class NodeImpl extends ArrayBasedPrimitive
         return getAllRelationshipsOfType( nodeManager, wrap( dir ), new RelationshipType[]{type} );
     }
 
-    public void delete( NodeManager nodeManager )
-    {
-
-        SYNTAX ERROR:
-//        This should be moved to Transaction State statmeent context, or whatever it's called.
-
-        boolean success = false;
-        TransactionState tx = nodeManager.getTransactionState();
-        try
-        {
-            ArrayMap<Integer, PropertyData> skipMap = tx.getOrCreateCowPropertyRemoveMap( this );
-            ArrayMap<Integer, PropertyData> removedProps = nodeManager.deleteNode( this, tx );
-            if ( removedProps.size() > 0 )
-            {
-                for ( Integer index : removedProps.keySet() )
-                {
-                    skipMap.put( index, removedProps.get( index ) );
-                }
-            }
-            success = true;
-        }
-        finally
-        {
-            if ( !success )
-            {
-                nodeManager.setRollbackOnly();
-            }
-        }
-    }
-
     /**
      * Returns this node's string representation.
      *

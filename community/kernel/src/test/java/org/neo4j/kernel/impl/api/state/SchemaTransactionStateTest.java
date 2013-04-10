@@ -51,6 +51,7 @@ import org.neo4j.kernel.api.StatementContext;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.impl.api.TransactionStateStatementContext;
+import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.xa.DefaultSchemaIndexProviderMap;
 import org.neo4j.kernel.impl.persistence.PersistenceManager;
@@ -225,9 +226,12 @@ public class SchemaTransactionStateTest
 
         oldTxState = mock( OldTxStateBridge.class );
 
-        state = new TxState( oldTxState, mock( PersistenceManager.class ), mock( TxState.IdGeneration.class ),
-                new DefaultSchemaIndexProviderMap( NO_INDEX_PROVIDER ) );
-        txContext = new TransactionStateStatementContext( store, state );
+        state = new TxState( oldTxState, mock( PersistenceManager.class ),
+                mock( TxState.IdGeneration.class ), new DefaultSchemaIndexProviderMap( NO_INDEX_PROVIDER ) );
+
+        NodeManager nodeManager = mock( NodeManager.class );
+
+        txContext = new TransactionStateStatementContext( store, state, nodeManager );
     }
 
     private static <T> Answer<Iterator<T>> asAnswer( final Iterable<T> values )

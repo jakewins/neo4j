@@ -41,7 +41,7 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.operations.SchemaOperations;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.state.TxState;
-import org.neo4j.kernel.impl.core.NodeProxy;
+import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class TransactionStateStatementContext extends CompositeStatementContext
@@ -49,20 +49,24 @@ public class TransactionStateStatementContext extends CompositeStatementContext
     private final TxState state;
     private final StatementContext delegate;
     private final SchemaOperations schemaOperations;
+    private final NodeManager nodeManager;
 
     public TransactionStateStatementContext( StatementContext actual,
                                              SchemaOperations schemaOperations,
-                                             TxState state )
+                                             TxState state,
+                                             NodeManager nodeManager )
     {
         super( actual, schemaOperations );
         this.state = state;
         this.delegate = actual;
         this.schemaOperations = schemaOperations;
+        this.nodeManager = nodeManager;
     }
 
-    public TransactionStateStatementContext( StatementContext actual, TxState state )
+    public TransactionStateStatementContext( StatementContext actual, TxState state,
+                                             NodeManager nodeManager )
     {
-        this( actual, actual, state );
+        this( actual, actual, state, nodeManager );
     }
 
     @Override
@@ -73,10 +77,9 @@ public class TransactionStateStatementContext extends CompositeStatementContext
     }
 
     @Override
-    public void deleteNode( NodeProxy.NodeLookup lookup, long nodeId )
+    public void deleteNode( long nodeId )
     {
         state.deleteNode( nodeId );
-        lookup.getNodeManager().delete
     }
 
     @Override

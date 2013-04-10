@@ -27,7 +27,6 @@ import org.neo4j.kernel.api.EntityNotFoundException;
 import org.neo4j.kernel.api.PropertyKeyIdNotFoundException;
 import org.neo4j.kernel.api.PropertyNotFoundException;
 import org.neo4j.kernel.api.StatementContext;
-import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 
 public class LockingStatementContext extends CompositeStatementContext
@@ -107,9 +106,9 @@ public class LockingStatementContext extends CompositeStatementContext
     }
 
     @Override
-    public void deleteNode( NodeProxy.NodeLookup lookup, long nodeId )
+    public void deleteNode( long nodeId )
     {
         lockHolder.acquireNodeWriteLock( nodeId );
-        delegate.deleteNode( lookup, nodeId );
+        delegate.deleteNode( nodeId );
     }
 }

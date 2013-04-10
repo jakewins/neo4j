@@ -50,13 +50,17 @@ import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.impl.api.DiffSets;
 import org.neo4j.kernel.impl.api.TransactionStateStatementContext;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
-import org.neo4j.kernel.impl.core.NodeProxy;
+import org.neo4j.kernel.impl.core.NodeImpl;
+import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.xa.DefaultSchemaIndexProviderMap;
 import org.neo4j.kernel.impl.persistence.PersistenceManager;
 
 public class IndexQueryTransactionStateTest
 {
+
+    private NodeManager nodeManager;
 
     @Test
     public void shouldExcludeRemovedNodesFromIndexQuery() throws Exception
@@ -71,9 +75,11 @@ public class IndexQueryTransactionStateTest
         when( store.exactIndexLookup( 1337l, value ) ).then( asAnswer( asList( 1l, 2l, 3l ) ) );
         when( oldTxState.getNodesWithChangedProperty( propertyKeyId, value ) ).thenReturn( new DiffSets<Long>() );
 
-        NodeProxy.NodeLookup mockNodeLookup = mock( NodeProxy.NodeLookup.class );
+        NodeImpl mockNodeImpl = mock( NodeImpl.class );
+        when( nodeManager.getTransactionState() ).thenReturn( mock( TransactionState.class ) );
+        when( nodeManager.getNodeForProxy( 2, null ) ).thenReturn( mockNodeImpl );
 
-        txContext.deleteNode( mockNodeLookup, 2l );
+        txContext.deleteNode( 2l );
 
         // When
         Iterator<Long> result = txContext.exactIndexLookup( 1337l, value );
@@ -95,7 +101,6 @@ public class IndexQueryTransactionStateTest
         when( store.exactIndexLookup( 1337l, value ) ).then( asAnswer( asList( 2l, 3l ) ) );
 
         when( store.isLabelSetOnNode( labelId, 1l ) ).thenReturn( false );
-        when( oldTxState.getDeletedNodes() ).thenReturn( Collections.<Long>emptyList() );
         when( oldTxState.getNodesWithChangedProperty( propertyKeyId, value ) ).thenReturn(
                 new DiffSets<Long>( asSet( 1l ), Collections.<Long>emptySet() ) );
 
@@ -119,7 +124,6 @@ public class IndexQueryTransactionStateTest
         when( store.exactIndexLookup( 1337l, value ) ).then( asAnswer( asList( 2l, 3l ) ) );
 
         when( store.isLabelSetOnNode( labelId, 1l ) ).thenReturn( false );
-        when( oldTxState.getDeletedNodes() ).thenReturn( Collections.<Long>emptyList() );
         when( oldTxState.getNodesWithChangedProperty( propertyKeyId, value ) ).thenReturn(
                 new DiffSets<Long>( asSet( 1l ), Collections.<Long>emptySet() ) );
 
@@ -146,7 +150,6 @@ public class IndexQueryTransactionStateTest
 
         when( store.isLabelSetOnNode( labelId, 1l ) ).thenReturn( false );
         when( store.getNodePropertyValue( 1l, propertyKeyId ) ).thenReturn( value );
-        when( oldTxState.getDeletedNodes() ).thenReturn( Collections.<Long>emptyList() );
         when( oldTxState.getNodesWithChangedProperty( propertyKeyId, value ) ).thenReturn( new DiffSets<Long>() );
 
         // When
@@ -172,7 +175,6 @@ public class IndexQueryTransactionStateTest
         when( store.isLabelSetOnNode( labelId, 1l ) ).thenReturn( true );
 
         when( store.getNodePropertyValue( 1l, propertyKeyId ) ).thenReturn( value );
-        when( oldTxState.getDeletedNodes() ).thenReturn( Collections.<Long>emptyList() );
         when( oldTxState.getNodesWithChangedProperty( propertyKeyId, value ) ).thenReturn( new DiffSets<Long>() );
 
         // When
@@ -197,7 +199,6 @@ public class IndexQueryTransactionStateTest
         when( store.exactIndexLookup( 1337l, value ) ).then( asAnswer( asList( 2l, 3l ) ) );
 
         when( store.isLabelSetOnNode( labelId, 1l ) ).thenReturn( true );
-        when( oldTxState.getDeletedNodes() ).thenReturn( Collections.<Long>emptyList() );
         when( oldTxState.getNodesWithChangedProperty( propertyKeyId, value ) ).thenReturn(
                 new DiffSets<Long>( Collections.<Long>emptySet(), asSet( 1l ) ) );
 
@@ -274,10 +275,12 @@ public class IndexQueryTransactionStateTest
         } );
 
         oldTxState = mock( OldTxStateBridge.class );
+        nodeManager = mock( NodeManager.class );
 
-        state = new TxState( oldTxState, mock( PersistenceManager.class ), mock( TxState.IdGeneration.class ),
-                new DefaultSchemaIndexProviderMap( NO_INDEX_PROVIDER ) );
-        txContext = new TransactionStateStatementContext( store, state );
+        state = new TxState( oldTxState, mock( PersistenceManager.class ),
+                mock( TxState.IdGeneration.class ), new DefaultSchemaIndexProviderMap( NO_INDEX_PROVIDER ) );
+
+        txContext = new TransactionStateStatementContext( store, state, nodeManager );
     }
 
     private static <T> Answer<Iterator<T>> asAnswer( final Iterable<T> values )

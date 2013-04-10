@@ -46,22 +46,28 @@ import org.neo4j.kernel.impl.persistence.PersistenceManager;
  * <p/>
  * So, in ascii art, the current implementation is:
  * <p/>
- * StateHandlingTransactionContext-------TransactionStateStatementContext
+ * StateHandlingTransactionContext------->TransactionStateStatementContext
  * \                                      /
  * ---------------------|----------------
  * |
+ * V
  * TxState
- * /      \
- * PersistenceManager   TransactionState
+ * /       \
+ * V        V
+ * PersistenceManager    OldTxStateBridge
+ * |
+ * V
+ * TransactionState
  * <p/>
  * <p/>
  * We want it to look like:
  * <p/>
- * StateHandlingTransactionContext-------TransactionStateStatementContext
+ * StateHandlingTransactionContext------>TransactionStateStatementContext
  * \                                      /
  * ---------------------|----------------
  * |
- * TxState
+ * V
+ * TxState (rename to TransactionState)
  * <p/>
  * <p/>
  * Where, in the end implementation, the state inside TxState can be used both to overlay on the graph, eg. read writes,
@@ -84,11 +90,11 @@ public class TxState
     private final Map<Long, LabelState> labelStates = new HashMap<Long, LabelState>();
 
     private final DiffSets<IndexRule> ruleDiffSets = new DiffSets<IndexRule>();
-    private final DiffSets<Long> deletedNodes = new DiffSets<Long>();
+    private final DiffSets<Long> nodes = new DiffSets<Long>();
 
 
     private final OldTxStateBridge legacyState;
-    private final PersistenceManager legacyTransaction;
+    private final PersistenceManager persistenceManager;
     private final IdGeneration idGeneration;
     private final SchemaIndexProviderMap providerMap;
 
@@ -99,14 +105,14 @@ public class TxState
     )
     {
         this.legacyState = legacyState;
-        this.legacyTransaction = legacyTransaction;
+        this.persistenceManager = legacyTransaction;
         this.idGeneration = idGeneration;
         this.providerMap = providerMap;
     }
 
     public boolean hasChanges()
     {
-        return !nodeStates.isEmpty() || !labelStates.isEmpty() || !deletedNodes.isEmpty();
+        return !nodeStates.isEmpty() || !labelStates.isEmpty() || !nodes.isEmpty();
     }
 
     public Iterable<NodeState> getNodeStates()
@@ -126,27 +132,27 @@ public class TxState
 
     public void deleteNode( long nodeId )
     {
-        legacyTransaction.nodeDelete( nodeId );
-        deletedNodes.remove( nodeId );
+        legacyState.deleteNode( nodeId );
+        nodes.remove( nodeId );
     }
 
     public boolean nodeIsRemoved( long nodeId )
     {
-        return deletedNodes.isRemoved( nodeId );
+        return nodes.isRemoved( nodeId );
     }
 
     public void addLabelToNode( long labelId, long nodeId )
     {
         getLabelStateNodeDiffSets( labelId ).add( nodeId );
         getNodeStateLabelDiffSets( nodeId ).add( labelId );
-        legacyTransaction.addLabelToNode( labelId, nodeId );
+        persistenceManager.addLabelToNode( labelId, nodeId );
     }
 
     public void removeLabelFromNode( long labelId, long nodeId )
     {
         getLabelStateNodeDiffSets( labelId ).remove( nodeId );
         getNodeStateLabelDiffSets( nodeId ).remove( labelId );
-        legacyTransaction.removeLabelFromNode( labelId, nodeId );
+        persistenceManager.removeLabelFromNode( labelId, nodeId );
     }
 
     /**
@@ -195,7 +201,7 @@ public class TxState
         SchemaIndexProvider.Descriptor providerDescriptor = providerMap.getDefaultProvider().getProviderDescriptor();
         IndexRule rule = new IndexRule( idGeneration.newSchemaRuleId(), labelId, providerDescriptor, propertyKey );
 
-        legacyTransaction.createSchemaRule( rule );
+        persistenceManager.createSchemaRule( rule );
 
         ruleDiffSets.add( rule );
         LabelState labelState = getOrCreateLabelState( rule.getLabel() );
@@ -210,7 +216,7 @@ public class TxState
         LabelState labelState = getOrCreateLabelState( rule.getLabel() );
         labelState.getIndexRuleDiffSets().remove( rule );
 
-        legacyTransaction.dropSchemaRule( rule.getId() );
+        persistenceManager.dropSchemaRule( rule.getId() );
     }
 
     public DiffSets<IndexRule> getIndexRuleDiffSetsByLabel( long labelId )
@@ -231,7 +237,7 @@ public class TxState
 
     public DiffSets<Long> getDeletedNodes()
     {
-        return deletedNodes;
+        return nodes;
     }
 
     public boolean haveIndexesBeenDropped()

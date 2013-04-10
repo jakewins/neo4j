@@ -35,6 +35,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.impl.api.DiffSets;
+import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.xa.DefaultSchemaIndexProviderMap;
 import org.neo4j.kernel.impl.persistence.PersistenceManager;
@@ -43,6 +44,7 @@ public class TxStateTest
 {
 
     private PersistenceManager persistenceManager;
+    private NodeManager nodeManager;
 
     @Test
     public void shouldGetAddedLabels() throws Exception
@@ -174,7 +176,6 @@ public class TxStateTest
         int propValue = 42;
 
         DiffSets<Long> nodesWithChangedProp = new DiffSets<Long>( asSet( nodeId ), emptySet );
-        when( legacyState.getDeletedNodes() ).thenReturn( emptySet );
         when( legacyState.getNodesWithChangedProperty( propertyKey, propValue ) ).thenReturn( nodesWithChangedProp );
 
         // When
@@ -214,7 +215,7 @@ public class TxStateTest
         state.deleteNode( nodeId );
 
         // Then
-        verify( persistenceManager ).nodeDelete( nodeId );
+        verify( legacyState ).deleteNode( nodeId );
         verifyNoMoreInteractions( legacyState, persistenceManager );
 
         assertThat( asSet( state.getDeletedNodes().getRemoved() ), equalTo( asSet( nodeId ) ) );
@@ -229,6 +230,7 @@ public class TxStateTest
     {
         legacyState = mock( OldTxStateBridge.class );
         persistenceManager = mock( PersistenceManager.class );
+        nodeManager = mock( NodeManager.class );
         state = new TxState( legacyState,
                 persistenceManager, mock( TxState.IdGeneration.class ),
                 new DefaultSchemaIndexProviderMap( SchemaIndexProvider.NO_INDEX_PROVIDER ) );

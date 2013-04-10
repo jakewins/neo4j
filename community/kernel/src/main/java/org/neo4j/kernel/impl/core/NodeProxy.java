@@ -90,7 +90,7 @@ public class NodeProxy implements Node
         StatementContext ctxForWriting = statementCtxProvider.getCtxForWriting();
         try
         {
-            ctxForWriting.deleteNode( nodeLookup, getId() );
+            ctxForWriting.deleteNode( getId() );
         }
         finally
         {
