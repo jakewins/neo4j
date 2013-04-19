@@ -49,6 +49,24 @@ function startTestRunner()
   TESTRUNNER_PID=$!
 }
 
+function ensureNodeModulesInstalled() 
+{
+  if [ ! -f node_modules ];
+  then
+      echo "Node.js dependencies not installed, attempting install"
+      npm install
+      node_modules/.bin/brunch build
+  fi
+}
+
+function createTargetDir() 
+{
+  if [ ! -f target ];
+  then
+      mkdir target
+  fi
+}
+
 function infiniteSleep() 
 {
   while(true); do
@@ -74,11 +92,14 @@ function onExit()
 
 trap onExit EXIT
 
-mkdir target
+createTargetDir;
+
+rm -rf ./public/webadmin-html/*;
+
+ensureNodeModulesInstalled;
 
 startServer;
 
-rm -rf ./public/webadmin-html/*
 autoCompileWebadmin;
 startTestRunner;
 infiniteSleep;
