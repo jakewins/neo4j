@@ -26,8 +26,8 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
 import org.neo4j.kernel.api.KernelAPI;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.StatementOperations;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
@@ -45,30 +45,25 @@ public abstract class KernelIntegrationTest
 
     private Transaction beansTx;
     private EphemeralFileSystemAbstraction fs;
-    private StatementState state;
+    private KernelStatement ctx;
 
-    protected StatementState newTransaction()
+    protected KernelStatement newTransaction()
     {
         beansTx = db.beginTx();
-        statement = statementContextProvider.getCtxForWriting().asStatementOperations();
-        return (state = statementContextProvider.statementForWriting());
-    }
-    
-    public StatementState getState()
-    {
-        return state;
+        ctx = statementContextProvider.getCtxForWriting();
+        statement = ctx.asStatementOperations();
+        return ctx;
     }
 
     protected StatementOperations readOnlyContext()
     {
         StatementOperations context = statementContextProvider.getCtxForReading().asStatementOperations();
-        state = statementContextProvider.statementForReading();
         return context;
     }
 
     protected void commit()
     {
-        state.close();
+        ctx.close();
         statement = null;
         beansTx.success();
         beansTx.finish();
@@ -76,7 +71,7 @@ public abstract class KernelIntegrationTest
 
     protected void rollback()
     {
-        state.close();
+        ctx.close();
         statement = null;
         beansTx.failure();
         beansTx.finish();

@@ -44,8 +44,8 @@ import org.neo4j.graphdb.event.ErrorState;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.UTF8;
 import org.neo4j.kernel.api.KernelAPI;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.core.KernelPanicEventGenerator;
 import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
@@ -947,7 +947,7 @@ public class TxManager extends AbstractTransactionManager implements Lifecycle
     }
 
     @Override
-    public StatementState newStatement()
+    public KernelStatement newStatement()
     {
         Transaction tx;
         try

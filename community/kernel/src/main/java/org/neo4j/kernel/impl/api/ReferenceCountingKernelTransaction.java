@@ -19,11 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import java.io.IOException;
-
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.operations.StatementState;
 
 public class ReferenceCountingKernelTransaction extends DelegatingKernelTransaction
 {
@@ -32,52 +28,10 @@ public class ReferenceCountingKernelTransaction extends DelegatingKernelTransact
     public ReferenceCountingKernelTransaction( KernelTransaction delegate )
     {
         super( delegate );
-        statementContextOwner = new StatementStateOwner( )
-        {
-            @Override
-            protected StatementState createStatementState()
-            {
-                return ReferenceCountingKernelTransaction.this.createOwnedStatementState();
-            }
-        };
+
     }
 
-    @Override
-    public StatementState newStatementState()
-    {
-        return statementContextOwner.getStatementState();
-    }
-    
-    private StatementState createOwnedStatementState()
-    {
-        return delegate.newStatementState();
-    }
-    
-    @Override
-    public void commit() throws TransactionFailureException
-    {
-        try
-        {
-            statementContextOwner.closeAllStatements();
-        }
-        catch ( IOException e )
-        {
-            throw new TransactionFailureException( new RuntimeException("Unable to close open statements.", e) );
-        }
-        delegate.commit();
-    }
 
-    @Override
-    public void rollback() throws TransactionFailureException
-    {
-        try
-        {
-            statementContextOwner.closeAllStatements();
-        }
-        catch ( IOException e )
-        {
-            throw new TransactionFailureException( new RuntimeException("Unable to close open statements.", e) );
-        }
-        delegate.rollback();
-    }
+    
+
 }

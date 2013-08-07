@@ -50,24 +50,6 @@ public class ReadOnlyStatementState implements StatementState
     }
 
     @Override
-    public TxState txState()
-    {
-        return NO_STATE;
-    }
-
-    @Override
-    public boolean hasTxState()
-    {
-        return false;
-    }
-
-    @Override
-    public boolean hasTxStateWithChanges()
-    {
-        return false;
-    }
-
-    @Override
     public IndexReaderFactory indexReaderFactory()
     {
         return indexReaderFactory;

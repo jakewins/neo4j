@@ -26,7 +26,6 @@ import org.neo4j.helpers.Thunk;
 import org.neo4j.kernel.api.EntityType;
 import org.neo4j.kernel.api.KernelAPI;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.state.NodeState;
 import org.neo4j.kernel.impl.api.state.TxState;
@@ -82,17 +81,17 @@ public class PersistenceCache
         this.graphProperties = graphProperties;
     }
 
-    public boolean nodeHasLabel( StatementState state, long nodeId, long labelId, CacheLoader<Set<Long>> cacheLoader )
+    public boolean nodeHasLabel( long nodeId, long labelId, CacheLoader<Set<Long>> cacheLoader )
             throws EntityNotFoundException
     {
-        Set<Long> labels = getNode( nodeId ).getLabels( state, cacheLoader );
+        Set<Long> labels = getNode( nodeId ).getLabels(cacheLoader);
         return labels.contains( labelId );
     }
     
-    public Set<Long> nodeGetLabels( StatementState state, long nodeId, CacheLoader<Set<Long>> loader )
+    public Set<Long> nodeGetLabels( long nodeId, CacheLoader<Set<Long>> loader )
             throws EntityNotFoundException
     {
-        return getNode( nodeId ).getLabels( state, loader );
+        return getNode( nodeId ).getLabels(loader);
     }
     
     private NodeImpl getNode( long nodeId ) throws EntityNotFoundException
@@ -136,62 +135,62 @@ public class PersistenceCache
         nodeCache.remove( nodeId );
     }
 
-    public Iterator<Property> nodeGetProperties( StatementState state, long nodeId,
+    public Iterator<Property> nodeGetProperties( long nodeId,
             CacheLoader<Iterator<Property>> cacheLoader )
             throws EntityNotFoundException
     {
-        return getNode( nodeId ).getProperties( state, cacheLoader, NODE_CACHE_SIZE_LISTENER );
+        return getNode( nodeId ).getProperties( cacheLoader, NODE_CACHE_SIZE_LISTENER );
     }
     
-    public PrimitiveLongIterator nodeGetPropertyKeys( StatementState state, long nodeId,
+    public PrimitiveLongIterator nodeGetPropertyKeys( long nodeId,
             CacheLoader<Iterator<Property>> cacheLoader )
             throws EntityNotFoundException
     {
-        return getNode( nodeId ).getPropertyKeys( state, cacheLoader, NODE_CACHE_SIZE_LISTENER );
+        return getNode( nodeId ).getPropertyKeys( cacheLoader, NODE_CACHE_SIZE_LISTENER );
     }
     
-    public Property nodeGetProperty( StatementState state, long nodeId, long propertyKeyId,
+    public Property nodeGetProperty( long nodeId, long propertyKeyId,
             CacheLoader<Iterator<Property>> cacheLoader )
             throws EntityNotFoundException
     {
-        return getNode( nodeId ).getProperty( state, cacheLoader, NODE_CACHE_SIZE_LISTENER, (int) propertyKeyId );
+        return getNode( nodeId ).getProperty( cacheLoader, NODE_CACHE_SIZE_LISTENER, (int) propertyKeyId );
     }
     
-    public Iterator<Property> relationshipGetProperties( StatementState state, long relationshipId,
+    public Iterator<Property> relationshipGetProperties( long relationshipId,
             CacheLoader<Iterator<Property>> cacheLoader ) throws EntityNotFoundException
     {
-        return getRelationship( relationshipId ).getProperties( state, cacheLoader,
+        return getRelationship( relationshipId ).getProperties( cacheLoader,
                 RELATIONSHIP_CACHE_SIZE_LISTENER );
     }
 
-    public PrimitiveLongIterator relationshipGetPropertyKeys( StatementState state, long relationshipId,
+    public PrimitiveLongIterator relationshipGetPropertyKeys( long relationshipId,
             CacheLoader<Iterator<Property>> cacheLoader ) throws EntityNotFoundException
     {
-        return getRelationship( relationshipId ).getPropertyKeys( state, cacheLoader,
+        return getRelationship( relationshipId ).getPropertyKeys( cacheLoader,
                 RELATIONSHIP_CACHE_SIZE_LISTENER );
     }
     
-    public Property relationshipGetProperty( StatementState state, long relationshipId, long propertyKeyId,
+    public Property relationshipGetProperty( long relationshipId, long propertyKeyId,
             CacheLoader<Iterator<Property>> cacheLoader ) throws EntityNotFoundException
     {
-        return getRelationship( relationshipId ).getProperty( state, cacheLoader, RELATIONSHIP_CACHE_SIZE_LISTENER,
+        return getRelationship( relationshipId ).getProperty( cacheLoader, RELATIONSHIP_CACHE_SIZE_LISTENER,
                 (int) propertyKeyId );
     }
     
-    public Iterator<Property> graphGetProperties( StatementState state, CacheLoader<Iterator<Property>> cacheLoader )
+    public Iterator<Property> graphGetProperties( CacheLoader<Iterator<Property>> cacheLoader )
     {
-        return graphProperties.evaluate().getProperties( state, cacheLoader, NO_UPDATES );
+        return graphProperties.evaluate().getProperties( cacheLoader, NO_UPDATES );
     }
     
-    public PrimitiveLongIterator graphGetPropertyKeys( StatementState state,
+    public PrimitiveLongIterator graphGetPropertyKeys(
             CacheLoader<Iterator<Property>> cacheLoader )
     {
-        return graphProperties.evaluate().getPropertyKeys( state, cacheLoader, NO_UPDATES );
+        return graphProperties.evaluate().getPropertyKeys( cacheLoader, NO_UPDATES );
     }
 
-    public Property graphGetProperty( StatementState state, CacheLoader<Iterator<Property>> cacheLoader,
+    public Property graphGetProperty( CacheLoader<Iterator<Property>> cacheLoader,
             long propertyKeyId )
     {
-        return graphProperties.evaluate().getProperty( state, cacheLoader, NO_UPDATES, (int) propertyKeyId );
+        return graphProperties.evaluate().getProperty( cacheLoader, NO_UPDATES, (int) propertyKeyId );
     }
 }

@@ -22,9 +22,8 @@ package org.neo4j.kernel.impl.api.index;
 import java.util.Iterator;
 
 import org.neo4j.kernel.ThreadToStatementContextBridge;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.kernel.impl.util.StringLogger;
@@ -60,23 +59,17 @@ public class RemoveOrphanConstraintIndexesOnStartup
             try
             {
                 tx = txManager.getKernelTransaction();
-                StatementOperationParts context = ctxProvider.getCtxForWriting();
-                StatementState state = tx.newStatementState();
-                try
+                try(KernelStatement context = ctxProvider.getCtxForWriting())
                 {
-                    for ( Iterator<IndexDescriptor> indexes = context.schemaReadOperations().uniqueIndexesGetAll( state );
+                    for ( Iterator<IndexDescriptor> indexes = context.schemaReadOperations().uniqueIndexesGetAll( );
                             indexes.hasNext(); )
                     {
                         IndexDescriptor index = indexes.next();
-                        if ( context.schemaReadOperations().indexGetOwningUniquenessConstraintId( state, index ) == null )
+                        if ( context.schemaReadOperations().indexGetOwningUniquenessConstraintId( index ) == null )
                         {
-                            context.schemaWriteOperations().uniqueIndexDrop( state, index );
+                            context.schemaWriteOperations().uniqueIndexDrop( index );
                         }
                     }
-                }
-                finally
-                {
-                    state.close();
                 }
                 success = true;
             }

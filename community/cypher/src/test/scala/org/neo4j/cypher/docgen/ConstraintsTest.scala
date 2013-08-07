@@ -61,11 +61,10 @@ class ConstraintsTest extends DocumentingTestBase {
 
   private def getConstraintIterator(labelName: String, propName: String): Iterator[UniquenessConstraint] = {
     val statementCtx = db.statementContextForReading
-    val state = db.stateForReading
 
-    val prop = statementCtx.keyReadOperations.propertyKeyGetForName(state, propName)
-    val label = statementCtx.keyReadOperations.labelGetForName(state, labelName)
+    val prop = statementCtx.keyReadOperations.propertyKeyGetForName(propName)
+    val label = statementCtx.keyReadOperations.labelGetForName(labelName)
 
-    statementCtx.schemaReadOperations.constraintsGetForLabelAndPropertyKey(state, label, prop).asScala
+    statementCtx.schemaReadOperations.constraintsGetForLabelAndPropertyKey(label, prop).asScala
   }
 }

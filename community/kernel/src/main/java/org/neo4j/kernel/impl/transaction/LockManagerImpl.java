@@ -137,7 +137,14 @@ public class LockManagerImpl implements LockManager
     {
         if ( resource == null || tx == null )
         {
-            throw new IllegalResourceException( "Null parameter" );
+            if( resource == null)
+            {
+                throw new IllegalResourceException( "The resource requested to grab a lock on cannot be null." );
+            }
+            else
+            {
+                throw new IllegalResourceException( "Unable to grab lock, transaction is null." );
+            }
         }
     }
 

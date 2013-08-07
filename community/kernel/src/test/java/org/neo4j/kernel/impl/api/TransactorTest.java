@@ -25,12 +25,11 @@ import javax.transaction.Transaction;
 
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
 import org.neo4j.kernel.api.exceptions.BeginTransactionFailureException;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 
 import static org.junit.Assert.*;
@@ -54,15 +53,12 @@ public class TransactorTest
         KernelTransaction txContext = mock( KernelTransaction.class );
         when( txManager.getKernelTransaction() ).thenReturn( txContext );
 
-        StatementOperationParts stmtContext = mockedParts( txContext );
+        KernelStatement stmtContext = mockedParts( txContext );
 
         @SuppressWarnings("unchecked")
         Transactor.Statement<Object, KernelException> statement = mock( Transactor.Statement.class );
         Object expectedResult = new Object();
-        when( statement.perform( eq( stmtContext ), any( StatementState.class ) ) ).thenReturn( expectedResult );
-
-        StatementState state = mock( StatementState.class );
-        when( txContext.newStatementState() ).thenReturn( state );
+        when( statement.perform( eq( stmtContext ) ) ).thenReturn( expectedResult );
 
         Transactor transactor = new Transactor( txManager );
 
@@ -71,13 +67,12 @@ public class TransactorTest
 
         // then
         assertEquals( expectedResult, result );
-        InOrder order = inOrder( txManager, txContext, state, statement );
+        InOrder order = inOrder( txManager, txContext, statement );
         order.verify( txManager ).suspend();
         order.verify( txManager ).begin();
         order.verify( txManager ).getKernelTransaction();
-        order.verify( txContext ).newStatementOperations();
-        order.verify( statement ).perform( stmtContext, state );
-        order.verify( state ).close();
+        order.verify( txContext ).newStatement();
+        order.verify( statement ).perform( stmtContext );
         order.verify( txContext ).commit();
         order.verify( txManager ).resume( existingTransaction );
         order.verifyNoMoreInteractions();
@@ -95,16 +90,13 @@ public class TransactorTest
         KernelTransaction txContext = mock( KernelTransaction.class );
         when( txManager.getKernelTransaction() ).thenReturn( txContext );
 
-        StatementOperationParts stmtContext = mockedParts( txContext );
-        when( txContext.newStatementOperations() ).thenReturn( stmtContext );
+        KernelStatement stmtContext = mockedParts( txContext );
+        when( txContext.newStatement() ).thenReturn( stmtContext );
 
         @SuppressWarnings("unchecked")
         Transactor.Statement<Object, KernelException> statement = mock( Transactor.Statement.class );
         SpecificKernelException exception = new SpecificKernelException();
-        when( statement.perform( any( StatementOperationParts.class ), any( StatementState.class ) ) ).thenThrow( exception );
-
-        StatementState state = mock( StatementState.class );
-        when( txContext.newStatementState() ).thenReturn( state );
+        when( statement.perform( any( KernelStatement.class ) ) ).thenThrow( exception );
 
         Transactor transactor = new Transactor( txManager );
 
@@ -120,13 +112,12 @@ public class TransactorTest
         {
             assertSame( exception, e );
         }
-        InOrder order = inOrder( txManager, txContext, state, statement );
+        InOrder order = inOrder( txManager, txContext, statement );
         order.verify( txManager ).suspend();
         order.verify( txManager ).begin();
         order.verify( txManager ).getKernelTransaction();
-        order.verify( txContext ).newStatementOperations();
-        order.verify( statement ).perform( stmtContext, state );
-        order.verify( state ).close();
+        order.verify( txContext ).newStatement();
+        order.verify( statement ).perform( stmtContext );
         order.verify( txContext ).rollback();
         order.verify( txManager ).resume( existingTransaction );
         order.verifyNoMoreInteractions();
@@ -141,16 +132,13 @@ public class TransactorTest
         KernelTransaction txContext = mock( KernelTransaction.class );
         when( txManager.getKernelTransaction() ).thenReturn( txContext );
 
-        StatementOperationParts stmtContext = mockedParts( txContext );
-        when( txContext.newStatementOperations() ).thenReturn( stmtContext );
+        KernelStatement stmtContext = mockedParts( txContext );
+        when( txContext.newStatement() ).thenReturn( stmtContext );
 
         @SuppressWarnings("unchecked")
         Transactor.Statement<Object, KernelException> statement = mock( Transactor.Statement.class );
         Object expectedResult = new Object();
-        when( statement.perform( eq( stmtContext ), any( StatementState.class ) ) ).thenReturn( expectedResult );
-
-        StatementState state = mock( StatementState.class );
-        when( txContext.newStatementState() ).thenReturn( state );
+        when( statement.perform( eq( stmtContext ) ) ).thenReturn( expectedResult );
 
         Transactor transactor = new Transactor( txManager );
 
@@ -159,13 +147,12 @@ public class TransactorTest
 
         // then
         assertEquals( expectedResult, result );
-        InOrder order = inOrder( txManager, txContext, state, statement );
+        InOrder order = inOrder( txManager, txContext, statement );
         order.verify( txManager ).suspend();
         order.verify( txManager ).begin();
         order.verify( txManager ).getKernelTransaction();
-        order.verify( txContext ).newStatementOperations();
-        order.verify( statement ).perform( stmtContext, state );
-        order.verify( state ).close();
+        order.verify( txContext ).newStatement();
+        order.verify( statement ).perform( stmtContext );
         order.verify( txContext ).commit();
         order.verifyNoMoreInteractions();
     }

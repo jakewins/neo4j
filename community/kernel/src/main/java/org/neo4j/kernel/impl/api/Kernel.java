@@ -23,7 +23,6 @@ import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.api.KernelAPI;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
 import org.neo4j.kernel.impl.api.constraints.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
@@ -117,8 +116,6 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
     private NodeManager nodeManager;
     private PersistenceCache persistenceCache;
     private boolean isShutdown = false;
-    private StatementOperationParts statementOperations;
-    private StatementOperationParts readOnlyStatementOperations;
     private SchemaCache schemaCache;
     private SchemaIndexProviderMap providerMap = null;
 
@@ -171,23 +168,6 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
                 neoStore = null;
             }
         } ) );
-    }
-
-    @Override
-    public void bootstrapAfterRecovery()
-    {
-            StatementOperationParts parts = newTransaction().newStatementOperations();
-            this.statementOperations = parts;
-            
-            ReadOnlyStatementOperations readOnlyParts = new ReadOnlyStatementOperations( parts.schemaStateOperations() );
-            this.readOnlyStatementOperations = parts.override(
-                    parts.keyReadOperations(),
-                    readOnlyParts,
-                    parts.entityReadOperations(),
-                    readOnlyParts,
-                    parts.schemaReadOperations(),
-                    readOnlyParts,
-                    readOnlyParts);
     }
 
     @Override
@@ -257,17 +237,5 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
         {
             throw new DatabaseShutdownException();
         }
-    }
-
-    @Override
-    public StatementOperationParts statementOperations()
-    {
-        return statementOperations;
-    }
-    
-    @Override
-    public StatementOperationParts readOnlyStatementOperations()
-    {
-        return readOnlyStatementOperations;
     }
 }

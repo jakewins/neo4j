@@ -25,11 +25,9 @@ import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundException;
 public class KeyNameLookup
 {
     private final KeyReadOperations keyReadOperations;
-    private final StatementState state;
 
-    public KeyNameLookup( StatementState state, KeyReadOperations context )
+    public KeyNameLookup( KeyReadOperations context )
     {
-        this.state = state;
         this.keyReadOperations = context;
     }
 
@@ -40,7 +38,7 @@ public class KeyNameLookup
     {
         try
         {
-            return keyReadOperations.labelGetName( state, labelId );
+            return keyReadOperations.labelGetName( labelId );
         }
         catch ( LabelNotFoundKernelException e )
         {
@@ -55,7 +53,7 @@ public class KeyNameLookup
     {
         try
         {
-            return keyReadOperations.propertyKeyGetName( state, propertyId );
+            return keyReadOperations.propertyKeyGetName( propertyId );
         }
         catch ( PropertyKeyIdNotFoundException e )
         {

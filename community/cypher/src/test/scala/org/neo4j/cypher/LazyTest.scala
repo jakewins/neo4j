@@ -43,7 +43,7 @@ import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito._
 import org.neo4j.kernel.{ThreadToStatementContextBridge, GraphDatabaseAPI}
 import org.neo4j.kernel.impl.core.NodeManager
-import org.neo4j.kernel.api.StatementOperationParts
+import org.neo4j.kernel.api.KernelStatement
 import org.neo4j.kernel.impl.api.{SchemaStateConcern, KernelSchemaStateStore}
 import org.neo4j.kernel.api.operations._
 import scala.Some
@@ -185,7 +185,7 @@ class LazyTest extends ExecutionEngineHelper with Assertions with MockitoSugar {
     val schemaState = new KernelSchemaStateStore()
     val schemaOps = new SchemaStateConcern(schemaState)
     
-    val fakeCtx = new StatementOperationParts(
+    val fakeCtx = new KernelStatement(
         mock[KeyReadOperations],
         mock[KeyWriteOperations],
         mock[EntityReadOperations],
@@ -194,11 +194,8 @@ class LazyTest extends ExecutionEngineHelper with Assertions with MockitoSugar {
         mock[SchemaWriteOperations],
         schemaOps)
 
-    val fakeState = mock[StatementState]
-
     when(nodeManager.getAllNodes).thenReturn(counter)
     when(bridge.getCtxForWriting).thenReturn(fakeCtx)
-    when(bridge.statementForWriting()).thenReturn(fakeState)
     when(fakeGraph.getDependencyResolver).thenReturn(dependencies)
     when(dependencies.resolveDependency(classOf[ThreadToStatementContextBridge])).thenReturn(bridge)
     when(dependencies.resolveDependency(classOf[NodeManager])).thenReturn(nodeManager)

@@ -20,11 +20,9 @@
 package org.neo4j.kernel.impl.api;
 
 import org.mockito.Matchers;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.operations.EntityReadOperations;
@@ -42,9 +40,9 @@ import static org.mockito.Mockito.*;
 
 public abstract class StatementOperationsTestHelper
 {
-    public static StatementOperationParts mockedParts()
+    public static KernelStatement mockedParts()
     {
-        StatementOperationParts stmtContextParts = new StatementOperationParts(
+        KernelStatement stmtContextParts = new KernelStatement(
             mock( KeyReadOperations.class ),
             mock( KeyWriteOperations.class ),
             mock( EntityReadOperations.class ),
@@ -55,10 +53,10 @@ public abstract class StatementOperationsTestHelper
         return stmtContextParts;
     }
     
-    public static StatementOperationParts mockedParts( KernelTransaction txContext )
+    public static KernelStatement mockedParts( KernelTransaction txContext )
     {
-        StatementOperationParts mock = mockedParts();
-        when( txContext.newStatementOperations() ).thenReturn( mock );
+        KernelStatement mock = mockedParts();
+        when( txContext.newStatement() ).thenReturn( mock );
         return mock;
     }
     
@@ -82,15 +80,6 @@ public abstract class StatementOperationsTestHelper
         {
             throw new Error( e );
         }
-        when( state.txState() ).thenReturn( txState );
-        when( state.hasTxState() ).thenReturn( true );
-        when( state.hasTxStateWithChanges() ).thenAnswer( new Answer<Boolean>() {
-            @Override
-            public Boolean answer( InvocationOnMock invocation ) throws Throwable
-            {
-                return txState.hasChanges();
-            }
-        } );
         when( state.locks() ).thenReturn( lockHolder );
         when( state.indexReaderFactory() ).thenReturn( indexReaderFactory );
         return state;

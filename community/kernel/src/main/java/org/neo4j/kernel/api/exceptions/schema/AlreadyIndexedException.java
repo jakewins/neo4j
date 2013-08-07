@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.api.exceptions.schema;
 
-import org.neo4j.kernel.api.operations.KeyNameLookup;
+import org.neo4j.kernel.api.operations.KeyReadOperations;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 
 public class AlreadyIndexedException extends SchemaKernelException
@@ -33,7 +33,7 @@ public class AlreadyIndexedException extends SchemaKernelException
     }
 
     @Override
-    public String getUserMessage( KeyNameLookup keyNameLookup )
+    public String getUserMessage( KeyReadOperations keyNameLookup )
     {
         return String.format( String.format( "Already indexed %s.", descriptor.userDescription( keyNameLookup ) ) );
     }

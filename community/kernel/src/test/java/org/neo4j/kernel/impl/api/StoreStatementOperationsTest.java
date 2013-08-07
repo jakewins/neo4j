@@ -77,7 +77,7 @@ public class StoreStatementOperationsTest
     {
         // When
         try {
-            statement.nodeAddLabel( state, 12, 12 );
+            statement.nodeAddLabel( 12, 12 );
             fail("Should have thrown unsupported operation.");
         } catch(UnsupportedOperationException e)
         {
@@ -92,13 +92,13 @@ public class StoreStatementOperationsTest
         Transaction tx = db.beginTx();
         long nodeId = db.createNode( label1, label2).getId();
         String labelName1 = label1.name(), labelName2 = label2.name();
-        long labelId1 = statement.labelGetForName( state, labelName1 );
-        long labelId2 = statement.labelGetOrCreateForName( state, labelName2 );
+        long labelId1 = statement.labelGetForName( labelName1 );
+        long labelId2 = statement.labelGetOrCreateForName( labelName2 );
         tx.success();
         tx.finish();
 
         // THEN
-        PrimitiveLongIterator readLabels = statement.nodeGetLabels( state, nodeId );
+        PrimitiveLongIterator readLabels = statement.nodeGetLabels( nodeId );
         assertEquals( new HashSet<>( asList( labelId1, labelId2 ) ),
                 addToCollection( readLabels, new HashSet<Long>() ) );
     }
@@ -108,10 +108,10 @@ public class StoreStatementOperationsTest
     {
         // GIVEN
         String labelName = label1.name();
-        long labelId = statement.labelGetOrCreateForName( state, labelName );
+        long labelId = statement.labelGetOrCreateForName( labelName );
 
         // WHEN
-        String readLabelName = statement.labelGetName( state, labelId );
+        String readLabelName = statement.labelGetName( labelId );
 
         // THEN
         assertEquals( labelName, readLabelName );
@@ -139,12 +139,12 @@ public class StoreStatementOperationsTest
         // GIVEN
         Node node1 = createLabeledNode( db, map( "name", "First", "age", 1L ), label1 );
         Node node2 = createLabeledNode( db, map( "type", "Node", "count", 10 ), label1, label2 );
-        long labelId1 = statement.labelGetForName( state, label1.name() );
-        long labelId2 = statement.labelGetForName( state, label2.name() );
+        long labelId1 = statement.labelGetForName( label1.name() );
+        long labelId2 = statement.labelGetForName( label2.name() );
 
         // WHEN
-        PrimitiveLongIterator nodesForLabel1 = statement.nodesGetForLabel( state, labelId1 );
-        PrimitiveLongIterator nodesForLabel2 = statement.nodesGetForLabel( state, labelId2 );
+        PrimitiveLongIterator nodesForLabel1 = statement.nodesGetForLabel( labelId1 );
+        PrimitiveLongIterator nodesForLabel2 = statement.nodesGetForLabel( labelId2 );
 
         // THEN
         assertEquals( asSet( node1.getId(), node2.getId() ), IteratorUtil.asSet( nodesForLabel1 ) );
@@ -203,7 +203,7 @@ public class StoreStatementOperationsTest
             long nodeId = createLabeledNode( db, singletonMap( "prop", value ), label1 ).getId();
 
             // when
-            Property property = single( statement.nodeGetAllProperties( state, nodeId ) );
+            Property property = single( statement.nodeGetAllProperties( nodeId ) );
 
             //then
             assertTrue( property + ".valueEquals(" + value + ")", property.valueEquals( value ) );
@@ -214,7 +214,7 @@ public class StoreStatementOperationsTest
     public void should_create_property_key_if_not_exists() throws Exception
     {
         // WHEN
-        long id = statement.propertyKeyGetOrCreateForName( state, propertyKey );
+        long id = statement.propertyKeyGetOrCreateForName( propertyKey );
 
         // THEN
         assertTrue( "Should have created a non-negative id", id >= 0 );
@@ -224,10 +224,10 @@ public class StoreStatementOperationsTest
     public void should_get_previously_created_property_key() throws Exception
     {
         // GIVEN
-        long id = statement.propertyKeyGetOrCreateForName( state, propertyKey );
+        long id = statement.propertyKeyGetOrCreateForName( propertyKey );
 
         // WHEN
-        long secondId = statement.propertyKeyGetForName( state, propertyKey );
+        long secondId = statement.propertyKeyGetForName( propertyKey );
 
         // THEN
         assertEquals( id, secondId );
@@ -237,10 +237,10 @@ public class StoreStatementOperationsTest
     public void should_be_able_to_get_or_create_previously_created_property_key() throws Exception
     {
         // GIVEN
-        long id = statement.propertyKeyGetOrCreateForName( state, propertyKey );
+        long id = statement.propertyKeyGetOrCreateForName( propertyKey );
 
         // WHEN
-        long secondId = statement.propertyKeyGetOrCreateForName( state, propertyKey );
+        long secondId = statement.propertyKeyGetOrCreateForName( propertyKey );
 
         // THEN
         assertEquals( id, secondId );
@@ -252,7 +252,7 @@ public class StoreStatementOperationsTest
         // WHEN
         try
         {
-            statement.propertyKeyGetForName( state, "non-existent-property-key" );
+            statement.propertyKeyGetForName( "non-existent-property-key" );
             fail( "Should have failed with property key not found exception" );
         }
         catch ( PropertyKeyNotFoundException e )
@@ -271,7 +271,7 @@ public class StoreStatementOperationsTest
         Transaction tx = db.beginTx();
 
         // WHEN
-        Set<Long> foundNodes = asUniqueSet( statement.nodesGetFromIndexLookup( state, index, name ) );
+        Set<Long> foundNodes = asUniqueSet( statement.nodesGetFromIndexLookup( index, name ) );
 
         // THEN
         assertEquals( asSet( mrTaylor.getId() ), foundNodes );
@@ -300,8 +300,7 @@ public class StoreStatementOperationsTest
                 resolver.resolveDependency( LabelTokenHolder.class ),
                 neoStoreDataSource.getNeoStore(),
                 resolver.resolveDependency( IndexingService.class ) );
-        statement = txContext.newStatementOperations().asStatementOperations();
-        state = txContext.newStatementState();
+        statement = txContext.newStatement().asStatementOperations();
     }
 
     @After
@@ -345,8 +344,8 @@ public class StoreStatementOperationsTest
         try
         {
             db.schema().awaitIndexOnline( index, 10, SECONDS );
-            return statement.indexesGetForLabelAndPropertyKey( state, statement.labelGetForName( state, label.name() ),
-                    statement.propertyKeyGetForName( state, propertyKey ) );
+            return statement.indexesGetForLabelAndPropertyKey( statement.labelGetForName( label.name() ),
+                    statement.propertyKeyGetForName( propertyKey ) );
         }
         finally
         {

@@ -45,18 +45,18 @@ public class PersistenceCacheTest
         final Set<Long> labels = asSet( 1L, 2L, 3L );
         @SuppressWarnings( "unchecked" )
         CacheLoader<Set<Long>> loader = mock( CacheLoader.class );
-        when( loader.load( state, nodeId ) ).thenReturn( labels );
+        when( loader.load( nodeId ) ).thenReturn( labels );
         NodeImpl node = new NodeImpl( nodeId );
         when( nodeCache.get( nodeId ) ).thenReturn( node );
         
         // WHEN
-        boolean hasLabel1 = persistenceCache.nodeHasLabel( state, nodeId, 1, loader );
-        boolean hasLabel2 = persistenceCache.nodeHasLabel( state, nodeId, 2, loader );
+        boolean hasLabel1 = persistenceCache.nodeHasLabel( nodeId, 1, loader );
+        boolean hasLabel2 = persistenceCache.nodeHasLabel( nodeId, 2, loader );
         
         // THEN
         assertTrue( hasLabel1 );
         assertTrue( hasLabel2 );
-        verify( loader, times( 1 ) ).load( state, nodeId );
+        verify( loader, times( 1 ) ).load( nodeId );
         verify( nodeCache, times( 2 ) ).get( nodeId );
     }
     

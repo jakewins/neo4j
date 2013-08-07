@@ -36,11 +36,6 @@ package org.neo4j.kernel.api;
 public interface KernelAPI
 {
     /**
-     * Hook for actions to take place when the database is fully functional and any recovery has completed.
-     */
-    void bootstrapAfterRecovery();
-    
-    /**
      * Creates and returns a new {@link KernelTransaction} capable of modifying the
      * underlying graph. Changes made in it are visible within the transaction and can
      * be committed or rolled back.
@@ -48,16 +43,4 @@ public interface KernelAPI
      * @return a new {@link KernelTransaction} for modifying the underlying graph.
      */
     KernelTransaction newTransaction();
-
-    /**
-     * Returns a {@link StatementOperations context} that can be used for read operations
-     * that aren't associated with any specific transaction. Write operations on this
-     * statement will throw exception.
-     * 
-     * @return a new {@link StatementOperations} used for read operations not associated
-     * with any transaction.
-     */
-    StatementOperationParts statementOperations();
-
-    StatementOperationParts readOnlyStatementOperations();
 }

@@ -33,12 +33,8 @@ object QueryStateHelper {
       .getDependencyResolver
       .resolveDependency(classOf[ThreadToStatementContextBridge])
       .getCtxForWriting
-    val state = db
-      .getDependencyResolver
-      .resolveDependency(classOf[ThreadToStatementContextBridge])
-      .statementForWriting
 
-    new QueryState(db, new TransactionBoundQueryContext(db, tx, ctx, state), Map.empty, NullDecorator, None)
+    new QueryState(db, new TransactionBoundQueryContext(db, tx, ctx), Map.empty, NullDecorator, None)
   }
 }
 

@@ -57,7 +57,7 @@ class ExecutionPlanBuilderTest extends GraphDatabaseTestBase with Assertions wit
     val q = Query.start(NodeById("x", 0)).returns(ReturnItem(Identifier("x"), "x"))
 
     val execPlanBuilder = new FakeExecPlanBuilder(graph, Seq(new ExplodingPipeBuilder))
-    val queryContext = new TransactionBoundQueryContext(graph, tx, statementContext, cakeState)
+    val queryContext = new TransactionBoundQueryContext(graph, tx, statementContext )
 
     // when
     intercept[ExplodingException] {
@@ -83,7 +83,7 @@ class ExecutionPlanBuilderTest extends GraphDatabaseTestBase with Assertions wit
       .returns(ReturnItem(Identifier("x"), "x"))
 
     val execPlanBuilder = new ExecutionPlanBuilder(graph)
-    val queryContext = new TransactionBoundQueryContext(graph, tx, statementContext, cakeState)
+    val queryContext = new TransactionBoundQueryContext(graph, tx, statementContext )
     val pkId = queryContext.getPropertyKeyId("foo")
 
     // when
@@ -97,14 +97,13 @@ class ExecutionPlanBuilderTest extends GraphDatabaseTestBase with Assertions wit
     val tx = graph.beginTx()
     val node = graph.createNode(DynamicLabel.label("Person"))
 
-    val identifier = Identifier("x")
     val q = Query
       .start(NodeById("x", node.getId))
       .where(HasLabel(Identifier("x"), Label("Person")))
       .returns(ReturnItem(Identifier("x"), "x"))
 
     val execPlanBuilder = new ExecutionPlanBuilder(graph)
-    val queryContext = new TransactionBoundQueryContext(graph, tx, statementContext, cakeState)
+    val queryContext = new TransactionBoundQueryContext(graph, tx, statementContext )
     val labelId = queryContext.getLabelId("Person")
 
     // when

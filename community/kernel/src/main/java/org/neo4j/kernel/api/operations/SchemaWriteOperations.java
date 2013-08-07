@@ -30,7 +30,7 @@ public interface SchemaWriteOperations
      * Creates an index, indexing properties with the given {@code propertyKeyId} for nodes with the given
      * {@code labelId}.
      */
-    IndexDescriptor indexCreate( StatementState state, long labelId, long propertyKeyId ) throws SchemaKernelException;
+    IndexDescriptor indexCreate( long labelId, long propertyKeyId ) throws SchemaKernelException;
 
     /**
      * Creates an index for use with a uniqueness constraint. The index indexes properties with the given
@@ -43,15 +43,15 @@ public interface SchemaWriteOperations
      * {@link #uniquenessConstraintCreate(long, long) creating a uniqueness constraint}, invoked through a separate
      * transaction (the separate transaction is why it has to be exposed in this API).
      */
-    IndexDescriptor uniqueIndexCreate( StatementState state, long labelId, long propertyKey ) throws SchemaKernelException;
+    IndexDescriptor uniqueIndexCreate( long labelId, long propertyKey ) throws SchemaKernelException;
 
     /** Drops a {@link IndexDescriptor} from the database */
-    void indexDrop( StatementState state, IndexDescriptor descriptor ) throws DropIndexFailureException;
+    void indexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException;
 
-    void uniqueIndexDrop( StatementState state, IndexDescriptor descriptor ) throws DropIndexFailureException;
+    void uniqueIndexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException;
 
-    UniquenessConstraint uniquenessConstraintCreate( StatementState state, long labelId, long propertyKeyId )
+    UniquenessConstraint uniquenessConstraintCreate( long labelId, long propertyKeyId )
             throws SchemaKernelException;
 
-    void constraintDrop( StatementState state, UniquenessConstraint constraint );
+    void constraintDrop( UniquenessConstraint constraint );
 }

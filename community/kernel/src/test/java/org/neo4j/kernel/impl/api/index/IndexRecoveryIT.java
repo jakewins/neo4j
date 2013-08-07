@@ -38,7 +38,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
-import org.neo4j.kernel.api.StatementOperationParts;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.index.IndexAccessor;
@@ -47,7 +47,6 @@ import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
@@ -262,16 +261,15 @@ public class IndexRecoveryIT
         {
             ThreadToStatementContextBridge ctxProvider = db.getDependencyResolver().resolveDependency(
                     ThreadToStatementContextBridge.class );
-            StatementOperationParts context = ctxProvider.getCtxForWriting();
-            StatementState state = ctxProvider.statementForReading();
+            KernelStatement context = ctxProvider.getCtxForWriting();
             for ( int number : new int[] {4, 10} )
             {
                 Node node = db.createNode( label );
                 node.setProperty( key, number );
-                updates.add( NodePropertyUpdate.add( node.getId(), context.keyReadOperations().propertyKeyGetForName( state, key ), number,
-                        new long[] {context.keyReadOperations().labelGetForName( state, label.name() )} ) );
+                updates.add( NodePropertyUpdate.add( node.getId(), context.keyReadOperations().propertyKeyGetForName( key ), number,
+                        new long[] {context.keyReadOperations().labelGetForName( label.name() )} ) );
             }
-            state.close();
+            context.close();
             tx.success();
             return updates;
         }

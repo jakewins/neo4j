@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.impl.api.constraints;
 
-import org.neo4j.kernel.api.StatementOperationParts;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.TransactionalException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
@@ -28,7 +28,6 @@ import org.neo4j.kernel.api.exceptions.schema.ConstraintCreationKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexEntryConflictException;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.Transactor;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
@@ -47,7 +46,7 @@ public class ConstraintIndexCreator
         this.indexingService = indexingService;
     }
 
-    public long createUniquenessConstraintIndex( StatementState state, SchemaReadOperations schema,
+    public long createUniquenessConstraintIndex( SchemaReadOperations schema,
             long labelId, long propertyKeyId )
             throws SchemaKernelException, ConstraintVerificationFailedKernelException, TransactionalException
     {
@@ -56,7 +55,7 @@ public class ConstraintIndexCreator
         long indexId;
         try
         {
-            indexId = schema.indexGetCommittedId( state, descriptor );
+            indexId = schema.indexGetCommittedId( descriptor );
         }
         catch ( SchemaRuleNotFoundException e )
         {
@@ -153,11 +152,10 @@ public class ConstraintIndexCreator
         return new Transactor.Statement<IndexDescriptor, SchemaKernelException>()
         {
             @Override
-            public IndexDescriptor perform( StatementOperationParts statement, StatementState kernelStatement ) throws
+            public IndexDescriptor perform( KernelStatement statement ) throws
                     SchemaKernelException
             {
-                return statement.schemaWriteOperations().uniqueIndexCreate(
-                        kernelStatement, labelId, propertyKeyId );
+                return statement.schemaWriteOperations().uniqueIndexCreate( labelId, propertyKeyId );
             }
         };
     }
@@ -168,9 +166,9 @@ public class ConstraintIndexCreator
         return new Transactor.Statement<Void, SchemaKernelException>()
         {
             @Override
-            public Void perform( StatementOperationParts statement, StatementState kernelStatement ) throws SchemaKernelException
+            public Void perform( KernelStatement statement ) throws SchemaKernelException
             {
-                statement.schemaWriteOperations().uniqueIndexDrop( kernelStatement, descriptor );
+                statement.schemaWriteOperations().uniqueIndexDrop( descriptor );
                 return null;
             }
         };

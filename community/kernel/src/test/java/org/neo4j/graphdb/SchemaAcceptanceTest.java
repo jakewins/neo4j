@@ -415,6 +415,7 @@ public class SchemaAcceptanceTest
         }
         catch ( ConstraintViolationException e )
         {
+            e.printStackTrace();
             assertEquals(
                 String.format( "Unable to create CONSTRAINT ON ( my_label:MY_LABEL ) ASSERT my_label.my_property_key " +
                         "IS UNIQUE:%nMultiple nodes with label `MY_LABEL` have property `my_property_key` = " +

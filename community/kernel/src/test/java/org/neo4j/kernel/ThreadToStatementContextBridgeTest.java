@@ -39,7 +39,7 @@ public class ThreadToStatementContextBridgeTest
         // When
         try
         {
-            bridge.statementForWriting();
+            bridge.getCtxForWriting();
             fail( "Should throw" );
         }
         catch ( NotInTransactionException e )

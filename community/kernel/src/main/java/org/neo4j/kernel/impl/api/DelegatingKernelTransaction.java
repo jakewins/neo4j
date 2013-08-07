@@ -19,10 +19,9 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.operations.StatementState;
 
 public class DelegatingKernelTransaction implements KernelTransaction
 {
@@ -34,9 +33,9 @@ public class DelegatingKernelTransaction implements KernelTransaction
     }
 
     @Override
-    public StatementOperationParts newStatementOperations()
+    public KernelStatement newStatement()
     {
-        return delegate.newStatementOperations();
+        return delegate.newStatement();
     }
 
     @Override
@@ -55,11 +54,5 @@ public class DelegatingKernelTransaction implements KernelTransaction
     public void rollback() throws TransactionFailureException
     {
         delegate.rollback();
-    }
-
-    @Override
-    public StatementState newStatementState()
-    {
-        return delegate.newStatementState();
     }
 }

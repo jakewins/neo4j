@@ -20,11 +20,10 @@
 package org.neo4j.kernel.api;
 
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.operations.StatementState;
 
 /**
  * Represents a transaction of changes to the underlying graph.
- * Actual changes are made in the {@link #newStatementOperations() statements}
+ * Actual changes are made in the {@link #newStatement() statements}
  * created from this transaction context. Changes made within a transaction
  * are visible to all operations within it.
  *
@@ -32,8 +31,8 @@ import org.neo4j.kernel.api.operations.StatementState;
  * isolation, a read can potentially involve multiple operations (think of a cypher statement). Within that read, or
  * statement if you will, the isolation level should be repeatable read, not read committed.
  *
- * Clearly separating between the concept of a transaction and the concept of a statement allows us to cater to this
- * type of isolation requirements.
+ * Clearly separating between the concept of a transaction and the concept of a statement allows us to cater to these
+ * types of isolation requirements.
  * 
  * TODO currently a {@link KernelTransaction} is used both for building the statement logic (once per db), as well as
  * being a transaction.
@@ -41,17 +40,10 @@ import org.neo4j.kernel.api.operations.StatementState;
 public interface KernelTransaction
 {
     /**
-     * Creates a new {@link StatementOperations statement} which operations can be performed on.
-     * When done it must be {@link StatementOperations#close() closed}.
-     *
-     * @return a new {@link StatementOperations} to do operations on.
+     * Creates a new {@link KernelStatement statement} which operations can be performed on.
+     * When done it must be {@link KernelStatement#close() closed}.
      */
-    StatementOperationParts newStatementOperations();
-
-    StatementState newStatementState();
-    
-    // NOTE: The below methods don't yet do actual transaction work, that is still carried by
-    //       the old TransactionImpl, WriteTransaction and friends.
+    KernelStatement newStatement();
 
     /**
      * Writes the changes this transaction wants to perform down to disk. If this method

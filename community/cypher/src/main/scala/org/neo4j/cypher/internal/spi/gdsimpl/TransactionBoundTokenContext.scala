@@ -23,22 +23,22 @@ import org.neo4j.cypher.internal.spi.TokenContext
 import org.neo4j.kernel.api.exceptions.{PropertyKeyNotFoundException, LabelNotFoundKernelException}
 import org.neo4j.kernel.api.StatementOperations
 import org.neo4j.kernel.api.operations.StatementState
-import org.neo4j.kernel.api.StatementOperationParts
+import org.neo4j.kernel.api.KernelStatement
 import org.neo4j.kernel.api.operations.KeyReadOperations
 
-abstract class TransactionBoundTokenContext(ctx: KeyReadOperations, state: StatementState) extends TokenContext
+abstract class TransactionBoundTokenContext(ctx: KeyReadOperations) extends TokenContext
 {
   def getOptPropertyKeyId(propertyKeyName: String): Option[Long] =
     TokenContext.tryGet[PropertyKeyNotFoundException](getPropertyKeyId(propertyKeyName))
 
-  def getPropertyKeyId(propertyKeyName: String) = ctx.propertyKeyGetForName(state, propertyKeyName)
+  def getPropertyKeyId(propertyKeyName: String) = ctx.propertyKeyGetForName(propertyKeyName)
 
-  def getPropertyKeyName(propertyKeyId: Long): String = ctx.propertyKeyGetName(state, propertyKeyId)
+  def getPropertyKeyName(propertyKeyId: Long): String = ctx.propertyKeyGetName(propertyKeyId)
 
-  def getLabelId(labelName: String): Long = ctx.labelGetForName(state, labelName)
+  def getLabelId(labelName: String): Long = ctx.labelGetForName(labelName)
 
   def getOptLabelId(labelName: String): Option[Long] =
     TokenContext.tryGet[LabelNotFoundKernelException](getLabelId(labelName))
 
-  def getLabelName(labelId: Long): String = ctx.labelGetName(state, labelId)
+  def getLabelName(labelId: Long): String = ctx.labelGetName(labelId)
 }

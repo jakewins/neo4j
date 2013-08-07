@@ -36,7 +36,7 @@ import org.neo4j.kernel.impl.api.state.TxState;
  * 
  * @author Mattias Persson
  */
-public interface StatementState extends TxState.Holder, Closeable
+public interface StatementState extends Closeable
 {
     LockHolder locks();
 

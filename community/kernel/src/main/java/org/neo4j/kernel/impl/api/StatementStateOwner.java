@@ -24,7 +24,6 @@ import java.io.IOException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.api.StatementOperations;
 import org.neo4j.kernel.api.operations.StatementState;
-import org.neo4j.kernel.impl.api.state.TxState;
 
 /**
  * Note: This is in a state of flux, as we are removing support for read operations without having a
@@ -122,24 +121,6 @@ public abstract class StatementStateOwner
         public LockHolder locks()
         {
             return actual.locks();
-        }
-
-        @Override
-        public TxState txState()
-        {
-            return actual.txState();
-        }
-
-        @Override
-        public boolean hasTxState()
-        {
-            return actual.hasTxState();
-        }
-
-        @Override
-        public boolean hasTxStateWithChanges()
-        {
-            return actual.hasTxStateWithChanges();
         }
 
         @Override

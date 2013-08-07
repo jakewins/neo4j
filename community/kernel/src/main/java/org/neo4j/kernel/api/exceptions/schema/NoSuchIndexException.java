@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.api.exceptions.schema;
 
-import org.neo4j.kernel.api.operations.KeyNameLookup;
+import org.neo4j.kernel.api.operations.KeyReadOperations;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 
 import static java.lang.String.format;
@@ -36,7 +36,7 @@ public class NoSuchIndexException extends SchemaKernelException
     }
 
     @Override
-    public String getUserMessage( KeyNameLookup keyNameLookup )
+    public String getUserMessage( KeyReadOperations keyNameLookup )
     {
         return format( message, descriptor.userDescription( keyNameLookup ) );
     }

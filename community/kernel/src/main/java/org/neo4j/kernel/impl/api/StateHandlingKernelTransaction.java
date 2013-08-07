@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.helpers.ThisShouldNotHappenError;
-import org.neo4j.kernel.api.StatementOperationParts;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.ConstraintCreationException;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
@@ -32,9 +32,6 @@ import org.neo4j.kernel.api.exceptions.schema.ConstraintCreationKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
-import org.neo4j.kernel.api.operations.AuxiliaryStoreOperations;
-import org.neo4j.kernel.api.operations.StatementState;
-import org.neo4j.kernel.api.operations.WritableStatementState;
 import org.neo4j.kernel.impl.api.constraints.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
@@ -49,7 +46,7 @@ import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.store.UniquenessConstraintRule;
 import org.neo4j.kernel.impl.persistence.PersistenceManager;
 
-public class StateHandlingKernelTransaction extends DelegatingKernelTransaction implements TxState.Holder
+public class StateHandlingKernelTransaction extends DelegatingKernelTransaction
 {
     private final SchemaIndexProviderMap providerMap;
     private final PersistenceCache persistenceCache;
@@ -63,7 +60,7 @@ public class StateHandlingKernelTransaction extends DelegatingKernelTransaction 
 
     private final OldTxStateBridge legacyStateBridge;
 
-    private TxState txState;
+    private final TxState txState;
 
     public StateHandlingKernelTransaction( StoreKernelTransaction delegate,
                                            SchemaStorage schemaStorage,
@@ -87,13 +84,14 @@ public class StateHandlingKernelTransaction extends DelegatingKernelTransaction 
         this.propertyKeyTokenHolder = propertyKeyTokenHolder;
         this.nodeManager = nodeManager;
         this.legacyStateBridge = new OldTxStateBridgeImpl( nodeManager, legacyState );
+        this.txState = new TxStateImpl( legacyStateBridge, persistenceManager, null );
     }
 
     @Override
-    public StatementOperationParts newStatementOperations()
+    public KernelStatement newStatement()
     {
         // Store stuff
-        StatementOperationParts parts = delegate.newStatementOperations();
+        KernelStatement parts = delegate.newStatement();
 
         // + Caching
         CachingStatementOperations cachingContext = new CachingStatementOperations(
@@ -108,6 +106,7 @@ public class StateHandlingKernelTransaction extends DelegatingKernelTransaction 
                 nodeManager.getNodePropertyTrackers(), nodeManager.getRelationshipPropertyTrackers(), nodeManager );
         
         StateHandlingStatementOperations stateHandlingContext = new StateHandlingStatementOperations(
+                txState,
                 parts.entityReadOperations(),
                 parts.schemaReadOperations(),
                 auxStoreOperations,
@@ -118,14 +117,6 @@ public class StateHandlingKernelTransaction extends DelegatingKernelTransaction 
                 
         // done
         return parts;
-    }
-    
-    @Override
-    public StatementState newStatementState()
-    {
-        WritableStatementState statement = (WritableStatementState) super.newStatementState();
-        statement.provide( this );
-        return statement;
     }
 
     @Override
@@ -149,9 +140,9 @@ public class StateHandlingKernelTransaction extends DelegatingKernelTransaction 
 
         // - commit changes from tx state to the cache
         // TODO: This should be done by log application, not by this level of the stack.
-        if ( hasTxStateWithChanges() )
+        if ( hasChanges() )
         {
-            persistenceCache.apply( this.txState() );
+            persistenceCache.apply( txState );
         }
     }
 
@@ -170,10 +161,10 @@ public class StateHandlingKernelTransaction extends DelegatingKernelTransaction 
 
     private void createTransactionCommands()
     {
-        if ( hasTxStateWithChanges() )
+        if ( hasChanges() )
         {
             final AtomicBoolean clearState = new AtomicBoolean( false );
-            txState().accept( new TxState.Visitor()
+            txState.accept( new TxState.Visitor()
             {
                 @Override
                 public void visitNodeLabelChanges( long id, Set<Long> added, Set<Long> removed )
@@ -264,9 +255,9 @@ public class StateHandlingKernelTransaction extends DelegatingKernelTransaction 
 
     private void dropCreatedConstraintIndexes() throws TransactionFailureException
     {
-        if ( hasTxStateWithChanges() )
+        if ( hasChanges() )
         {
-            for ( IndexDescriptor createdConstraintIndex : txState().constraintIndexesCreatedInTx() )
+            for ( IndexDescriptor createdConstraintIndex : txState.constraintIndexesCreatedInTx() )
             {
                 try
                 {
@@ -291,25 +282,8 @@ public class StateHandlingKernelTransaction extends DelegatingKernelTransaction 
         }
     }
 
-    @Override
-    public TxState txState()
+    private boolean hasChanges()
     {
-        if ( !hasTxState() )
-        {
-            txState = new TxStateImpl( legacyStateBridge, persistenceManager, null );
-        }
-        return txState;
-    }
-
-    @Override
-    public boolean hasTxState()
-    {
-        return null != txState;
-    }
-
-    @Override
-    public boolean hasTxStateWithChanges()
-    {
-        return legacyStateBridge.hasChanges() || ( hasTxState() && txState.hasChanges() );
+        return legacyStateBridge.hasChanges() || txState.hasChanges();
     }
 }

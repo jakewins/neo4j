@@ -24,12 +24,9 @@ import javax.transaction.HeuristicRollbackException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.operations.AuxiliaryStoreOperations;
-import org.neo4j.kernel.api.operations.StatementState;
-import org.neo4j.kernel.api.operations.WritableStatementState;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.LabelTokenHolder;
 import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
@@ -60,12 +57,12 @@ public class StoreKernelTransaction implements KernelTransaction
     }
 
     @Override
-    public StatementOperationParts newStatementOperations()
+    public KernelStatement newStatement()
     {
         StoreStatementOperations context = new StoreStatementOperations( propertyKeyTokenHolder, labelTokenHolder,
                 new SchemaStorage( neoStore.getSchemaStore() ), neoStore, persistenceManager,
-                indexingService );
-        return new StatementOperationParts( context, context, context, context, context, null, null )
+                indexingService, new IndexReaderFactory.Caching( indexingService ) );
+        return new KernelStatement( context, context, context, context, context, null, null )
             .additionalPart( AuxiliaryStoreOperations.class, context );
     }
 
@@ -125,13 +122,5 @@ public class StoreKernelTransaction implements KernelTransaction
         {
             throw new TransactionFailureException( e );
         }
-    }
-
-    @Override
-    public StatementState newStatementState()
-    {
-        WritableStatementState result = new WritableStatementState();
-        result.provide( new IndexReaderFactory.Caching( indexingService ) );
-        return result;
     }
 }

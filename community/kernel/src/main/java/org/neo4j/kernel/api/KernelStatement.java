@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.api;
 
+import java.io.Closeable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -41,13 +42,12 @@ import org.neo4j.kernel.api.operations.KeyWriteOperations;
 import org.neo4j.kernel.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.api.operations.SchemaStateOperations;
 import org.neo4j.kernel.api.operations.SchemaWriteOperations;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.PrimitiveLongIterator;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.core.Token;
 
-public class StatementOperationParts
+public class KernelStatement implements Closeable
 {
     private final KeyReadOperations keyReadOperations;
     private final KeyWriteOperations keyWriteOperations;
@@ -60,7 +60,7 @@ public class StatementOperationParts
     @SuppressWarnings( "rawtypes" )
     private Map<Class,Object> additionalParts;
 
-    public StatementOperationParts(
+    public KernelStatement(
             KeyReadOperations keyReadOperations,
             KeyWriteOperations keyWriteOperations,
             EntityReadOperations entityReadOperations,
@@ -77,8 +77,13 @@ public class StatementOperationParts
         this.schemaWriteOperations = schemaWriteOperations;
         this.schemaStateOperations = schemaStateOperations;
     }
-    
-    public <T> StatementOperationParts additionalPart( Class<T> cls, T value )
+
+    @Override
+    public void close()
+    {
+    }
+
+    public <T> KernelStatement additionalPart( Class<T> cls, T value )
     {
         if ( additionalParts == null )
         {
@@ -135,7 +140,7 @@ public class StatementOperationParts
     }
 
     @SuppressWarnings( { "unchecked", "rawtypes" } )
-    public StatementOperationParts override(
+    public KernelStatement override(
             KeyReadOperations keyReadOperations,
             KeyWriteOperations keyWriteOperations,
             EntityReadOperations entityReadOperations,
@@ -145,7 +150,7 @@ public class StatementOperationParts
             SchemaStateOperations schemaStateOperations,
             Object... alternatingAdditionalClassAndObject )
     {
-        StatementOperationParts parts = new StatementOperationParts(
+        KernelStatement parts = new KernelStatement(
                 eitherOr( keyReadOperations, this.keyReadOperations, KeyReadOperations.class ),
                 eitherOr( keyWriteOperations, this.keyWriteOperations, KeyWriteOperations.class ),
                 eitherOr( entityReadOperations, this.entityReadOperations, EntityReadOperations.class ),
@@ -194,282 +199,282 @@ public class StatementOperationParts
         return new StatementOperations()
         {
             @Override
-            public long labelGetForName( StatementState state, String labelName ) throws LabelNotFoundKernelException
+            public long labelGetForName( String labelName ) throws LabelNotFoundKernelException
             {
-                return keyReadOperations.labelGetForName( state, labelName );
+                return keyReadOperations.labelGetForName( labelName );
             }
             @Override
-            public String labelGetName( StatementState state, long labelId ) throws LabelNotFoundKernelException
+            public String labelGetName( long labelId ) throws LabelNotFoundKernelException
             {
-                return keyReadOperations.labelGetName( state, labelId );
+                return keyReadOperations.labelGetName( labelId );
             }
             @Override
-            public long propertyKeyGetForName( StatementState state, String propertyKeyName ) throws PropertyKeyNotFoundException
+            public long propertyKeyGetForName( String propertyKeyName ) throws PropertyKeyNotFoundException
             {
-                return keyReadOperations.propertyKeyGetForName( state, propertyKeyName );
+                return keyReadOperations.propertyKeyGetForName( propertyKeyName );
             }
             @Override
-            public String propertyKeyGetName( StatementState state, long propertyKeyId ) throws PropertyKeyIdNotFoundException
+            public String propertyKeyGetName( long propertyKeyId ) throws PropertyKeyIdNotFoundException
             {
-                return keyReadOperations.propertyKeyGetName( state, propertyKeyId );
+                return keyReadOperations.propertyKeyGetName( propertyKeyId );
             }
             @Override
-            public Iterator<Token> labelsGetAllTokens( StatementState state )
+            public Iterator<Token> labelsGetAllTokens()
             {
-                return keyReadOperations.labelsGetAllTokens(state);
+                return keyReadOperations.labelsGetAllTokens();
             }
             @Override
-            public long labelGetOrCreateForName( StatementState state, String labelName ) throws SchemaKernelException
+            public long labelGetOrCreateForName( String labelName ) throws SchemaKernelException
             {
-                return keyWriteOperations.labelGetOrCreateForName( state, labelName );
+                return keyWriteOperations.labelGetOrCreateForName( labelName );
             }
             @Override
-            public long propertyKeyGetOrCreateForName( StatementState state, String propertyKeyName ) throws SchemaKernelException
+            public long propertyKeyGetOrCreateForName( String propertyKeyName ) throws SchemaKernelException
             {
-                return keyWriteOperations.propertyKeyGetOrCreateForName( state, propertyKeyName );
+                return keyWriteOperations.propertyKeyGetOrCreateForName( propertyKeyName );
             }
             @Override
-            public PrimitiveLongIterator nodesGetForLabel( StatementState state, long labelId )
+            public PrimitiveLongIterator nodesGetForLabel( long labelId )
             {
-                return entityReadOperations.nodesGetForLabel( state, labelId );
+                return entityReadOperations.nodesGetForLabel( labelId );
             }
             @Override
-            public PrimitiveLongIterator nodesGetFromIndexLookup( StatementState state, IndexDescriptor index, Object value )
+            public PrimitiveLongIterator nodesGetFromIndexLookup( IndexDescriptor index, Object value )
                     throws IndexNotFoundKernelException
             {
-                return entityReadOperations.nodesGetFromIndexLookup( state, index, value );
+                return entityReadOperations.nodesGetFromIndexLookup( index, value );
             }
             @Override
-            public boolean nodeHasLabel( StatementState state, long nodeId, long labelId ) throws EntityNotFoundException
+            public boolean nodeHasLabel( long nodeId, long labelId ) throws EntityNotFoundException
             {
-                return entityReadOperations.nodeHasLabel( state, nodeId, labelId );
+                return entityReadOperations.nodeHasLabel( nodeId, labelId );
             }
             @Override
-            public PrimitiveLongIterator nodeGetLabels( StatementState state, long nodeId ) throws EntityNotFoundException
+            public PrimitiveLongIterator nodeGetLabels( long nodeId ) throws EntityNotFoundException
             {
-                return entityReadOperations.nodeGetLabels( state, nodeId );
+                return entityReadOperations.nodeGetLabels( nodeId );
             }
             @Override
-            public Property nodeGetProperty( StatementState state, long nodeId, long propertyKeyId ) throws PropertyKeyIdNotFoundException,
+            public Property nodeGetProperty( long nodeId, long propertyKeyId ) throws PropertyKeyIdNotFoundException,
                     EntityNotFoundException
             {
-                return entityReadOperations.nodeGetProperty( state, nodeId, propertyKeyId );
+                return entityReadOperations.nodeGetProperty( nodeId, propertyKeyId );
             }
             @Override
-            public Property relationshipGetProperty( StatementState state, long relationshipId, long propertyKeyId )
+            public Property relationshipGetProperty( long relationshipId, long propertyKeyId )
                     throws PropertyKeyIdNotFoundException, EntityNotFoundException
             {
-                return entityReadOperations.relationshipGetProperty( state, relationshipId, propertyKeyId );
+                return entityReadOperations.relationshipGetProperty( relationshipId, propertyKeyId );
             }
             @Override
-            public Property graphGetProperty( StatementState state, long propertyKeyId ) throws PropertyKeyIdNotFoundException
+            public Property graphGetProperty( long propertyKeyId ) throws PropertyKeyIdNotFoundException
             {
-                return entityReadOperations.graphGetProperty( state, propertyKeyId );
+                return entityReadOperations.graphGetProperty( propertyKeyId );
             }
             @Override
-            public boolean nodeHasProperty( StatementState state, long nodeId, long propertyKeyId ) throws PropertyKeyIdNotFoundException,
+            public boolean nodeHasProperty( long nodeId, long propertyKeyId ) throws PropertyKeyIdNotFoundException,
                     EntityNotFoundException
             {
-                return entityReadOperations.nodeHasProperty( state, nodeId, propertyKeyId );
+                return entityReadOperations.nodeHasProperty( nodeId, propertyKeyId );
             }
             @Override
-            public boolean relationshipHasProperty( StatementState state, long relationshipId, long propertyKeyId )
+            public boolean relationshipHasProperty( long relationshipId, long propertyKeyId )
                     throws PropertyKeyIdNotFoundException, EntityNotFoundException
             {
-                return entityReadOperations.relationshipHasProperty( state, relationshipId, propertyKeyId );
+                return entityReadOperations.relationshipHasProperty( relationshipId, propertyKeyId );
             }
             @Override
-            public boolean graphHasProperty( StatementState state, long propertyKeyId ) throws PropertyKeyIdNotFoundException
+            public boolean graphHasProperty( long propertyKeyId ) throws PropertyKeyIdNotFoundException
             {
-                return entityReadOperations.graphHasProperty( state, propertyKeyId );
+                return entityReadOperations.graphHasProperty( propertyKeyId );
             }
             @Override
-            public PrimitiveLongIterator nodeGetPropertyKeys( StatementState state, long nodeId ) throws EntityNotFoundException
+            public PrimitiveLongIterator nodeGetPropertyKeys( long nodeId ) throws EntityNotFoundException
             {
-                return entityReadOperations.nodeGetPropertyKeys( state, nodeId );
+                return entityReadOperations.nodeGetPropertyKeys( nodeId );
             }
             @Override
-            public Iterator<Property> nodeGetAllProperties( StatementState state, long nodeId ) throws EntityNotFoundException
+            public Iterator<Property> nodeGetAllProperties( long nodeId ) throws EntityNotFoundException
             {
-                return entityReadOperations.nodeGetAllProperties( state, nodeId );
+                return entityReadOperations.nodeGetAllProperties( nodeId );
             }
             @Override
-            public PrimitiveLongIterator relationshipGetPropertyKeys( StatementState state, long relationshipId ) throws EntityNotFoundException
+            public PrimitiveLongIterator relationshipGetPropertyKeys( long relationshipId ) throws EntityNotFoundException
             {
-                return entityReadOperations.relationshipGetPropertyKeys( state, relationshipId );
+                return entityReadOperations.relationshipGetPropertyKeys( relationshipId );
             }
             @Override
-            public Iterator<Property> relationshipGetAllProperties( StatementState state, long relationshipId )
+            public Iterator<Property> relationshipGetAllProperties( long relationshipId )
                     throws EntityNotFoundException
             {
-                return entityReadOperations.relationshipGetAllProperties( state, relationshipId );
+                return entityReadOperations.relationshipGetAllProperties( relationshipId );
             }
             @Override
-            public PrimitiveLongIterator graphGetPropertyKeys( StatementState state )
+            public PrimitiveLongIterator graphGetPropertyKeys()
             {
-                return entityReadOperations.graphGetPropertyKeys(state);
+                return entityReadOperations.graphGetPropertyKeys();
             }
             @Override
-            public Iterator<Property> graphGetAllProperties( StatementState state )
+            public Iterator<Property> graphGetAllProperties()
             {
-                return entityReadOperations.graphGetAllProperties(state);
+                return entityReadOperations.graphGetAllProperties();
             }
             @Override
-            public void nodeDelete( StatementState state, long nodeId )
+            public void nodeDelete( long nodeId )
             {
-                entityWriteOperations.nodeDelete( state, nodeId );
+                entityWriteOperations.nodeDelete( nodeId );
             }
             @Override
-            public void relationshipDelete( StatementState state, long relationshipId )
+            public void relationshipDelete( long relationshipId )
             {
-                entityWriteOperations.relationshipDelete( state, relationshipId );
+                entityWriteOperations.relationshipDelete( relationshipId );
             }
             @Override
-            public boolean nodeAddLabel( StatementState state, long nodeId, long labelId ) throws EntityNotFoundException
+            public boolean nodeAddLabel( long nodeId, long labelId ) throws EntityNotFoundException
             {
-                return entityWriteOperations.nodeAddLabel( state, nodeId, labelId );
+                return entityWriteOperations.nodeAddLabel( nodeId, labelId );
             }
             @Override
-            public boolean nodeRemoveLabel( StatementState state, long nodeId, long labelId ) throws EntityNotFoundException
+            public boolean nodeRemoveLabel( long nodeId, long labelId ) throws EntityNotFoundException
             {
-                return entityWriteOperations.nodeRemoveLabel( state, nodeId, labelId );
+                return entityWriteOperations.nodeRemoveLabel( nodeId, labelId );
             }
             @Override
-            public Property nodeSetProperty( StatementState state, long nodeId, Property property ) throws PropertyKeyIdNotFoundException,
+            public Property nodeSetProperty( long nodeId, Property property ) throws PropertyKeyIdNotFoundException,
                     EntityNotFoundException
             {
-                return entityWriteOperations.nodeSetProperty( state, nodeId, property );
+                return entityWriteOperations.nodeSetProperty( nodeId, property );
             }
             @Override
-            public Property relationshipSetProperty( StatementState state, long relationshipId, Property property )
+            public Property relationshipSetProperty( long relationshipId, Property property )
                     throws PropertyKeyIdNotFoundException, EntityNotFoundException
             {
-                return entityWriteOperations.relationshipSetProperty( state, relationshipId, property );
+                return entityWriteOperations.relationshipSetProperty( relationshipId, property );
             }
             @Override
-            public Property graphSetProperty( StatementState state, Property property ) throws PropertyKeyIdNotFoundException
+            public Property graphSetProperty( Property property ) throws PropertyKeyIdNotFoundException
             {
-                return entityWriteOperations.graphSetProperty( state, property );
+                return entityWriteOperations.graphSetProperty( property );
             }
             @Override
-            public Property nodeRemoveProperty( StatementState state, long nodeId, long propertyKeyId )
+            public Property nodeRemoveProperty( long nodeId, long propertyKeyId )
                     throws PropertyKeyIdNotFoundException, EntityNotFoundException
             {
-                return entityWriteOperations.nodeRemoveProperty( state, nodeId, propertyKeyId );
+                return entityWriteOperations.nodeRemoveProperty( nodeId, propertyKeyId );
             }
             @Override
-            public Property relationshipRemoveProperty( StatementState state, long relationshipId, long propertyKeyId )
+            public Property relationshipRemoveProperty( long relationshipId, long propertyKeyId )
                     throws PropertyKeyIdNotFoundException, EntityNotFoundException
             {
-                return entityWriteOperations.relationshipRemoveProperty( state, relationshipId, propertyKeyId );
+                return entityWriteOperations.relationshipRemoveProperty( relationshipId, propertyKeyId );
             }
             @Override
-            public Property graphRemoveProperty( StatementState state, long propertyKeyId ) throws PropertyKeyIdNotFoundException
+            public Property graphRemoveProperty( long propertyKeyId ) throws PropertyKeyIdNotFoundException
             {
-                return entityWriteOperations.graphRemoveProperty( state, propertyKeyId );
+                return entityWriteOperations.graphRemoveProperty( propertyKeyId );
             }
             @Override
-            public IndexDescriptor indexesGetForLabelAndPropertyKey( StatementState state, long labelId, long propertyKey )
+            public IndexDescriptor indexesGetForLabelAndPropertyKey( long labelId, long propertyKey )
                     throws SchemaRuleNotFoundException
             {
-                return schemaReadOperations.indexesGetForLabelAndPropertyKey( state, labelId, propertyKey );
+                return schemaReadOperations.indexesGetForLabelAndPropertyKey( labelId, propertyKey );
             }
             @Override
-            public Iterator<IndexDescriptor> indexesGetForLabel( StatementState state, long labelId )
+            public Iterator<IndexDescriptor> indexesGetForLabel( long labelId )
             {
-                return schemaReadOperations.indexesGetForLabel( state, labelId );
+                return schemaReadOperations.indexesGetForLabel( labelId );
             }
             @Override
-            public Iterator<IndexDescriptor> indexesGetAll( StatementState state )
+            public Iterator<IndexDescriptor> indexesGetAll()
             {
-                return schemaReadOperations.indexesGetAll(state);
+                return schemaReadOperations.indexesGetAll();
             }
             @Override
-            public Iterator<IndexDescriptor> uniqueIndexesGetForLabel( StatementState state, long labelId )
+            public Iterator<IndexDescriptor> uniqueIndexesGetForLabel( long labelId )
             {
-                return schemaReadOperations.uniqueIndexesGetForLabel( state, labelId );
+                return schemaReadOperations.uniqueIndexesGetForLabel( labelId );
             }
             @Override
-            public Iterator<IndexDescriptor> uniqueIndexesGetAll( StatementState state )
+            public Iterator<IndexDescriptor> uniqueIndexesGetAll()
             {
-                return schemaReadOperations.uniqueIndexesGetAll(state);
+                return schemaReadOperations.uniqueIndexesGetAll();
             }
             @Override
-            public InternalIndexState indexGetState( StatementState state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+            public InternalIndexState indexGetState( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
             {
-                return schemaReadOperations.indexGetState( state, descriptor );
+                return schemaReadOperations.indexGetState( descriptor );
             }
             @Override
-            public String indexGetFailure( StatementState state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+            public String indexGetFailure( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
             {
-                return schemaReadOperations.indexGetFailure( state, descriptor );
+                return schemaReadOperations.indexGetFailure( descriptor );
             }
             @Override
-            public Iterator<UniquenessConstraint> constraintsGetForLabelAndPropertyKey( StatementState state, long labelId, long propertyKeyId )
+            public Iterator<UniquenessConstraint> constraintsGetForLabelAndPropertyKey( long labelId, long propertyKeyId )
             {
-                return schemaReadOperations.constraintsGetForLabelAndPropertyKey( state, labelId, propertyKeyId );
+                return schemaReadOperations.constraintsGetForLabelAndPropertyKey( labelId, propertyKeyId );
             }
             @Override
-            public Iterator<UniquenessConstraint> constraintsGetForLabel( StatementState state, long labelId )
+            public Iterator<UniquenessConstraint> constraintsGetForLabel( long labelId )
             {
-                return schemaReadOperations.constraintsGetForLabel( state, labelId );
+                return schemaReadOperations.constraintsGetForLabel( labelId );
             }
             @Override
-            public Iterator<UniquenessConstraint> constraintsGetAll( StatementState state )
+            public Iterator<UniquenessConstraint> constraintsGetAll()
             {
-                return schemaReadOperations.constraintsGetAll(state);
+                return schemaReadOperations.constraintsGetAll();
             }
             @Override
-            public Long indexGetOwningUniquenessConstraintId( StatementState state, IndexDescriptor index )
+            public Long indexGetOwningUniquenessConstraintId( IndexDescriptor index )
                     throws SchemaRuleNotFoundException
             {
-                return schemaReadOperations.indexGetOwningUniquenessConstraintId( state, index );
+                return schemaReadOperations.indexGetOwningUniquenessConstraintId( index );
             }
             @Override
-            public long indexGetCommittedId( StatementState state, IndexDescriptor index ) throws SchemaRuleNotFoundException
+            public long indexGetCommittedId( IndexDescriptor index ) throws SchemaRuleNotFoundException
             {
-                return schemaReadOperations.indexGetCommittedId( state, index );
+                return schemaReadOperations.indexGetCommittedId( index );
             }
             @Override
-            public IndexDescriptor indexCreate( StatementState state, long labelId, long propertyKeyId ) throws SchemaKernelException
+            public IndexDescriptor indexCreate( long labelId, long propertyKeyId ) throws SchemaKernelException
             {
-                return schemaWriteOperations.indexCreate( state, labelId, propertyKeyId );
+                return schemaWriteOperations.indexCreate( labelId, propertyKeyId );
             }
             @Override
-            public IndexDescriptor uniqueIndexCreate( StatementState state, long labelId, long propertyKey ) throws SchemaKernelException
+            public IndexDescriptor uniqueIndexCreate( long labelId, long propertyKey ) throws SchemaKernelException
             {
-                return schemaWriteOperations.uniqueIndexCreate( state, labelId, propertyKey );
+                return schemaWriteOperations.uniqueIndexCreate( labelId, propertyKey );
             }
             @Override
-            public void indexDrop( StatementState state, IndexDescriptor descriptor ) throws DropIndexFailureException
+            public void indexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException
             {
-                schemaWriteOperations.indexDrop( state, descriptor );
+                schemaWriteOperations.indexDrop( descriptor );
             }
             @Override
-            public void uniqueIndexDrop( StatementState state, IndexDescriptor descriptor ) throws DropIndexFailureException
+            public void uniqueIndexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException
             {
-                schemaWriteOperations.uniqueIndexDrop( state, descriptor );
+                schemaWriteOperations.uniqueIndexDrop( descriptor );
             }
             @Override
-            public UniquenessConstraint uniquenessConstraintCreate( StatementState state, long labelId, long propertyKeyId )
+            public UniquenessConstraint uniquenessConstraintCreate( long labelId, long propertyKeyId )
                     throws SchemaKernelException
             {
-                return schemaWriteOperations.uniquenessConstraintCreate( state, labelId, propertyKeyId );
+                return schemaWriteOperations.uniquenessConstraintCreate( labelId, propertyKeyId );
             }
             @Override
-            public void constraintDrop( StatementState state, UniquenessConstraint constraint )
+            public void constraintDrop( UniquenessConstraint constraint )
             {
-                schemaWriteOperations.constraintDrop( state, constraint );
+                schemaWriteOperations.constraintDrop( constraint );
             }
             @Override
-            public <K, V> V schemaStateGetOrCreate( StatementState state, K key, Function<K, V> creator )
+            public <K, V> V schemaStateGetOrCreate( K key, Function<K, V> creator )
             {
-                return schemaStateOperations.schemaStateGetOrCreate( state, key, creator );
+                return schemaStateOperations.schemaStateGetOrCreate( key, creator );
             }
             @Override
-            public <K> boolean schemaStateContains( StatementState state, K key )
+            public <K> boolean schemaStateContains( K key )
             {
-                return schemaStateOperations.schemaStateContains( state, key );
+                return schemaStateOperations.schemaStateContains( key );
             }
         };
     }

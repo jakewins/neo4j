@@ -56,8 +56,8 @@ public class UniquenessConstraintEvaluationIT extends KernelIntegrationTest
         node = db.createNode( label( "Foo" ) );
         long node2 = node.getId();
         node.setProperty( "name", "foo" );
-        long foo = statement.labelGetForName( getState(), "Foo" );
-        long name = statement.propertyKeyGetForName( getState(), "name" );
+        long foo = statement.labelGetForName( "Foo" );
+        long name = statement.propertyKeyGetForName( "name" );
         commit();
 
         newTransaction();
@@ -65,7 +65,7 @@ public class UniquenessConstraintEvaluationIT extends KernelIntegrationTest
         // when
         try
         {
-            statement.uniquenessConstraintCreate( getState(), foo, name );
+            statement.uniquenessConstraintCreate( foo, name );
 
             fail( "expected exception" );
         }
@@ -90,12 +90,12 @@ public class UniquenessConstraintEvaluationIT extends KernelIntegrationTest
         Node node = db.createNode( label( "Foo" ) );
         long node1 = node.getId();
         node.setProperty( "name", "foo" );
-        long foo = statement.labelGetForName( getState(), "Foo" );
-        long name = statement.propertyKeyGetForName( getState(), "name" );
+        long foo = statement.labelGetForName( "Foo" );
+        long name = statement.propertyKeyGetForName( "name" );
         commit();
 
         newTransaction();
-        statement.uniquenessConstraintCreate( getState(), foo, name );
+        statement.uniquenessConstraintCreate( foo, name );
         ExecutorService executor = Executors.newSingleThreadExecutor();
         long node2 = executor.submit( new Callable<Long>()
         {
@@ -148,11 +148,11 @@ public class UniquenessConstraintEvaluationIT extends KernelIntegrationTest
         // given
         newTransaction();
         db.createNode( label( "Foo" ) ).setProperty( "name", "foo" );
-        long foo = statement.labelGetForName( getState(), "Foo" );
-        long name = statement.propertyKeyGetForName( getState(), "name" );
+        long foo = statement.labelGetForName( "Foo" );
+        long name = statement.propertyKeyGetForName( "name" );
         commit();
         newTransaction();
-        statement.uniquenessConstraintCreate( getState(), foo, name );
+        statement.uniquenessConstraintCreate( foo, name );
         commit();
 
         newTransaction();

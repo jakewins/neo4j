@@ -32,64 +32,64 @@ public interface SchemaReadOperations
     /**
      * Returns the index rule for the given labelId and propertyKey.
      */
-    IndexDescriptor indexesGetForLabelAndPropertyKey( StatementState state, long labelId, long propertyKey ) throws SchemaRuleNotFoundException;
+    IndexDescriptor indexesGetForLabelAndPropertyKey( long labelId, long propertyKey ) throws SchemaRuleNotFoundException;
 
     /**
      * Get all indexes for a label.
      */
-    Iterator<IndexDescriptor> indexesGetForLabel( StatementState state, long labelId );
+    Iterator<IndexDescriptor> indexesGetForLabel( long labelId );
 
     /**
      * Returns all indexes.
      */
-    Iterator<IndexDescriptor> indexesGetAll( StatementState state );
+    Iterator<IndexDescriptor> indexesGetAll();
 
     /**
      * Get all constraint indexes for a label.
      */
-    Iterator<IndexDescriptor> uniqueIndexesGetForLabel( StatementState state, long labelId );
+    Iterator<IndexDescriptor> uniqueIndexesGetForLabel( long labelId );
 
     /**
      * Returns all constraint indexes.
      */
-    Iterator<IndexDescriptor> uniqueIndexesGetAll( StatementState state );
+    Iterator<IndexDescriptor> uniqueIndexesGetAll( );
 
     /**
      * Retrieve the state of an index.
      */
-    InternalIndexState indexGetState( StatementState state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
+    InternalIndexState indexGetState( IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
 	
     /**
      * Returns the failure description of a failed index.
      */
-    String indexGetFailure( StatementState state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
+    String indexGetFailure( IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
 
     /**
      * Get all constraints applicable to label and propertyKey. There are only {@link UniquenessConstraint}
      * for the time being.
      */
-    Iterator<UniquenessConstraint> constraintsGetForLabelAndPropertyKey( StatementState state, long labelId, long propertyKeyId );
+    Iterator<UniquenessConstraint> constraintsGetForLabelAndPropertyKey( long labelId, long propertyKeyId );
 
     /**
      * Get all constraints applicable to label. There are only {@link UniquenessConstraint}
      * for the time being.
      */
-    Iterator<UniquenessConstraint> constraintsGetForLabel( StatementState state, long labelId );
+    Iterator<UniquenessConstraint> constraintsGetForLabel( long labelId );
 
     /**
      * Get all constraints. There are only {@link UniquenessConstraint}
      * for the time being.
      */
-    Iterator<UniquenessConstraint> constraintsGetAll( StatementState state );
+    Iterator<UniquenessConstraint> constraintsGetAll();
 
     /**
      * Get the owning constraint for a constraint index. Returns null if the index does not have an owning constraint.
      */
-    Long indexGetOwningUniquenessConstraintId( StatementState state, IndexDescriptor index ) throws SchemaRuleNotFoundException;
+    Long indexGetOwningUniquenessConstraintId( IndexDescriptor index ) throws SchemaRuleNotFoundException;
 
     /**
      * Get the index id (the id or the schema rule record) for a committed index
      * - throws exception for indexes that aren't committed.
      */
-    long indexGetCommittedId( StatementState state, IndexDescriptor index ) throws SchemaRuleNotFoundException;
+    long indexGetCommittedId( IndexDescriptor index ) throws SchemaRuleNotFoundException;
 }

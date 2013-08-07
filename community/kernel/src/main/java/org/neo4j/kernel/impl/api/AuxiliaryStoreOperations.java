@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.api.operations;
+package org.neo4j.kernel.impl.api;
 
 import org.neo4j.kernel.api.exceptions.PropertyNotFoundException;
 import org.neo4j.kernel.api.properties.Property;
@@ -28,6 +28,13 @@ import org.neo4j.kernel.api.properties.Property;
  *
  * This class uses the same naming schema as StatementContext but uses the particle "Store" to differentiate
  * methods from their StatementContext counterparts.
+ *
+ * TODO: This is a workaround for the fact that building up a list of commands to apply to the logical log is
+ * not handled by {@link org.neo4j.kernel.impl.api.state.TxState}, which it should be. Instead, for some reason, the store layer delegates
+ * write commands to {@link org.neo4j.kernel.impl.persistence.PersistenceManager} through these methods.
+ *
+ * This should all go away, including the persistence manager. The work that persistence manager does should
+ * live under transaction state somewhere.
  */
 public interface AuxiliaryStoreOperations
 {

@@ -34,6 +34,8 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
+import org.neo4j.kernel.api.KernelStatement;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.core.ReadOnlyDbException;
 import org.neo4j.kernel.impl.util.StringLogger;
 
@@ -58,6 +60,7 @@ class ReadOnlyTransactionImpl implements Transaction
 
     private final ReadOnlyTxManager txManager;
     private StringLogger logger;
+    private KernelTransaction transactionContext;
 
     ReadOnlyTransactionImpl( ReadOnlyTxManager txManager, StringLogger logger )
     {
@@ -487,6 +490,16 @@ class ReadOnlyTransactionImpl implements Transaction
             }
         }
         status = Status.STATUS_ROLLEDBACK;
+    }
+
+    public void setTransactionContext( KernelTransaction transactionContext )
+    {
+        this.transactionContext = transactionContext;
+    }
+
+    public KernelStatement newStatement()
+    {
+        return transactionContext.newStatement();
     }
 
     private static class ResourceElement

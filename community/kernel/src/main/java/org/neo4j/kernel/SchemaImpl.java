@@ -35,7 +35,7 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.helpers.Function;
 import org.neo4j.helpers.ThisShouldNotHappenError;
-import org.neo4j.kernel.api.StatementOperationParts;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
@@ -46,8 +46,6 @@ import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyIndexedException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
-import org.neo4j.kernel.api.operations.KeyNameLookup;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 
 import static java.lang.String.format;
@@ -85,23 +83,17 @@ public class SchemaImpl implements Schema
     {
         assertInTransaction();
 
-        StatementOperationParts context = ctxProvider.getCtxForReading();
-        StatementState state = ctxProvider.statementForReading();
-        try
+        try(final KernelStatement context = ctxProvider.getCtxForReading())
         {
             List<IndexDefinition> definitions = new ArrayList<>();
-            long labelId = context.keyReadOperations().labelGetForName( state, label.name() );
-            addDefinitions( definitions, context, state, context.schemaReadOperations().indexesGetForLabel( state, labelId ), false );
-            addDefinitions( definitions, context, state, context.schemaReadOperations().uniqueIndexesGetForLabel( state, labelId ), true );
+            long labelId = context.keyReadOperations().labelGetForName( label.name() );
+            addDefinitions( definitions, context, context.schemaReadOperations().indexesGetForLabel( labelId ), false );
+            addDefinitions( definitions, context, context.schemaReadOperations().uniqueIndexesGetForLabel( labelId ), true );
             return definitions;
         }
         catch ( LabelNotFoundKernelException e )
         {
             return emptyList();
-        }
-        finally
-        {
-            state.close();
         }
     }
 
@@ -110,23 +102,17 @@ public class SchemaImpl implements Schema
     {
         assertInTransaction();
 
-        StatementOperationParts context = ctxProvider.getCtxForReading();
-        StatementState state = ctxProvider.statementForReading();
-        try
+        try(final KernelStatement context = ctxProvider.getCtxForReading())
         {
             List<IndexDefinition> definitions = new ArrayList<>();
-            addDefinitions( definitions, context, state, context.schemaReadOperations().indexesGetAll( state ), false );
-            addDefinitions( definitions, context, state, context.schemaReadOperations().uniqueIndexesGetAll( state ), true );
+            addDefinitions( definitions, context, context.schemaReadOperations().indexesGetAll( ), false );
+            addDefinitions( definitions, context, context.schemaReadOperations().uniqueIndexesGetAll( ), true );
             return definitions;
-        }
-        finally
-        {
-            state.close();
         }
     }
 
-    private void addDefinitions( List<IndexDefinition> definitions, final StatementOperationParts context,
-            final StatementState state, Iterator<IndexDescriptor> indexes, final boolean constraintIndex )
+    private void addDefinitions( List<IndexDefinition> definitions, final KernelStatement context,
+            Iterator<IndexDescriptor> indexes, final boolean constraintIndex )
     {
         addToCollection( map( new Function<IndexDescriptor, IndexDefinition>()
         {
@@ -135,8 +121,8 @@ public class SchemaImpl implements Schema
             {
                 try
                 {
-                    Label label = label( context.keyReadOperations().labelGetName( state, rule.getLabelId() ) );
-                    String propertyKey = context.keyReadOperations().propertyKeyGetName( state, rule.getPropertyKeyId() );
+                    Label label = label( context.keyReadOperations().labelGetName( rule.getLabelId() ) );
+                    String propertyKey = context.keyReadOperations().propertyKeyGetName( rule.getPropertyKeyId() );
                     return new IndexDefinitionImpl( actions, label, propertyKey, constraintIndex );
                 }
                 catch ( LabelNotFoundKernelException | PropertyKeyIdNotFoundException e )
@@ -206,15 +192,13 @@ public class SchemaImpl implements Schema
     {
         assertInTransaction();
 
-        StatementOperationParts context = ctxProvider.getCtxForReading();
         String propertyKey = single( index.getPropertyKeys() );
-        StatementState state = ctxProvider.statementForReading();
-        try
+        try(final KernelStatement context = ctxProvider.getCtxForReading())
         {
-            long labelId = context.keyReadOperations().labelGetForName( state, index.getLabel().name() );
-            long propertyKeyId = context.keyReadOperations().propertyKeyGetForName( state, propertyKey );
-            org.neo4j.kernel.api.index.InternalIndexState indexState = context.schemaReadOperations().indexGetState( state,
-                    context.schemaReadOperations().indexesGetForLabelAndPropertyKey( state, labelId, propertyKeyId ) );
+            long labelId = context.keyReadOperations().labelGetForName( index.getLabel().name() );
+            long propertyKeyId = context.keyReadOperations().propertyKeyGetForName( propertyKey );
+            org.neo4j.kernel.api.index.InternalIndexState indexState = context.schemaReadOperations().indexGetState(
+                    context.schemaReadOperations().indexesGetForLabelAndPropertyKey( labelId, propertyKeyId ) );
             switch ( indexState )
             {
             case POPULATING:
@@ -240,10 +224,6 @@ public class SchemaImpl implements Schema
             throw new NotFoundException( format( "No index for label %s on property %s",
                                                  index.getLabel().name(), propertyKey ) );
         }
-        finally
-        {
-            state.close();
-        }
     }
 
     @Override
@@ -251,15 +231,13 @@ public class SchemaImpl implements Schema
     {
         assertInTransaction();
 
-        StatementOperationParts context = ctxProvider.getCtxForReading();
-        StatementState state = ctxProvider.statementForReading();
         String propertyKey = single( index.getPropertyKeys() );
-        try
+        try(final KernelStatement context = ctxProvider.getCtxForReading())
         {
-            long labelId = context.keyReadOperations().labelGetForName( state, index.getLabel().name() );
-            long propertyKeyId = context.keyReadOperations().propertyKeyGetForName( state, propertyKey );
-            IndexDescriptor indexId = context.schemaReadOperations().indexesGetForLabelAndPropertyKey( state, labelId, propertyKeyId );
-            return context.schemaReadOperations().indexGetFailure( state, indexId );
+            long labelId = context.keyReadOperations().labelGetForName( index.getLabel().name() );
+            long propertyKeyId = context.keyReadOperations().propertyKeyGetForName( propertyKey );
+            IndexDescriptor indexId = context.schemaReadOperations().indexesGetForLabelAndPropertyKey( labelId, propertyKeyId );
+            return context.schemaReadOperations().indexGetFailure( indexId );
         }
         catch ( LabelNotFoundKernelException e )
         {
@@ -273,10 +251,6 @@ public class SchemaImpl implements Schema
         {
             throw new NotFoundException( format( "No index for label %s on property %s",
                                                  index.getLabel().name(), propertyKey ) );
-        }
-        finally
-        {
-            state.close();
         }
     }
 
@@ -293,16 +267,10 @@ public class SchemaImpl implements Schema
     {
         assertInTransaction();
 
-        final StatementOperationParts context = ctxProvider.getCtxForReading();
-        StatementState state = ctxProvider.statementForReading();
-        try
+        try(final KernelStatement context = ctxProvider.getCtxForReading())
         {
-            Iterator<UniquenessConstraint> constraints = context.schemaReadOperations().constraintsGetAll( state );
-            return asConstraintDefinitions( context, state, constraints );
-        }
-        finally
-        {
-            state.close();
+            Iterator<UniquenessConstraint> constraints = context.schemaReadOperations().constraintsGetAll();
+            return asConstraintDefinitions( context, constraints );
         }
     }
 
@@ -311,26 +279,20 @@ public class SchemaImpl implements Schema
     {
         assertInTransaction();
 
-        final StatementOperationParts context = ctxProvider.getCtxForReading();
-        StatementState state = ctxProvider.statementForReading();
-        try
+        try(final KernelStatement context = ctxProvider.getCtxForReading())
         {
             Iterator<UniquenessConstraint> constraints = context.schemaReadOperations().constraintsGetForLabel(
-                    state, context.keyReadOperations().labelGetForName( state, label.name() ) );
-            return asConstraintDefinitions( context, state, constraints );
+                    context.keyReadOperations().labelGetForName( label.name() ) );
+            return asConstraintDefinitions( context, constraints );
         }
         catch ( LabelNotFoundKernelException e )
         {
             return emptyList();
         }
-        finally
-        {
-            state.close();
-        }
     }
 
-    private Iterable<ConstraintDefinition> asConstraintDefinitions( final StatementOperationParts context,
-            final StatementState state, Iterator<UniquenessConstraint> constraints )
+    private Iterable<ConstraintDefinition> asConstraintDefinitions( final KernelStatement context,
+                                                                    Iterator<UniquenessConstraint> constraints )
     {
         Iterator<ConstraintDefinition> definitions =
                 map( new Function<UniquenessConstraint, ConstraintDefinition>()
@@ -341,9 +303,9 @@ public class SchemaImpl implements Schema
                         long labelId = constraint.label();
                         try
                         {
-                            Label label = label( context.keyReadOperations().labelGetName( state, labelId ) );
+                            Label label = label( context.keyReadOperations().labelGetName( labelId ) );
                             return new PropertyUniqueConstraintDefinition( actions, label,
-                                    context.keyReadOperations().propertyKeyGetName( state, constraint.property() ) );
+                                    context.keyReadOperations().propertyKeyGetName( constraint.property() ) );
                         }
                         catch ( PropertyKeyIdNotFoundException e )
                         {
@@ -375,13 +337,12 @@ public class SchemaImpl implements Schema
         @Override
         public IndexDefinition createIndexDefinition( Label label, String propertyKey )
         {
-            StatementOperationParts context = ctxProvider.getCtxForWriting();
-            StatementState state = ctxProvider.statementForWriting();
+            final KernelStatement context = ctxProvider.getCtxForWriting();
             try
             {
-                long labelId = context.keyWriteOperations().labelGetOrCreateForName( state, label.name() );
-                long propertyKeyId = context.keyWriteOperations().propertyKeyGetOrCreateForName( state, propertyKey );
-                context.schemaWriteOperations().indexCreate( state, labelId, propertyKeyId );
+                long labelId = context.keyWriteOperations().labelGetOrCreateForName( label.name() );
+                long propertyKeyId = context.keyWriteOperations().propertyKeyGetOrCreateForName( propertyKey );
+                context.schemaWriteOperations().indexCreate( labelId, propertyKeyId );
                 return new IndexDefinitionImpl( this, label, propertyKey, false );
             }
             catch ( AlreadyIndexedException e )
@@ -397,25 +358,23 @@ public class SchemaImpl implements Schema
             }
             catch ( SchemaKernelException e )
             {
-                throw new ConstraintViolationException( e.getUserMessage( new KeyNameLookup( state, context.keyReadOperations() ) ), e );
+                throw new ConstraintViolationException( e.getUserMessage( context.keyReadOperations() ), e );
             }
             finally
             {
-                state.close();
+                context.close();
             }
         }
 
         @Override
         public void dropIndexDefinitions( Label label, String propertyKey )
         {
-            StatementOperationParts context = ctxProvider.getCtxForWriting();
-            StatementState state = ctxProvider.statementForWriting();
-            try
+            try(final KernelStatement context = ctxProvider.getCtxForWriting())
             {
-                long labelId = context.keyReadOperations().labelGetForName( state, label.name() );
-                long propertyKeyId = context.keyReadOperations().propertyKeyGetForName( state, propertyKey );
-                context.schemaWriteOperations().indexDrop( state,
-                        context.schemaReadOperations().indexesGetForLabelAndPropertyKey( state, labelId, propertyKeyId ) );
+                long labelId = context.keyReadOperations().labelGetForName( label.name() );
+                long propertyKeyId = context.keyReadOperations().propertyKeyGetForName( propertyKey );
+                context.schemaWriteOperations().indexDrop(
+                        context.schemaReadOperations().indexesGetForLabelAndPropertyKey( labelId, propertyKeyId ) );
             }
             catch ( SchemaKernelException e )
             {
@@ -430,65 +389,43 @@ public class SchemaImpl implements Schema
             {
                 throw new ThisShouldNotHappenError( "Mattias", "Property " + propertyKey + " should exist here" );
             }
-            finally
-            {
-                state.close();
-            }
         }
 
         @Override
         public ConstraintDefinition createPropertyUniquenessConstraint( Label label, String propertyKey )
                 throws SchemaKernelException
         {
-            StatementOperationParts context = ctxProvider.getCtxForWriting();
-            StatementState state = ctxProvider.statementForWriting();
-            try
+            try(final KernelStatement context = ctxProvider.getCtxForWriting())
             {
-                long labelId = context.keyWriteOperations().labelGetOrCreateForName( state, label.name() );
-                long propertyKeyId = context.keyWriteOperations().propertyKeyGetOrCreateForName( state, propertyKey );
-                context.schemaWriteOperations().uniquenessConstraintCreate( state, labelId, propertyKeyId );
+                long labelId = context.keyWriteOperations().labelGetOrCreateForName( label.name() );
+                long propertyKeyId = context.keyWriteOperations().propertyKeyGetOrCreateForName( propertyKey );
+                context.schemaWriteOperations().uniquenessConstraintCreate( labelId, propertyKeyId );
                 return new PropertyUniqueConstraintDefinition( this, label, propertyKey );
-            }
-            finally
-            {
-                state.close();
             }
         }
 
         @Override
         public void dropPropertyUniquenessConstraint( Label label, String propertyKey )
         {
-            StatementOperationParts context = ctxProvider.getCtxForWriting();
-            StatementState state = ctxProvider.statementForWriting();
-            try
+            try(final KernelStatement context = ctxProvider.getCtxForWriting())
             {
-                long labelId = context.keyWriteOperations().labelGetOrCreateForName( state, label.name() );
-                long propertyKeyId = context.keyWriteOperations().propertyKeyGetOrCreateForName( state, propertyKey );
+                long labelId = context.keyWriteOperations().labelGetOrCreateForName( label.name() );
+                long propertyKeyId = context.keyWriteOperations().propertyKeyGetOrCreateForName( propertyKey );
                 UniquenessConstraint constraint = new UniquenessConstraint( labelId, propertyKeyId );
-                context.schemaWriteOperations().constraintDrop( state, constraint );
+                context.schemaWriteOperations().constraintDrop( constraint );
             }
             catch ( SchemaKernelException e )
             {
                 throw new ThisShouldNotHappenError( "Mattias", "Unable to drop property unique constraint" );
-            }
-            finally
-            {
-                state.close();
             }
         }
 
         @Override
         public String getUserMessage( KernelException e )
         {
-            StatementOperationParts context = ctxProvider.getCtxForWriting();
-            StatementState state = ctxProvider.statementForReading();
-            try
+            try(final KernelStatement context = ctxProvider.getCtxForReading())
             {
-                return e.getUserMessage( new KeyNameLookup( state, context.keyReadOperations() ) );
-            }
-            finally
-            {
-                state.close();
+                return e.getUserMessage( context.keyReadOperations() );
             }
         }
 

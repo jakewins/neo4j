@@ -19,13 +19,12 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.kernel.api.operations.SchemaWriteOperations;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 
 public class UniquenessConstraintStoppingKernelTransaction extends DelegatingKernelTransaction
@@ -36,9 +35,9 @@ public class UniquenessConstraintStoppingKernelTransaction extends DelegatingKer
     }
 
     @Override
-    public StatementOperationParts newStatementOperations()
+    public KernelStatement newStatement()
     {
-        StatementOperationParts parts = delegate.newStatementOperations();
+        KernelStatement parts = delegate.newStatement();
         
         UniquenessConstraintStoppingStatementOperations stoppingContext =
                 new UniquenessConstraintStoppingStatementOperations( parts.schemaWriteOperations() );
@@ -56,26 +55,26 @@ public class UniquenessConstraintStoppingKernelTransaction extends DelegatingKer
         }
         
         @Override
-        public UniquenessConstraint uniquenessConstraintCreate( StatementState state, long labelId, long propertyKeyId )
+        public UniquenessConstraint uniquenessConstraintCreate( long labelId, long propertyKeyId )
                 throws SchemaKernelException
         {
             throw unsupportedOperation();
         }
 
         @Override
-        public void constraintDrop( StatementState state, UniquenessConstraint constraint )
+        public void constraintDrop( UniquenessConstraint constraint )
         {
             throw unsupportedOperation();
         }
 
         @Override
-        public IndexDescriptor uniqueIndexCreate( StatementState state, long labelId, long propertyKey ) throws SchemaKernelException
+        public IndexDescriptor uniqueIndexCreate( long labelId, long propertyKey ) throws SchemaKernelException
         {
             throw unsupportedOperation();
         }
 
         @Override
-        public void uniqueIndexDrop( StatementState state, IndexDescriptor descriptor ) throws DropIndexFailureException
+        public void uniqueIndexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException
         {
             throw unsupportedOperation();
         }
@@ -88,15 +87,15 @@ public class UniquenessConstraintStoppingKernelTransaction extends DelegatingKer
         // === TODO Below is unnecessary delegate methods
 
         @Override
-        public IndexDescriptor indexCreate( StatementState state, long labelId, long propertyKeyId ) throws SchemaKernelException
+        public IndexDescriptor indexCreate( long labelId, long propertyKeyId ) throws SchemaKernelException
         {
-            return schemaWriteDelegate.indexCreate( state, labelId, propertyKeyId );
+            return schemaWriteDelegate.indexCreate( labelId, propertyKeyId );
         }
 
         @Override
-        public void indexDrop( StatementState state, IndexDescriptor descriptor ) throws DropIndexFailureException
+        public void indexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException
         {
-            schemaWriteDelegate.indexDrop( state, descriptor );
+            schemaWriteDelegate.indexDrop( descriptor );
         }
     }
 }

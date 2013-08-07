@@ -30,9 +30,7 @@ import javax.transaction.xa.XAResource;
 
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelAPI;
-import org.neo4j.kernel.api.operations.StatementState;
-import org.neo4j.kernel.api.operations.ReadOnlyStatementState;
-import org.neo4j.kernel.impl.api.IndexReaderFactory;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.ReadOnlyDbException;
 import org.neo4j.kernel.impl.core.TransactionState;
@@ -55,7 +53,6 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
     private XaDataSourceManager xaDsManager = null;
     private final StringLogger logger;
     private KernelAPI kernel;
-    private IndexingService indexingService;
 
     public ReadOnlyTxManager( XaDataSourceManager xaDsManagerToUse, StringLogger logger )
     {
@@ -77,15 +74,7 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
     public void start()
             throws Throwable
     {
-        txThreadMap = new ThreadLocalWithSize<ReadOnlyTransactionImpl>();
-        xaDsManager.addDataSourceRegistrationListener( neoStoreListener( new DataSourceRegistrationListener.Adapter()
-        {
-            @Override
-            public void registeredDataSource( XaDataSource ds )
-            {
-                indexingService = ((NeoStoreXaDataSource)ds).getIndexService();
-            }
-        } ) );
+        txThreadMap = new ThreadLocalWithSize<>();
     }
 
     @Override
@@ -108,7 +97,9 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
             throw new NotSupportedException(
                     "Nested transactions not supported" );
         }
-        txThreadMap.set( new ReadOnlyTransactionImpl( this, logger ) );
+        ReadOnlyTransactionImpl tx = new ReadOnlyTransactionImpl( this, logger );
+        txThreadMap.set( tx );
+        tx.setTransactionContext(kernel.newTransaction() );
     }
 
     @Override
@@ -340,9 +331,10 @@ public class ReadOnlyTxManager extends AbstractTransactionManager
     }
 
     @Override
-    public StatementState newStatement()
+    public KernelStatement newStatement()
     {
-        return new ReadOnlyStatementState( new IndexReaderFactory.Caching( indexingService ) );
+        Transaction tx = getTransaction();
+        return tx != null ? ((ReadOnlyTransactionImpl)tx).newStatement() : null;
     }
 
     @Override

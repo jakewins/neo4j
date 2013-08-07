@@ -33,25 +33,24 @@ import org.neo4j.helpers.collection.IteratorUtil.singleOrNull
 import org.neo4j.kernel.api.operations.KeyNameLookup
 import org.neo4j.kernel.api.exceptions.KernelException
 import org.neo4j.kernel.api.exceptions.schema.{SchemaKernelException, DropIndexFailureException}
-import org.neo4j.kernel.api.operations.StatementState
 import org.neo4j.kernel.impl.api.PrimitiveLongIterator
 import scala.collection.Iterator
 import org.neo4j.cypher.internal.helpers.JavaConversionSupport
 import org.neo4j.cypher.internal.helpers.JavaConversionSupport.mapToScala
 
 class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction,
-                                   ctx: StatementOperationParts, theState: StatementState)
-  extends TransactionBoundTokenContext(ctx.keyReadOperations, theState) with QueryContext {
+                                   ctx: KernelStatement)
+  extends TransactionBoundTokenContext(ctx.keyReadOperations) with QueryContext {
 
   private var open = true
 
   def setLabelsOnNode(node: Long, labelIds: Iterator[Long]): Int = labelIds.foldLeft(0) {
-    case (count, labelId) => if (ctx.entityWriteOperations.nodeAddLabel(theState, node, labelId)) count + 1 else count
+    case (count, labelId) => if (ctx.entityWriteOperations.nodeAddLabel(node, labelId)) count + 1 else count
   }
 
   def close(success: Boolean) {
     try {
-      theState.close()
+      ctx.close()
 
       if (success)
         tx.success()
@@ -73,12 +72,11 @@ class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction,
       try {
         val bridge   = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
         val stmCtx   = bridge.getCtxForReading
-        val state    = bridge.statementForReading
         val result   = try {
-          work(new TransactionBoundQueryContext(graph, tx, stmCtx, state))
+          work(new TransactionBoundQueryContext(graph, tx, stmCtx))
         }
         finally {
-          state.close()
+          stmCtx.close()
         }
         tx.success()
         result
@@ -96,13 +94,13 @@ class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction,
     start.createRelationshipTo(end, withName(relType))
 
   def getLabelsForNode(node: Long) =
-    JavaConversionSupport.asScala( ctx.entityReadOperations.nodeGetLabels(theState, node) )
+    JavaConversionSupport.asScala( ctx.entityReadOperations.nodeGetLabels(node) )
 
   override def isLabelSetOnNode(label: Long, node: Long) =
-    ctx.entityReadOperations.nodeHasLabel(theState, node, label)
+    ctx.entityReadOperations.nodeHasLabel(node, label)
 
   def getOrCreateLabelId(labelName: String) =
-    ctx.keyWriteOperations.labelGetOrCreateForName(theState, labelName)
+    ctx.keyWriteOperations.labelGetOrCreateForName(labelName)
 
 
   def getRelationshipsFor(node: Node, dir: Direction, types: Seq[String]): Iterator[Relationship] = types match {
@@ -113,7 +111,7 @@ class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction,
   def getTransaction = tx
 
   def exactIndexSearch(index: IndexDescriptor, value: Any) =
-    mapToScala( ctx.entityReadOperations.nodesGetFromIndexLookup(theState, index, value) )(nodeOps.getById(_))
+    mapToScala( ctx.entityReadOperations.nodesGetFromIndexLookup(index, value) )(nodeOps.getById(_))
 
   val nodeOps = new NodeOperations
 
@@ -121,35 +119,35 @@ class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction,
 
   def removeLabelsFromNode(node: Long, labelIds: Iterator[Long]): Int = labelIds.foldLeft(0) {
     case (count, labelId) =>
-      if (ctx.entityWriteOperations.nodeRemoveLabel(theState, node, labelId)) count + 1 else count
+      if (ctx.entityWriteOperations.nodeRemoveLabel(node, labelId)) count + 1 else count
   }
 
   def getNodesByLabel(id: Long): Iterator[Node] =
-    mapToScala( ctx.entityReadOperations.nodesGetForLabel(theState, id) )(nodeOps.getById(_))
+    mapToScala( ctx.entityReadOperations.nodesGetForLabel(id) )(nodeOps.getById(_))
 
   class NodeOperations extends BaseOperations[Node] {
     def delete(obj: Node) {
-      ctx.entityWriteOperations.nodeDelete(theState, obj.getId)
+      ctx.entityWriteOperations.nodeDelete(obj.getId)
     }
 
     def propertyKeyIds(obj: Node): Iterator[Long] =
       primitiveLongIteratorToScalaIterator(
-        ctx.entityReadOperations.nodeGetPropertyKeys(theState, obj.getId)).map(_.longValue())
+        ctx.entityReadOperations.nodeGetPropertyKeys(obj.getId)).map(_.longValue())
 
     def getProperty(obj: Node, propertyKeyId: Long): Any = {
-      ctx.entityReadOperations.nodeGetProperty(theState, obj.getId, propertyKeyId).value(null)
+      ctx.entityReadOperations.nodeGetProperty(obj.getId, propertyKeyId).value(null)
     }
 
     def hasProperty(obj: Node, propertyKey: Long) =
-      ctx.entityReadOperations.nodeHasProperty(theState, obj.getId, propertyKey)
+      ctx.entityReadOperations.nodeHasProperty(obj.getId, propertyKey)
 
     def removeProperty(obj: Node, propertyKeyId: Long) {
-      ctx.entityWriteOperations.nodeRemoveProperty(theState, obj.getId, propertyKeyId)
+      ctx.entityWriteOperations.nodeRemoveProperty(obj.getId, propertyKeyId)
     }
 
     def setProperty(obj: Node, propertyKeyId: Long, value: Any) {
       ctx.entityWriteOperations
-         .nodeSetProperty(theState, obj.getId, properties.Property.property(propertyKeyId, value) )
+         .nodeSetProperty(obj.getId, properties.Property.property(propertyKeyId, value) )
     }
 
 
@@ -171,26 +169,26 @@ class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction,
 
   class RelationshipOperations extends BaseOperations[Relationship] {
     def delete(obj: Relationship) {
-      ctx.entityWriteOperations.relationshipDelete(theState, obj.getId)
+      ctx.entityWriteOperations.relationshipDelete(obj.getId)
     }
 
     def propertyKeyIds(obj: Relationship): Iterator[Long] =
       primitiveLongIteratorToScalaIterator(
-        ctx.entityReadOperations.relationshipGetPropertyKeys(theState, obj.getId)).map(_.longValue())
+        ctx.entityReadOperations.relationshipGetPropertyKeys(obj.getId)).map(_.longValue())
 
     def getProperty(obj: Relationship, propertyKeyId: Long): Any =
-      ctx.entityReadOperations.relationshipGetProperty(theState, obj.getId, propertyKeyId).value(null)
+      ctx.entityReadOperations.relationshipGetProperty(obj.getId, propertyKeyId).value(null)
 
     def hasProperty(obj: Relationship, propertyKey: Long) =
-      ctx.entityReadOperations.relationshipHasProperty(theState, obj.getId, propertyKey)
+      ctx.entityReadOperations.relationshipHasProperty(obj.getId, propertyKey)
 
     def removeProperty(obj: Relationship, propertyKeyId: Long) {
-      ctx.entityWriteOperations.relationshipRemoveProperty(theState, obj.getId, propertyKeyId)
+      ctx.entityWriteOperations.relationshipRemoveProperty(obj.getId, propertyKeyId)
     }
 
     def setProperty(obj: Relationship, propertyKeyId: Long, value: Any) {
       ctx.entityWriteOperations
-         .relationshipSetProperty(theState, obj.getId, properties.Property.property(propertyKeyId, value) )
+         .relationshipSetProperty(obj.getId, properties.Property.property(propertyKeyId, value) )
     }
 
     def getById(id: Long) = graph.getRelationshipById(id)
@@ -206,25 +204,25 @@ class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction,
   }
 
   def getOrCreatePropertyKeyId(propertyKey: String) =
-    ctx.keyWriteOperations.propertyKeyGetOrCreateForName(theState, propertyKey)
+    ctx.keyWriteOperations.propertyKeyGetOrCreateForName(propertyKey)
 
   def addIndexRule(labelIds: Long, propertyKeyId: Long) {
     try {
-      ctx.schemaWriteOperations.indexCreate(theState, labelIds, propertyKeyId)
+      ctx.schemaWriteOperations.indexCreate(labelIds, propertyKeyId)
     } catch {
       case e: SchemaKernelException =>
         val labelName = getLabelName(labelIds)
-        val propName = ctx.keyReadOperations.propertyKeyGetName(theState, propertyKeyId)
+        val propName = ctx.keyReadOperations.propertyKeyGetName(propertyKeyId)
         throw new IndexAlreadyDefinedException(labelName, propName, e)
     }
   }
 
   def dropIndexRule(labelId: Long, propertyKeyId: Long) {
     try {
-      ctx.schemaWriteOperations.indexDrop(theState, new IndexDescriptor(labelId, propertyKeyId))
+      ctx.schemaWriteOperations.indexDrop(new IndexDescriptor(labelId, propertyKeyId))
     } catch {
       case e: DropIndexFailureException =>
-        throw new CouldNotDropIndexException(e.getUserMessage(new KeyNameLookup(theState, ctx.keyReadOperations)), e)
+        throw new CouldNotDropIndexException(e.getUserMessage(ctx.keyReadOperations), e)
     }
   }
 
@@ -257,29 +255,29 @@ class TransactionBoundQueryContext(graph: GraphDatabaseAPI, tx: Transaction,
     val javaCreator = new org.neo4j.helpers.Function[K, V]() {
       def apply(key: K) = creator
     }
-    ctx.schemaStateOperations.schemaStateGetOrCreate(theState, key, javaCreator)
+    ctx.schemaStateOperations.schemaStateGetOrCreate(key, javaCreator)
   }
 
-  def schemaStateContains(key: String) = ctx.schemaStateOperations.schemaStateContains(theState, key)
+  def schemaStateContains(key: String) = ctx.schemaStateOperations.schemaStateContains(key)
 
   def createUniqueConstraint(labelId: Long, propertyKeyId: Long) {
     try {
-      ctx.schemaWriteOperations.uniquenessConstraintCreate(theState, labelId, propertyKeyId)
+      ctx.schemaWriteOperations.uniquenessConstraintCreate(labelId, propertyKeyId)
     } catch {
         case e: KernelException =>
           throw new CouldNotCreateConstraintException(
-            e.getUserMessage(new KeyNameLookup(theState, ctx.keyReadOperations)), e)
+            e.getUserMessage(ctx.keyReadOperations), e)
     }
   }
 
   def dropUniqueConstraint(labelId: Long, propertyKeyId: Long) {
     val constraint = singleOrNull(ctx.schemaReadOperations
-                                     .constraintsGetForLabelAndPropertyKey(theState, labelId, propertyKeyId))
+                                     .constraintsGetForLabelAndPropertyKey(labelId, propertyKeyId))
 
     if (constraint == null) {
       throw new MissingConstraintException()
     }
 
-    ctx.schemaWriteOperations.constraintDrop(theState, constraint)
+    ctx.schemaWriteOperations.constraintDrop(constraint)
   }
 }

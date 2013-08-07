@@ -32,7 +32,7 @@ import org.neo4j.cypher.internal.spi.gdsimpl.TransactionBoundPlanContext
 import org.scalatest.Assertions
 import org.neo4j.kernel.api.StatementOperations
 import org.neo4j.kernel.api.operations.StatementState
-import org.neo4j.kernel.api.StatementOperationParts
+import org.neo4j.kernel.api.KernelStatement
 import org.neo4j.cypher.internal.spi.gdsimpl.TransactionBoundPlanContext
 
 class GraphDatabaseTestBase extends GraphIcing with Assertions {
@@ -99,7 +99,7 @@ class GraphDatabaseTestBase extends GraphIcing with Assertions {
 
   def createNode(values: (String, Any)*): Node = createNode(values.toMap)
 
-  def execStatement[T](f: (StatementOperationParts => T)): T = {
+  def execStatement[T](f: (KernelStatement => T)): T = {
     val tx = graph.beginTx
     val ctx = graph
       .getDependencyResolver
@@ -178,20 +178,14 @@ class GraphDatabaseTestBase extends GraphIcing with Assertions {
     (a, b, c, d)
   }
 
-  def statementContext:StatementOperationParts =
+  def statementContext:KernelStatement =
     graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).getCtxForWriting
-
-  def cakeState:StatementState =
-    graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).statementForWriting
     
-  def readOnlyStatementContext:StatementOperationParts =
+  def readOnlyStatementContext:KernelStatement =
     graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).getCtxForReading
 
   def planContext:PlanContext= new TransactionBoundPlanContext(
-      statementContext.keyReadOperations, statementContext.schemaReadOperations, cakeState, graph)
-
-  def readOnlyCakeState:StatementState =
-    graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).statementForReading
+      statementContext.keyReadOperations, statementContext.schemaReadOperations, graph)
 }
 
 trait Snitch extends GraphDatabaseAPI {

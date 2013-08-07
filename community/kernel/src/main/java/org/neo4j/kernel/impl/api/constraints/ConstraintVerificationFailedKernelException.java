@@ -24,8 +24,10 @@ import java.util.Set;
 
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
+import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundException;
 import org.neo4j.kernel.api.index.IndexEntryConflictException;
-import org.neo4j.kernel.api.operations.KeyNameLookup;
+import org.neo4j.kernel.api.operations.KeyReadOperations;
 
 public class ConstraintVerificationFailedKernelException extends KernelException
 {
@@ -84,15 +86,23 @@ public class ConstraintVerificationFailedKernelException extends KernelException
     }
 
     @Override
-    public String getUserMessage( KeyNameLookup keyNameLookup )
+    public String getUserMessage( KeyReadOperations keyNameLookup )
     {
         StringBuilder message = new StringBuilder();
         for ( Evidence evidenceItem : evidence() )
         {
             IndexEntryConflictException conflict = evidenceItem.conflict;
-            message.append( conflict.evidenceMessage(
-                    keyNameLookup.getLabelName( constraint.label() ),
-                    keyNameLookup.getPropertyKeyName( constraint.property() ) ) );
+            try
+            {
+                message.append( conflict.evidenceMessage(
+                        keyNameLookup.labelGetName( constraint.label() ),
+                        keyNameLookup.propertyKeyGetName( constraint.property() ) ) );
+            }
+            catch ( LabelNotFoundKernelException | PropertyKeyIdNotFoundException e )
+            {
+                message.append( conflict.evidenceMessage(
+                        "UnresolveableLabel[" + constraint.label() + "]", "UnresolveableProperty["+constraint.property()+"]" )) ;
+            }
         }
         return message.toString();
     }

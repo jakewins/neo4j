@@ -30,7 +30,6 @@ import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.api.operations.EntityWriteOperations;
 import org.neo4j.kernel.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.api.operations.SchemaStateOperations;
@@ -48,13 +47,13 @@ public class LockingStatementOperations implements
     private final SchemaReadOperations schemaReadDelegate;
     private final SchemaWriteOperations schemaWriteDelegate;
     private final SchemaStateOperations schemaStateDelegate;
+    private final LockHolder locks;
 
-    public LockingStatementOperations(
-            EntityWriteOperations entityWriteDelegate,
-            SchemaReadOperations schemaReadDelegate,
-            SchemaWriteOperations schemaWriteDelegate,
-            SchemaStateOperations schemaStateDelegate )
+    public LockingStatementOperations( LockHolder locks, SchemaReadOperations schemaReadDelegate,
+                                 SchemaWriteOperations schemaWriteDelegate, SchemaStateOperations schemaStateDelegate,
+                                 EntityWriteOperations entityWriteDelegate )
     {
+        this.locks = locks;
         this.entityWriteDelegate = entityWriteDelegate;
         this.schemaReadDelegate = schemaReadDelegate;
         this.schemaWriteDelegate = schemaWriteDelegate;
@@ -62,218 +61,218 @@ public class LockingStatementOperations implements
     }
 
     @Override
-    public boolean nodeAddLabel( StatementState state, long nodeId, long labelId ) throws EntityNotFoundException
+    public boolean nodeAddLabel( long nodeId, long labelId ) throws EntityNotFoundException
     {
-        state.locks().acquireNodeWriteLock( nodeId );
-        return entityWriteDelegate.nodeAddLabel( state, nodeId, labelId );
+        locks.acquireNodeWriteLock( nodeId );
+        return entityWriteDelegate.nodeAddLabel( nodeId, labelId );
     }
 
     @Override
-    public boolean nodeRemoveLabel( StatementState state, long nodeId, long labelId ) throws EntityNotFoundException
+    public boolean nodeRemoveLabel( long nodeId, long labelId ) throws EntityNotFoundException
     {
-        state.locks().acquireNodeWriteLock( nodeId );
-        return entityWriteDelegate.nodeRemoveLabel( state, nodeId, labelId );
+        locks.acquireNodeWriteLock( nodeId );
+        return entityWriteDelegate.nodeRemoveLabel( nodeId, labelId );
     }
 
     @Override
-    public IndexDescriptor indexCreate( StatementState state, long labelId, long propertyKey ) throws SchemaKernelException
+    public IndexDescriptor indexCreate( long labelId, long propertyKey ) throws SchemaKernelException
     {
-        state.locks().acquireSchemaWriteLock();
-        return schemaWriteDelegate.indexCreate( state, labelId, propertyKey );
+        locks.acquireSchemaWriteLock();
+        return schemaWriteDelegate.indexCreate( labelId, propertyKey );
     }
 
     @Override
-    public IndexDescriptor uniqueIndexCreate( StatementState state, long labelId, long propertyKey ) throws SchemaKernelException
+    public IndexDescriptor uniqueIndexCreate( long labelId, long propertyKey ) throws SchemaKernelException
     {
-        state.locks().acquireSchemaWriteLock();
-        return schemaWriteDelegate.uniqueIndexCreate( state, labelId, propertyKey );
+        locks.acquireSchemaWriteLock();
+        return schemaWriteDelegate.uniqueIndexCreate( labelId, propertyKey );
     }
 
     @Override
-    public void indexDrop( StatementState state, IndexDescriptor descriptor ) throws DropIndexFailureException
+    public void indexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException
     {
-        state.locks().acquireSchemaWriteLock();
-        schemaWriteDelegate.indexDrop( state, descriptor );
+        locks.acquireSchemaWriteLock();
+        schemaWriteDelegate.indexDrop( descriptor );
     }
 
     @Override
-    public void uniqueIndexDrop( StatementState state, IndexDescriptor descriptor ) throws DropIndexFailureException
+    public void uniqueIndexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException
     {
-        state.locks().acquireSchemaWriteLock();
-        schemaWriteDelegate.uniqueIndexDrop( state, descriptor );
+        locks.acquireSchemaWriteLock();
+        schemaWriteDelegate.uniqueIndexDrop( descriptor );
     }
 
     @Override
-    public <K, V> V schemaStateGetOrCreate( StatementState state, K key, Function<K, V> creator )
+    public <K, V> V schemaStateGetOrCreate( K key, Function<K, V> creator )
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaStateDelegate.schemaStateGetOrCreate( state, key, creator );
+        locks.acquireSchemaReadLock();
+        return schemaStateDelegate.schemaStateGetOrCreate( key, creator );
     }
 
     @Override
-    public <K> boolean schemaStateContains( StatementState state, K key )
+    public <K> boolean schemaStateContains( K key )
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaStateDelegate.schemaStateContains( state, key );
+        locks.acquireSchemaReadLock();
+        return schemaStateDelegate.schemaStateContains( key );
     }
 
     @Override
-    public Iterator<IndexDescriptor> indexesGetForLabel( StatementState state, long labelId )
+    public Iterator<IndexDescriptor> indexesGetForLabel( long labelId )
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.indexesGetForLabel( state, labelId );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.indexesGetForLabel( labelId );
     }
     
     @Override
-    public IndexDescriptor indexesGetForLabelAndPropertyKey( StatementState state, long labelId, long propertyKey )
+    public IndexDescriptor indexesGetForLabelAndPropertyKey( long labelId, long propertyKey )
             throws SchemaRuleNotFoundException
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.indexesGetForLabelAndPropertyKey( state, labelId, propertyKey );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.indexesGetForLabelAndPropertyKey( labelId, propertyKey );
     }
 
     @Override
-    public Iterator<IndexDescriptor> indexesGetAll( StatementState state )
+    public Iterator<IndexDescriptor> indexesGetAll()
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.indexesGetAll( state );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.indexesGetAll();
     }
     
     @Override
-    public InternalIndexState indexGetState( StatementState state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public InternalIndexState indexGetState( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.indexGetState( state, descriptor );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.indexGetState( descriptor );
     }
 
     @Override
-    public Long indexGetOwningUniquenessConstraintId( StatementState state, IndexDescriptor index ) throws SchemaRuleNotFoundException
+    public Long indexGetOwningUniquenessConstraintId( IndexDescriptor index ) throws SchemaRuleNotFoundException
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.indexGetOwningUniquenessConstraintId( state, index );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.indexGetOwningUniquenessConstraintId( index );
     }
 
     @Override
-    public long indexGetCommittedId( StatementState state, IndexDescriptor index ) throws SchemaRuleNotFoundException
+    public long indexGetCommittedId( IndexDescriptor index ) throws SchemaRuleNotFoundException
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.indexGetCommittedId( state, index );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.indexGetCommittedId( index );
     }
 
     @Override
-    public Iterator<IndexDescriptor> uniqueIndexesGetForLabel( StatementState state, long labelId )
+    public Iterator<IndexDescriptor> uniqueIndexesGetForLabel( long labelId )
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.uniqueIndexesGetForLabel( state, labelId );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.uniqueIndexesGetForLabel( labelId );
     }
 
     @Override
-    public Iterator<IndexDescriptor> uniqueIndexesGetAll( StatementState state )
+    public Iterator<IndexDescriptor> uniqueIndexesGetAll( )
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.uniqueIndexesGetAll( state );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.uniqueIndexesGetAll( );
     }
 
     @Override
-    public void nodeDelete( StatementState state, long nodeId )
+    public void nodeDelete( long nodeId )
     {
-        state.locks().acquireNodeWriteLock( nodeId );
-        entityWriteDelegate.nodeDelete( state, nodeId );
+        locks.acquireNodeWriteLock( nodeId );
+        entityWriteDelegate.nodeDelete( nodeId );
     }
     
     @Override
-    public void relationshipDelete( StatementState state, long relationshipId )
+    public void relationshipDelete( long relationshipId )
     {
-        state.locks().acquireRelationshipWriteLock( relationshipId );
-        entityWriteDelegate.relationshipDelete( state, relationshipId );
+        locks.acquireRelationshipWriteLock( relationshipId );
+        entityWriteDelegate.relationshipDelete( relationshipId );
     }
 
     @Override
-    public UniquenessConstraint uniquenessConstraintCreate( StatementState state, long labelId, long propertyKeyId )
+    public UniquenessConstraint uniquenessConstraintCreate( long labelId, long propertyKeyId )
             throws SchemaKernelException
     {
-        state.locks().acquireSchemaWriteLock();
-        return schemaWriteDelegate.uniquenessConstraintCreate( state, labelId, propertyKeyId );
+        locks.acquireSchemaWriteLock();
+        return schemaWriteDelegate.uniquenessConstraintCreate( labelId, propertyKeyId );
     }
 
     @Override
-    public Iterator<UniquenessConstraint> constraintsGetForLabelAndPropertyKey( StatementState state, long labelId, long propertyKeyId )
+    public Iterator<UniquenessConstraint> constraintsGetForLabelAndPropertyKey( long labelId, long propertyKeyId )
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.constraintsGetForLabelAndPropertyKey( state, labelId, propertyKeyId );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.constraintsGetForLabelAndPropertyKey( labelId, propertyKeyId );
     }
 
     @Override
-    public Iterator<UniquenessConstraint> constraintsGetForLabel( StatementState state, long labelId )
+    public Iterator<UniquenessConstraint> constraintsGetForLabel( long labelId )
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.constraintsGetForLabel( state, labelId );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.constraintsGetForLabel( labelId );
     }
 
     @Override
-    public Iterator<UniquenessConstraint> constraintsGetAll( StatementState state )
+    public Iterator<UniquenessConstraint> constraintsGetAll()
     {
-        state.locks().acquireSchemaReadLock();
-        return schemaReadDelegate.constraintsGetAll( state );
+        locks.acquireSchemaReadLock();
+        return schemaReadDelegate.constraintsGetAll();
     }
 
     @Override
-    public void constraintDrop( StatementState state, UniquenessConstraint constraint )
+    public void constraintDrop( UniquenessConstraint constraint )
     {
-        state.locks().acquireSchemaWriteLock();
-        schemaWriteDelegate.constraintDrop( state, constraint );
+        locks.acquireSchemaWriteLock();
+        schemaWriteDelegate.constraintDrop( constraint );
     }
     
     @Override
-    public Property nodeSetProperty( StatementState state, long nodeId, Property property ) throws PropertyKeyIdNotFoundException,
+    public Property nodeSetProperty( long nodeId, Property property ) throws PropertyKeyIdNotFoundException,
             EntityNotFoundException
     {
-        state.locks().acquireNodeWriteLock( nodeId );
-        return entityWriteDelegate.nodeSetProperty( state, nodeId, property );
+        locks.acquireNodeWriteLock( nodeId );
+        return entityWriteDelegate.nodeSetProperty( nodeId, property );
     }
     
     @Override
-    public Property nodeRemoveProperty( StatementState state, long nodeId, long propertyKeyId ) throws PropertyKeyIdNotFoundException,
+    public Property nodeRemoveProperty( long nodeId, long propertyKeyId ) throws PropertyKeyIdNotFoundException,
             EntityNotFoundException
     {
-        state.locks().acquireNodeWriteLock( nodeId );
-        return entityWriteDelegate.nodeRemoveProperty( state, nodeId, propertyKeyId );
+        locks.acquireNodeWriteLock( nodeId );
+        return entityWriteDelegate.nodeRemoveProperty( nodeId, propertyKeyId );
     }
     
     @Override
-    public Property relationshipSetProperty( StatementState state, long relationshipId, Property property )
+    public Property relationshipSetProperty( long relationshipId, Property property )
             throws PropertyKeyIdNotFoundException, EntityNotFoundException
     {
-        state.locks().acquireRelationshipWriteLock( relationshipId );
-        return entityWriteDelegate.relationshipSetProperty( state, relationshipId, property );
+        locks.acquireRelationshipWriteLock( relationshipId );
+        return entityWriteDelegate.relationshipSetProperty( relationshipId, property );
     }
     
     @Override
-    public Property relationshipRemoveProperty( StatementState state, long relationshipId, long propertyKeyId )
+    public Property relationshipRemoveProperty( long relationshipId, long propertyKeyId )
             throws PropertyKeyIdNotFoundException, EntityNotFoundException
     {
-        state.locks().acquireRelationshipWriteLock( relationshipId );
-        return entityWriteDelegate.relationshipRemoveProperty( state, relationshipId, propertyKeyId );
+        locks.acquireRelationshipWriteLock( relationshipId );
+        return entityWriteDelegate.relationshipRemoveProperty( relationshipId, propertyKeyId );
     }
     
     @Override
-    public Property graphSetProperty( StatementState state, Property property ) throws PropertyKeyIdNotFoundException
+    public Property graphSetProperty( Property property ) throws PropertyKeyIdNotFoundException
     {
-        state.locks().acquireGraphWriteLock();
-        return entityWriteDelegate.graphSetProperty( state, property );
+        locks.acquireGraphWriteLock();
+        return entityWriteDelegate.graphSetProperty( property );
     }
     
     @Override
-    public Property graphRemoveProperty( StatementState state, long propertyKeyId ) throws PropertyKeyIdNotFoundException
+    public Property graphRemoveProperty( long propertyKeyId ) throws PropertyKeyIdNotFoundException
     {
-        state.locks().acquireGraphWriteLock();
-        return entityWriteDelegate.graphRemoveProperty( state, propertyKeyId );
+        locks.acquireGraphWriteLock();
+        return entityWriteDelegate.graphRemoveProperty( propertyKeyId );
     }
     
     // === TODO Below is unnecessary delegate methods
     @Override
-    public String indexGetFailure( StatementState state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public String indexGetFailure( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
-        return schemaReadDelegate.indexGetFailure( state, descriptor );
+        return schemaReadDelegate.indexGetFailure( descriptor );
     }
 }

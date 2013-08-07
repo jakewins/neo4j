@@ -33,7 +33,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.kernel.impl.util.StringLogger
 import org.neo4j.cypher.internal.parser.prettifier.Prettifier
 import org.neo4j.kernel.api.operations.StatementState
-import org.neo4j.kernel.api.StatementOperationParts
+import org.neo4j.kernel.api.KernelStatement
 
 class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = StringLogger.DEV_NULL) {
 
@@ -76,14 +76,9 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
     .getDependencyResolver
     .resolveDependency(classOf[ThreadToStatementContextBridge])
     .getCtxForWriting
-
-  private def getCakeState = graph.asInstanceOf[GraphDatabaseAPI]
-    .getDependencyResolver
-    .resolveDependency(classOf[ThreadToStatementContextBridge])
-    .statementForWriting()
     
-  private def createQueryContext(tx: Transaction, ctx: StatementOperationParts, state: StatementState) = {
-    new TransactionBoundQueryContext(graph.asInstanceOf[GraphDatabaseAPI], tx, ctx, state)
+  private def createQueryContext(tx: Transaction, ctx: KernelStatement) = {
+    new TransactionBoundQueryContext(graph.asInstanceOf[GraphDatabaseAPI], tx, ctx)
   }
 
   @throws(classOf[SyntaxException])
@@ -102,14 +97,12 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
     while (n < ExecutionEngine.PLAN_BUILDING_TRIES) {
       // create transaction and query context
       var touched = false
-      var statementContext: StatementOperationParts = null
-      var state: StatementState = null
+      var statementContext: KernelStatement = null
       var queryContext: QueryContext = null
       val tx = graph.beginTx()
       val plan = try {
         statementContext = getStatementContext
-        state = getCakeState
-        queryContext = createQueryContext(tx, statementContext, state)
+        queryContext = createQueryContext(tx, statementContext)
 
         // fetch plan cache
         val planCache =
@@ -118,20 +111,20 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
         // get plan or build it
         planCache.getOrElseUpdate(query, () => {
           touched = true
-          val planContext = new TransactionBoundPlanContext(statementContext.keyReadOperations, statementContext.schemaReadOperations, state, graph)
+          val planContext = new TransactionBoundPlanContext(statementContext.keyReadOperations, statementContext.schemaReadOperations, graph)
           planBuilder.build(planContext, cachedQuery)
         })
       }
       catch {
         case (t: Throwable) =>
-          state.close()
+          statementContext.close()
           tx.failure()
           tx.finish()
           throw t
       }
 
       if (touched) {
-        state.close()
+        statementContext.close()
         tx.success()
         tx.finish()
       }
@@ -155,8 +148,8 @@ class ExecutionEngine(graph: GraphDatabaseService, logger: StringLogger = String
     try {
       verify(query)
       val statementContext = getStatementContext
-      val queryContext = createQueryContext(tx, statementContext, getCakeState)
-      val planContext = new TransactionBoundPlanContext(statementContext.keyReadOperations, statementContext.schemaReadOperations, getCakeState, graph)
+      val queryContext = createQueryContext(tx, statementContext )
+      val planContext = new TransactionBoundPlanContext(statementContext.keyReadOperations, statementContext.schemaReadOperations, graph)
       planBuilder.build(planContext, query).execute(queryContext, params)
     }
     catch {

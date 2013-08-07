@@ -22,11 +22,9 @@ package org.neo4j.kernel.impl.api;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.operations.StatementState;
-import org.neo4j.kernel.api.operations.WritableStatementState;
 import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.transaction.LockManager;
 
@@ -51,28 +49,18 @@ public class LockingKernelTransaction extends DelegatingKernelTransaction
     }
 
     @Override
-    public StatementOperationParts newStatementOperations()
+    public KernelStatement newStatement()
     {
         // The actual transaction context
-        StatementOperationParts parts = delegate.newStatementOperations();
+        KernelStatement parts = delegate.newStatement();
         
         // + Locking
         LockingStatementOperations lockingContext = new LockingStatementOperations(
-                parts.entityWriteOperations(),
-                parts.schemaReadOperations(),
-                parts.schemaWriteOperations(),
-                parts.schemaStateOperations() );
+                lockHolder, parts.schemaReadOperations(), parts.schemaWriteOperations(), parts.schemaStateOperations(), parts.entityWriteOperations()
+        );
         
         return parts.override(
                 null, null, null, lockingContext, lockingContext, lockingContext, lockingContext );
-    }
-    
-    @Override
-    public StatementState newStatementState()
-    {
-        StatementState statement = super.newStatementState();
-        ((WritableStatementState)statement).provide( lockHolder );
-        return statement;
     }
 
     @Override

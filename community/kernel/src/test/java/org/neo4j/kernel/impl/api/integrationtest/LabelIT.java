@@ -35,11 +35,11 @@ public class LabelIT extends KernelIntegrationTest
     {
         // given
         newTransaction();
-        long label1Id = statement.labelGetOrCreateForName( getState(), "label1" );
-        long label2Id = statement.labelGetOrCreateForName( getState(), "label2" );
+        long label1Id = statement.labelGetOrCreateForName( "label1" );
+        long label2Id = statement.labelGetOrCreateForName( "label2" );
 
         // when
-        Iterator<Token> labelIdsBeforeCommit = statement.labelsGetAllTokens( getState() );
+        Iterator<Token> labelIdsBeforeCommit = statement.labelsGetAllTokens();
 
         // then
         assertThat( asCollection( labelIdsBeforeCommit ),
@@ -48,7 +48,7 @@ public class LabelIT extends KernelIntegrationTest
         // when
         commit();
         newTransaction();
-        Iterator<Token> labelIdsAfterCommit = statement.labelsGetAllTokens( getState() );
+        Iterator<Token> labelIdsAfterCommit = statement.labelsGetAllTokens();
 
         // then
         assertThat(asCollection( labelIdsAfterCommit ) ,

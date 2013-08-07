@@ -36,7 +36,6 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.Triplet;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.CacheLoader;
 import org.neo4j.kernel.impl.cache.SizeOfs;
@@ -52,7 +51,6 @@ import org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper;
 import org.neo4j.kernel.impl.util.RelIdIterator;
 
 import static java.lang.System.arraycopy;
-
 import static org.neo4j.kernel.impl.cache.SizeOfs.withArrayOverheadIncludingReferences;
 import static org.neo4j.kernel.impl.util.RelIdArray.empty;
 import static org.neo4j.kernel.impl.util.RelIdArray.wrap;
@@ -717,7 +715,7 @@ public class NodeImpl extends ArrayBasedPrimitive
         return nm.newNodeProxyById( getId() );
     }
 
-    public Set<Long> getLabels( StatementState state, CacheLoader<Set<Long>> loader ) throws EntityNotFoundException
+    public Set<Long> getLabels( CacheLoader<Set<Long>> loader ) throws EntityNotFoundException
     {
         if ( labels == null )
         {
@@ -725,7 +723,7 @@ public class NodeImpl extends ArrayBasedPrimitive
             {
                 if ( labels == null )
                 {
-                    labels = loader.load( state, getId() );
+                    labels = loader.load( getId() );
                 }
             }
         }

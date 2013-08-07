@@ -30,15 +30,12 @@ import org.neo4j.helpers.FutureAdapter;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @Ignore( "This is not a test" )
 public class SchemaIndexTestHelper
@@ -114,13 +111,13 @@ public class SchemaIndexTestHelper
         }
     }
     
-    public static void awaitIndexOnline( SchemaReadOperations ctx, StatementState state, IndexDescriptor indexRule ) 
+    public static void awaitIndexOnline( SchemaReadOperations ctx, IndexDescriptor indexRule )
             throws IndexNotFoundKernelException
     {
         long start = System.currentTimeMillis();
         while(true)
         {
-            if ( ctx.indexGetState( state, indexRule ) == InternalIndexState.ONLINE )
+            if ( ctx.indexGetState( indexRule ) == InternalIndexState.ONLINE )
            {
                break;
            }

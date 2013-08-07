@@ -58,10 +58,10 @@ public class LockingStatementOperationsTest
         when( lookup.lookup( anyLong(), any( LockType.class ) ) ).thenReturn( node );
 
         LockingStatementOperations statementContext =
-                new LockingStatementOperations( inner, null, null, null );
+                new LockingStatementOperations( lockHolder, null, null, null, inner );
 
         // WHEN
-        statementContext.nodeDelete( state, nodeId );
+        statementContext.nodeDelete( nodeId );
 
         //THEN
         verify( lockHolder ).acquireNodeWriteLock( nodeId );
@@ -73,18 +73,18 @@ public class LockingStatementOperationsTest
         // given
         SchemaWriteOperations delegate = mock( SchemaWriteOperations.class );
         IndexDescriptor rule = mock( IndexDescriptor.class );
-        when( delegate.indexCreate( state, 123, 456 ) ).thenReturn( rule );
+        when( delegate.indexCreate( 123, 456 ) ).thenReturn( rule );
 
-        LockingStatementOperations context = new LockingStatementOperations( null, null, delegate, null );
+        LockingStatementOperations context = new LockingStatementOperations( lockHolder, null, delegate, null, null );
 
         // when
-        IndexDescriptor result = context.indexCreate( state, 123, 456 );
+        IndexDescriptor result = context.indexCreate( 123, 456 );
 
         // then
         assertSame( rule, result );
         InOrder order = inOrder( lockHolder, delegate );
         order.verify( lockHolder ).acquireSchemaWriteLock();
-        order.verify( delegate ).indexCreate( state, 123, 456 );
+        order.verify( delegate ).indexCreate( 123, 456 );
         verifyNoMoreInteractions( lockHolder, delegate );
     }
 
@@ -95,15 +95,15 @@ public class LockingStatementOperationsTest
         SchemaWriteOperations delegate = mock( SchemaWriteOperations.class );
         IndexDescriptor rule = mock( IndexDescriptor.class );
 
-        LockingStatementOperations context = new LockingStatementOperations( null, null, delegate, null );
+        LockingStatementOperations context = new LockingStatementOperations( lockHolder, null, delegate, null, null );
 
         // when
-        context.indexDrop( state, rule );
+        context.indexDrop( rule );
 
         // then
         InOrder order = inOrder( lockHolder, delegate );
         order.verify( lockHolder ).acquireSchemaWriteLock();
-        order.verify( delegate ).indexDrop( state, rule );
+        order.verify( delegate ).indexDrop( rule );
         verifyNoMoreInteractions( lockHolder, delegate );
     }
 
@@ -114,18 +114,18 @@ public class LockingStatementOperationsTest
         SchemaReadOperations delegate = mock( SchemaReadOperations.class );
         @SuppressWarnings("unchecked")
         Iterator<IndexDescriptor> rules = mock( Iterator.class );
-        when( delegate.indexesGetAll( state ) ).thenReturn( rules );
+        when( delegate.indexesGetAll() ).thenReturn( rules );
 
-        LockingStatementOperations context = new LockingStatementOperations( null, delegate, null, null );
+        LockingStatementOperations context = new LockingStatementOperations( lockHolder, delegate, null, null, null );
 
         // when
-        Iterator<IndexDescriptor> result = context.indexesGetAll( state );
+        Iterator<IndexDescriptor> result = context.indexesGetAll();
 
         // then
         assertSame( rules, result );
         InOrder order = inOrder( lockHolder, delegate );
         order.verify( lockHolder ).acquireSchemaReadLock();
-        order.verify( delegate ).indexesGetAll( state );
+        order.verify( delegate ).indexesGetAll();
         verifyNoMoreInteractions( lockHolder, delegate );
     }
 
@@ -135,18 +135,18 @@ public class LockingStatementOperationsTest
         // given
         SchemaWriteOperations delegate = mock( SchemaWriteOperations.class );
         UniquenessConstraint constraint = mock( UniquenessConstraint.class );
-        when( delegate.uniquenessConstraintCreate( state, 123, 456 ) ).thenReturn( constraint );
+        when( delegate.uniquenessConstraintCreate( 123, 456 ) ).thenReturn( constraint );
 
-        LockingStatementOperations context = new LockingStatementOperations( null, null, delegate, null );
+        LockingStatementOperations context = new LockingStatementOperations( lockHolder, null, delegate, null, null );
 
         // when
-        UniquenessConstraint result = context.uniquenessConstraintCreate( state, 123, 456 );
+        UniquenessConstraint result = context.uniquenessConstraintCreate( 123, 456 );
 
         // then
         assertEquals( constraint, result );
         InOrder order = inOrder( lockHolder, delegate );
         order.verify( lockHolder ).acquireSchemaWriteLock();
-        order.verify( delegate ).uniquenessConstraintCreate( state, 123, 456 );
+        order.verify( delegate ).uniquenessConstraintCreate( 123, 456 );
         verifyNoMoreInteractions( lockHolder, delegate );
     }
 
@@ -157,15 +157,15 @@ public class LockingStatementOperationsTest
         SchemaWriteOperations delegate = mock( SchemaWriteOperations.class );
         UniquenessConstraint constraint = mock( UniquenessConstraint.class );
 
-        LockingStatementOperations context = new LockingStatementOperations( null, null, delegate, null );
+        LockingStatementOperations context = new LockingStatementOperations( lockHolder, null, delegate, null, null );
 
         // when
-        context.constraintDrop( state, constraint );
+        context.constraintDrop( constraint );
 
         // then
         InOrder order = inOrder( lockHolder, delegate );
         order.verify( lockHolder ).acquireSchemaWriteLock();
-        order.verify( delegate ).constraintDrop( state, constraint );
+        order.verify( delegate ).constraintDrop( constraint );
         verifyNoMoreInteractions( lockHolder, delegate );
     }
 
@@ -176,18 +176,18 @@ public class LockingStatementOperationsTest
         SchemaReadOperations delegate = mock( SchemaReadOperations.class );
         @SuppressWarnings("unchecked")
         Iterator<UniquenessConstraint> constraints = mock( Iterator.class );
-        when( delegate.constraintsGetForLabelAndPropertyKey( state, 123, 456 ) ).thenReturn( constraints );
+        when( delegate.constraintsGetForLabelAndPropertyKey( 123, 456 ) ).thenReturn( constraints );
 
-        LockingStatementOperations context = new LockingStatementOperations( null, delegate, null, null );
+        LockingStatementOperations context = new LockingStatementOperations( lockHolder, delegate, null, null, null );
 
         // when
-        Iterator<UniquenessConstraint> result = context.constraintsGetForLabelAndPropertyKey( state, 123, 456 );
+        Iterator<UniquenessConstraint> result = context.constraintsGetForLabelAndPropertyKey( 123, 456 );
 
         // then
         assertEquals( constraints, result );
         InOrder order = inOrder( lockHolder, delegate );
         order.verify( lockHolder ).acquireSchemaReadLock();
-        order.verify( delegate ).constraintsGetForLabelAndPropertyKey( state, 123, 456 );
+        order.verify( delegate ).constraintsGetForLabelAndPropertyKey( 123, 456 );
         verifyNoMoreInteractions( lockHolder, delegate );
     }
 
@@ -198,18 +198,18 @@ public class LockingStatementOperationsTest
         SchemaReadOperations delegate = mock( SchemaReadOperations.class );
         @SuppressWarnings("unchecked")
         Iterator<UniquenessConstraint> constraints = mock( Iterator.class );
-        when( delegate.constraintsGetForLabel( state, 123 ) ).thenReturn( constraints );
+        when( delegate.constraintsGetForLabel( 123 ) ).thenReturn( constraints );
 
-        LockingStatementOperations context = new LockingStatementOperations( null, delegate, null, null );
+        LockingStatementOperations context = new LockingStatementOperations( lockHolder, delegate, null, null, null );
 
         // when
-        Iterator<UniquenessConstraint> result = context.constraintsGetForLabel( state, 123 );
+        Iterator<UniquenessConstraint> result = context.constraintsGetForLabel( 123 );
 
         // then
         assertEquals( constraints, result );
         InOrder order = inOrder( lockHolder, delegate );
         order.verify( lockHolder ).acquireSchemaReadLock();
-        order.verify( delegate ).constraintsGetForLabel( state, 123 );
+        order.verify( delegate ).constraintsGetForLabel( 123 );
         verifyNoMoreInteractions( lockHolder, delegate );
     }
 
@@ -220,18 +220,18 @@ public class LockingStatementOperationsTest
         SchemaReadOperations delegate = mock( SchemaReadOperations.class );
         @SuppressWarnings("unchecked")
         Iterator<UniquenessConstraint> constraints = mock( Iterator.class );
-        when( delegate.constraintsGetAll( state ) ).thenReturn( constraints );
+        when( delegate.constraintsGetAll() ).thenReturn( constraints );
 
-        LockingStatementOperations context = new LockingStatementOperations( null, delegate, null, null );
+        LockingStatementOperations context = new LockingStatementOperations( lockHolder, delegate, null, null, null );
 
         // when
-        Iterator<UniquenessConstraint> result = context.constraintsGetAll( state );
+        Iterator<UniquenessConstraint> result = context.constraintsGetAll();
 
         // then
         assertEquals( constraints, result );
         InOrder order = inOrder( lockHolder, delegate );
         order.verify( lockHolder ).acquireSchemaReadLock();
-        order.verify( delegate ).constraintsGetAll( state );
+        order.verify( delegate ).constraintsGetAll();
         verifyNoMoreInteractions( lockHolder, delegate );
     }
 

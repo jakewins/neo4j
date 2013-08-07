@@ -25,7 +25,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.kernel.PropertyTracker;
 import org.neo4j.kernel.api.exceptions.PropertyNotFoundException;
-import org.neo4j.kernel.api.operations.AuxiliaryStoreOperations;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.core.EntityFactory;
 import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;

@@ -25,20 +25,19 @@ import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 
 import org.neo4j.helpers.ThisShouldNotHappenError;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.StatementOperationParts;
 import org.neo4j.kernel.api.exceptions.BeginTransactionFailureException;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.exceptions.TransactionalException;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 
 public class Transactor
 {
     public interface Statement<RESULT, FAILURE extends KernelException>
     {
-        RESULT perform( StatementOperationParts statementContext, StatementState statement ) throws FAILURE;
+        RESULT perform( KernelStatement statementContext ) throws FAILURE;
     }
 
     private final AbstractTransactionManager txManager;
@@ -57,19 +56,18 @@ public class Transactor
             beginTransaction();
             @SuppressWarnings("deprecation")
             KernelTransaction tx = txManager.getKernelTransaction();
-            StatementState state = tx.newStatementState();
             boolean success = false;
             try
             {
                 RESULT result;
-                StatementOperationParts context = tx.newStatementOperations();
+                KernelStatement context = tx.newStatement();
                 try
                 {
-                    result = statement.perform( context, state );
+                    result = statement.perform( context );
                 }
                 finally
                 {
-                    state.close();
+                    context.close();
                 }
                 success = true;
                 return result;

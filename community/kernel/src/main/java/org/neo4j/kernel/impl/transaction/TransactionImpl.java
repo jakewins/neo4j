@@ -38,9 +38,9 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.nioneo.xa.NeoStoreXaDataSource;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
@@ -73,6 +73,7 @@ class TransactionImpl implements Transaction
 
     private final TransactionState state;
     private KernelTransaction transactionContext;
+    private ReferenceCountingKernelStatement openStatement;
 
     TransactionImpl( TxManager txManager, ForceMode forceMode, TransactionStateFactory stateFactory,
                      StringLogger logger )
@@ -591,9 +592,14 @@ class TransactionImpl implements Transaction
         status = Status.STATUS_ROLLEDBACK;
     }
 
-    public StatementState newStatement()
+    public KernelStatement newStatement()
     {
-        return transactionContext.newStatementState();
+        if( openStatement == null || openStatement.isClosed() )
+        {
+            openStatement = new ReferenceCountingKernelStatement( transactionContext.newStatement() );
+        }
+        openStatement.claimReference();
+        return openStatement;
     }
 
     /*

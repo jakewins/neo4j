@@ -59,14 +59,13 @@ import org.neo4j.helpers.Settings;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.KernelAPI;
-import org.neo4j.kernel.api.StatementOperationParts;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConfigurationChange;
 import org.neo4j.kernel.configuration.ConfigurationChangeListener;
@@ -344,8 +343,7 @@ public abstract class InternalAbstractGraphDatabase
         {   // If recovery failed then there's no point in going any further here. The database startup will fail.
             return;
         }
-        
-        kernelAPI.bootstrapAfterRecovery();
+
         if ( txManager instanceof TxManager )
         {
             @SuppressWarnings("deprecation")
@@ -490,9 +488,7 @@ public abstract class InternalAbstractGraphDatabase
         // XXX: Circular dependency, temporary during transition to KernelAPI - TxManager should not depend on KernelAPI
         txManager.setKernel(kernelAPI);
 
-        ThreadToStatementContextBridge statementBridge = readOnly ?
-                new ThreadToStatementContextBridge.ReadOnly( kernelAPI, txManager ) :
-                new ThreadToStatementContextBridge( kernelAPI, txManager );
+        ThreadToStatementContextBridge statementBridge = new ThreadToStatementContextBridge( kernelAPI, txManager );
         statementContextProvider = life.add( statementBridge );
 
         nodeManager = guard != null ?
@@ -1470,31 +1466,29 @@ public abstract class InternalAbstractGraphDatabase
 
     private ResourceIterator<Node> nodesByLabelAndProperty( Label myLabel, String key, Object value )
     {
-        StatementOperationParts ctx = statementContextProvider.getCtxForReading();
-        StatementState state = statementContextProvider.statementForReading();
+        KernelStatement ctx = statementContextProvider.getCtxForReading();
 
         long propertyId;
         long labelId;
         try
         {
-            propertyId = ctx.keyReadOperations().propertyKeyGetForName( state, key );
-            labelId = ctx.keyReadOperations().labelGetForName( state, myLabel.name() );
+            propertyId = ctx.keyReadOperations().propertyKeyGetForName( key );
+            labelId = ctx.keyReadOperations().labelGetForName( myLabel.name() );
         }
         catch ( KernelException e )
         {
-            state.close();
+            ctx.close();
             return IteratorUtil.emptyIterator();
         }
 
         try
         {
-            IndexDescriptor indexRule = ctx.schemaReadOperations().indexesGetForLabelAndPropertyKey(
-                    state, labelId, propertyId );
-            if ( ctx.schemaReadOperations().indexGetState( state, indexRule ) == InternalIndexState.ONLINE )
+            IndexDescriptor indexRule = ctx.schemaReadOperations().indexesGetForLabelAndPropertyKey( labelId, propertyId );
+            if ( ctx.schemaReadOperations().indexGetState( indexRule ) == InternalIndexState.ONLINE )
             {
                 // Ha! We found an index - let's use it to find matching nodes
-                return map2nodes( ctx.entityReadOperations().nodesGetFromIndexLookup( state, indexRule, value ),
-                        state );
+                return map2nodes( ctx.entityReadOperations().nodesGetFromIndexLookup( indexRule, value ),
+                        ctx );
             }
         }
         catch ( SchemaRuleNotFoundException | IndexNotFoundKernelException e )
@@ -1502,17 +1496,17 @@ public abstract class InternalAbstractGraphDatabase
             // If we don't find a matching index rule, we'll scan all nodes and filter manually (below)
         }
 
-        return getNodesByLabelAndPropertyWithoutIndex( propertyId, value, ctx, state, labelId );
+        return getNodesByLabelAndPropertyWithoutIndex( propertyId, value, ctx, labelId );
     }
 
     private ResourceIterator<Node> getNodesByLabelAndPropertyWithoutIndex( long propertyId, Object value,
-            StatementOperationParts ctx, StatementState state, long labelId )
+                                                                           KernelStatement ctx, long labelId )
     {
         return map2nodes( new PropertyValueFilteringNodeIdIterator(
-                ctx.entityReadOperations().nodesGetForLabel( state, labelId ), ctx, state, propertyId, value ), state );
+                ctx.entityReadOperations().nodesGetForLabel( labelId ), ctx, propertyId, value ), ctx );
     }
 
-    private ResourceIterator<Node> map2nodes( PrimitiveLongIterator input, StatementState state )
+    private ResourceIterator<Node> map2nodes( PrimitiveLongIterator input, KernelStatement statement )
     {
         return cleanupService.resourceIterator( map( new FunctionFromPrimitiveLong<Node>()
         {
@@ -1521,23 +1515,21 @@ public abstract class InternalAbstractGraphDatabase
             {
                 return getNodeById( id );
             }
-        }, input ), state );
+        }, input ), statement );
     }
 
     private static class PropertyValueFilteringNodeIdIterator extends AbstractPrimitiveLongIterator
     {
         private final PrimitiveLongIterator nodesWithLabel;
-        private final StatementOperationParts ctx;
-        private final StatementState state;
+        private final KernelStatement ctx;
         private final long propertyId;
         private final Object value;
 
-        PropertyValueFilteringNodeIdIterator( PrimitiveLongIterator nodesWithLabel, StatementOperationParts ctx,
-                                              StatementState state, long propertyId, Object value )
+        PropertyValueFilteringNodeIdIterator( PrimitiveLongIterator nodesWithLabel, KernelStatement ctx,
+                                              long propertyId, Object value )
         {
             this.nodesWithLabel = nodesWithLabel;
             this.ctx = ctx;
-            this.state = state;
             this.propertyId = propertyId;
             this.value = value;
             computeNext();
@@ -1550,7 +1542,7 @@ public abstract class InternalAbstractGraphDatabase
                 nextValue = nodesWithLabel.next();
                 try
                 {
-                    if ( ctx.entityReadOperations().nodeGetProperty( state, nextValue, propertyId ).valueEquals( value ) )
+                    if ( ctx.entityReadOperations().nodeGetProperty( nextValue, propertyId ).valueEquals( value ) )
                     {
                         return;
                     }

@@ -22,9 +22,8 @@ package org.neo4j.kernel;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.kernel.api.KernelAPI;
-import org.neo4j.kernel.api.StatementOperationParts;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.StatementOperations;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
@@ -44,30 +43,20 @@ public class ThreadToStatementContextBridge extends LifecycleAdapter
         this.txManager = txManager;
     }
     
-    public StatementOperationParts getCtxForReading()
+    public KernelStatement getCtxForReading()
     {
-        return kernelAPI.readOnlyStatementOperations();
+        return newStatement();
     }
 
-    public StatementOperationParts getCtxForWriting()
+    public KernelStatement getCtxForWriting()
     {
-        return kernelAPI.statementOperations();
+        return newStatement();
     }
 
-    public StatementState statementForReading()
-    {
-        return statementForReadingAndWriting();
-    }
-
-    public StatementState statementForWriting()
-    {
-        return statementForReadingAndWriting();
-    }
-
-    private StatementState statementForReadingAndWriting()
+    private KernelStatement newStatement()
     {
         checkIfShutdown();
-        StatementState statement = txManager.newStatement();
+        KernelStatement statement = txManager.newStatement();
         if ( statement != null )
         {
             return statement;
@@ -92,25 +81,5 @@ public class ThreadToStatementContextBridge extends LifecycleAdapter
     public void assertInTransaction()
     {
         txManager.assertInTransaction();
-    }
-
-    public static class ReadOnly extends ThreadToStatementContextBridge
-    {
-        public ReadOnly( KernelAPI kernelAPI, AbstractTransactionManager txManager )
-        {
-            super( kernelAPI, txManager );
-        }
-        
-        @Override
-        public StatementOperationParts getCtxForWriting()
-        {
-            return kernelAPI.readOnlyStatementOperations();
-        }
-
-        @Override
-        public StatementOperationParts getCtxForReading()
-        {
-            return kernelAPI.readOnlyStatementOperations();
-        }
     }
 }

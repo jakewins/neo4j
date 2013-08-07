@@ -19,7 +19,9 @@
  */
 package org.neo4j.kernel.api.constraints;
 
-import org.neo4j.kernel.api.operations.KeyNameLookup;
+import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
+import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundException;
+import org.neo4j.kernel.api.operations.KeyReadOperations;
 
 // TODO: When we add other types of constraints, we will either want to create a hierarchy, or...
 // TODO: ...rename this to "Constraint" and add a "type" enum (or something like that).
@@ -78,11 +80,19 @@ public class UniquenessConstraint
         return String.format( "CONSTRAINT ON ( n:label[%s] ) ASSERT n.property[%s] IS UNIQUE", labelId, propertyKeyId );
     }
 
-    public String userDescription( KeyNameLookup keyNameLookup )
+    public String userDescription( KeyReadOperations keyNameLookup )
     {
-        String labelName = keyNameLookup.getLabelName( labelId );
-        String boundIdentifier = labelName.toLowerCase();
-        return String.format( "CONSTRAINT ON ( %s:%s ) ASSERT %s.%s IS UNIQUE", boundIdentifier, labelName,
-                boundIdentifier, keyNameLookup.getPropertyKeyName( propertyKeyId ) );
+        try
+        {
+            String labelName = keyNameLookup.labelGetName( labelId );
+            String boundIdentifier = labelName.toLowerCase();
+            return String.format( "CONSTRAINT ON ( %s:%s ) ASSERT %s.%s IS UNIQUE", boundIdentifier, labelName,
+                    boundIdentifier, keyNameLookup.propertyKeyGetName( propertyKeyId ) );
+        }
+        catch ( LabelNotFoundKernelException | PropertyKeyIdNotFoundException e )
+        {
+            return String.format( "CONSTRAINT ON ( %s:%s ) ASSERT %s.%s IS UNIQUE", "node", labelId,
+                    "node", propertyKeyId );
+        }
     }
 }

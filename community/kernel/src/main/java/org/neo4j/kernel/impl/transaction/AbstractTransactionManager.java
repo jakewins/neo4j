@@ -25,8 +25,8 @@ import javax.transaction.TransactionManager;
 
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.kernel.api.KernelAPI;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.impl.core.TransactionState;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -85,7 +85,7 @@ public abstract class AbstractTransactionManager implements TransactionManager, 
      *         can do this using the kernel api that is provided at startup through the (ick) setKernel method.
      */
     @Deprecated
-    public StatementState newStatement()
+    public KernelStatement newStatement()
     {
         throw new UnsupportedOperationException( "The current transaction manager implementation does not support the " +
                 "new StatementContext interface. This is an intermediary problem during transition to a new internal API." );

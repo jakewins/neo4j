@@ -33,12 +33,11 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.helpers.Function;
 import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.kernel.ThreadToStatementContextBridge;
-import org.neo4j.kernel.api.StatementOperationParts;
+import org.neo4j.kernel.api.KernelStatement;
 import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundException;
 import org.neo4j.kernel.api.exceptions.PropertyKeyNotFoundException;
 import org.neo4j.kernel.api.exceptions.PropertyNotFoundException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
-import org.neo4j.kernel.api.operations.StatementState;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
 import org.neo4j.kernel.impl.api.PrimitiveLongIterator;
@@ -113,91 +112,59 @@ public class GraphPropertiesImpl extends Primitive implements GraphProperties
         if ( null == key )
             return false;
 
-        StatementOperationParts ctxForReading = statementCtxProvider.getCtxForReading();
-        StatementState state = statementCtxProvider.statementForReading();
-        try
+        try(final KernelStatement context = statementCtxProvider.getCtxForReading())
         {
-            long propertyId = ctxForReading.keyReadOperations().propertyKeyGetForName( state, key );
-            return ctxForReading.entityReadOperations().graphHasProperty( state, propertyId );
+            long propertyId = context.keyReadOperations().propertyKeyGetForName( key );
+            return context.entityReadOperations().graphHasProperty( propertyId );
         }
-        catch ( PropertyKeyIdNotFoundException e )
+        catch ( PropertyKeyIdNotFoundException | PropertyKeyNotFoundException e )
         {
             return false;
-        }
-        catch ( PropertyKeyNotFoundException e )
-        {
-            return false;
-        }
-        finally
-        {
-            state.close();
         }
     }
 
     @Override
     public Object getProperty( String key )
     {
-        // TODO: Push this check to getPropertyKeyId
-        // ^^^^^ actually, if the key is null, we could fail before getting the statement context...
         if ( null == key )
             throw new IllegalArgumentException( "(null) property key is not allowed" );
 
-        StatementOperationParts ctxForReading = statementCtxProvider.getCtxForReading();
-        StatementState state = statementCtxProvider.statementForReading();
-        try
+        try(final KernelStatement context = statementCtxProvider.getCtxForReading())
         {
-            long propertyId = ctxForReading.keyReadOperations().propertyKeyGetForName( state, key );
-            return ctxForReading.entityReadOperations().graphGetProperty( state, propertyId ).value();
+            long propertyId = context.keyReadOperations().propertyKeyGetForName( key );
+            return context.entityReadOperations().graphGetProperty( propertyId ).value();
         }
         catch ( PropertyKeyIdNotFoundException | PropertyKeyNotFoundException | PropertyNotFoundException e )
         {
             throw new NotFoundException( e );
-        }
-        finally
-        {
-            state.close();
         }
     }
 
     @Override
     public Object getProperty( String key, Object defaultValue )
     {
-        // TODO: Push this check to getPropertyKeyId
-        // ^^^^^ actually, if the key is null, we could fail before getting the statement context...
         if ( null == key )
             throw new IllegalArgumentException( "(null) property key is not allowed" );
 
-        StatementOperationParts ctxForReading = statementCtxProvider.getCtxForReading();
-        StatementState state = statementCtxProvider.statementForReading();
-        try
+        try(final KernelStatement context = statementCtxProvider.getCtxForReading())
         {
-            long propertyId = ctxForReading.keyReadOperations().propertyKeyGetForName( state, key );
-            return ctxForReading.entityReadOperations().graphGetProperty( state, propertyId ).value(defaultValue);
+            long propertyId = context.keyReadOperations().propertyKeyGetForName( key );
+            return context.entityReadOperations().graphGetProperty( propertyId ).value(defaultValue);
         }
-        catch ( PropertyKeyIdNotFoundException e )
+        catch ( PropertyKeyIdNotFoundException | PropertyKeyNotFoundException e )
         {
             return defaultValue;
-        }
-        catch ( PropertyKeyNotFoundException e )
-        {
-            return defaultValue;
-        }
-        finally
-        {
-            state.close();
         }
     }
 
     @Override
     public void setProperty( String key, Object value )
     {
-        StatementOperationParts ctxForWriting = statementCtxProvider.getCtxForWriting();
-        StatementState state = statementCtxProvider.statementForWriting();
         boolean success = false;
-        try
+        try(KernelStatement ctxForWriting = statementCtxProvider.getCtxForWriting())
         {
-            long propertyKeyId = ctxForWriting.keyWriteOperations().propertyKeyGetOrCreateForName( state, key );
-            ctxForWriting.entityWriteOperations().graphSetProperty( state, property( propertyKeyId, value ) );
+            long propertyKeyId = ctxForWriting.keyWriteOperations().propertyKeyGetOrCreateForName( key );
+            ctxForWriting.entityWriteOperations().graphSetProperty( property( propertyKeyId, value ) );
             success = true;
         }
         catch ( PropertyKeyIdNotFoundException e )
@@ -211,7 +178,6 @@ public class GraphPropertiesImpl extends Primitive implements GraphProperties
         }
         finally
         {
-            state.close();
             if ( !success )
             {
                 nodeManager.setRollbackOnly();
@@ -222,12 +188,10 @@ public class GraphPropertiesImpl extends Primitive implements GraphProperties
     @Override
     public Object removeProperty( String key )
     {
-        StatementOperationParts ctxForWriting = statementCtxProvider.getCtxForWriting();
-        StatementState state = statementCtxProvider.statementForWriting();
-        try
+        try(KernelStatement ctxForWriting = statementCtxProvider.getCtxForWriting())
         {
-            long propertyId = ctxForWriting.keyWriteOperations().propertyKeyGetOrCreateForName( state, key );
-            return ctxForWriting.entityWriteOperations().graphRemoveProperty( state, propertyId ).value( null );
+            long propertyId = ctxForWriting.keyWriteOperations().propertyKeyGetOrCreateForName( key );
+            return ctxForWriting.entityWriteOperations().graphRemoveProperty( propertyId ).value( null );
         }
         catch ( PropertyKeyIdNotFoundException e )
         {
@@ -238,24 +202,18 @@ public class GraphPropertiesImpl extends Primitive implements GraphProperties
             // TODO: Maybe throw more context-specific error than just IllegalArgument
             throw new IllegalArgumentException( e );
         }
-        finally
-        {
-            state.close();
-        }
     }
 
     @Override
     public Iterable<String> getPropertyKeys()
     {
-        final StatementOperationParts context = statementCtxProvider.getCtxForReading();
-        final StatementState state = statementCtxProvider.statementForReading();
-        try
+        try(final KernelStatement context = statementCtxProvider.getCtxForReading())
         {
             List<String> keys = new ArrayList<>();
-            PrimitiveLongIterator keyIds = context.entityReadOperations().graphGetPropertyKeys( state );
+            PrimitiveLongIterator keyIds = context.entityReadOperations().graphGetPropertyKeys( );
             while ( keyIds.hasNext() )
             {
-                keys.add( context.keyReadOperations().propertyKeyGetName( state, keyIds.next() ) );
+                keys.add( context.keyReadOperations().propertyKeyGetName( keyIds.next() ) );
             }
             return keys;
         }
@@ -264,18 +222,12 @@ public class GraphPropertiesImpl extends Primitive implements GraphProperties
             throw new ThisShouldNotHappenError( "Jake",
                     "Property key retrieved through kernel API should exist." );
         }
-        finally
-        {
-            state.close();
-        }
     }
 
     @Override
     public Iterable<Object> getPropertyValues()
     {
-        final StatementOperationParts context = statementCtxProvider.getCtxForReading();
-        StatementState state = statementCtxProvider.statementForReading();
-        try
+        try(final KernelStatement context = statementCtxProvider.getCtxForReading())
         {
             return asSet( map( new Function<Property,Object>() {
                 @Override
@@ -291,11 +243,7 @@ public class GraphPropertiesImpl extends Primitive implements GraphProperties
                                 "Property key retrieved through kernel API should exist." );
                     }
                 }
-            }, context.entityReadOperations().graphGetAllProperties( state ) ) );
-        }
-        finally
-        {
-            state.close();
+            }, context.entityReadOperations().graphGetAllProperties() ) );
         }
     }
     
