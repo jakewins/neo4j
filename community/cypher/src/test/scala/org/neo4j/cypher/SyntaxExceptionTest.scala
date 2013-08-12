@@ -24,7 +24,8 @@ import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.Assertions
 import org.hamcrest.CoreMatchers.equalTo
-import CypherVersion._
+import org.neo4j.cypher.CypherVersion._
+import org.neo4j.cypher.internal.CypherParser
 
 class SyntaxExceptionTest extends JUnitSuite with Assertions {
   @Test def shouldRaiseErrorWhenMissingIndexValue() {
@@ -71,7 +72,7 @@ class SyntaxExceptionTest extends JUnitSuite with Assertions {
 
   @Test def shouldWarnAboutMissingStart() {
     test("where s.name = 'Name' and s.age = 10 return s",
-      vLegacy -> "invalid start of query",
+      vLegacy -> "expected valid query body",
       v2_0    -> "Query must begin with START, MATCH or CREATE (line 1, column 1)"
     )
   }
@@ -232,7 +233,7 @@ class SyntaxExceptionTest extends JUnitSuite with Assertions {
     }
     val errorMessage = s"Using ${versionString}: Did not get the expected syntax error, expected: ${message}"
 
-    val parser = new CypherParser()
+    val parser = CypherParser()
     try {
       val result = parser.parse(qWithVer)
       fail(errorMessage)

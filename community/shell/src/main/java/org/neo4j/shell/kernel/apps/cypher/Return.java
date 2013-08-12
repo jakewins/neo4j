@@ -17,10 +17,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.parser
+package org.neo4j.shell.kernel.apps.cypher;
 
-import org.neo4j.cypher.internal.commands.AbstractQuery
+import org.neo4j.helpers.Service;
+import org.neo4j.shell.App;
 
-trait ActualParser {
-  def parse(queryText: String): AbstractQuery
+@Service.Implementation( App.class )
+public class Return extends Start
+{
 }
