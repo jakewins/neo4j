@@ -51,6 +51,7 @@ import org.neo4j.kernel.impl.api.state.TxState;
 import static java.util.Collections.emptyList;
 import static org.neo4j.helpers.collection.Iterables.filter;
 import static org.neo4j.helpers.collection.Iterables.option;
+import static org.neo4j.helpers.collection.IteratorUtil.iterator;
 import static org.neo4j.helpers.collection.IteratorUtil.single;
 import static org.neo4j.helpers.collection.IteratorUtil.singleOrNull;
 import static org.neo4j.helpers.collection.IteratorUtil.toPrimitiveIntIterator;
@@ -428,7 +429,6 @@ public class StateHandlingStatementOperations implements
 
             if ( diff.isEmpty() )
             {
-                // load from down below
                 long indexNode = entityReadDelegate.nodeGetUniqueFromIndexLookup( state, index, value );
 
                 if ( NO_SUCH_NODE == indexNode )
@@ -440,10 +440,22 @@ public class StateHandlingStatementOperations implements
                     return nodeIfNotDeleted( indexNode, txState );
                 }
             }
+            else
+            {
+                long indexNode = entityReadDelegate.nodeGetUniqueFromIndexLookup( state, index, value );
 
-            // created one in current tx
-            Iterator<Long> iterator = diff.getAdded().iterator();
-            return iterator.hasNext() ? nodeIfNotDeleted( single( iterator ), txState ) : NO_SUCH_NODE;
+                if ( NO_SUCH_NODE  == indexNode )
+                {
+                    // No underlying node, return any node created in the tx state, or nothing
+                    Iterator<Long> iterator = diff.getAdded().iterator();
+                    return iterator.hasNext() ? nodeIfNotDeleted( single( iterator ), txState ) : NO_SUCH_NODE;
+                }
+                else
+                {
+                    // There is a node already, apply tx state diff
+                    return single( diff.apply( iterator( indexNode ) ), NO_SUCH_NODE);
+                }
+            }
         }
 
         return entityReadDelegate.nodeGetUniqueFromIndexLookup( state, index, value );
@@ -715,7 +727,7 @@ public class StateHandlingStatementOperations implements
 
         // Ensure remaining nodes have the correct label
         HasLabelFilter hasLabel = new HasLabelFilter( state, labelId );
-        diff = diff.filterAdded( hasLabel );
+        diff = diff.filter( hasLabel );
 
         // Include newly labeled nodes that already had the correct property
         HasPropertyFilter hasPropertyFilter = new HasPropertyFilter( state, propertyKeyId, value );

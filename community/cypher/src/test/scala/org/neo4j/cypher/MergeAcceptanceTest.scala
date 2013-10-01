@@ -382,7 +382,7 @@ class MergeAcceptanceTest
   }
 
   @Test
-  def should_not_fail() {
+  def unrelated_nodes_with_same_property_should_not_clash() {
     // given
     graph.createConstraint("Person", "id")
     parseAndExecute("MERGE (a:Item {id:1}) MERGE (b:Person {id:1})")
