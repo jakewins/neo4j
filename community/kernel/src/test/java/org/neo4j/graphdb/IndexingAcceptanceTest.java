@@ -23,13 +23,12 @@ import java.util.Map;
 
 import org.junit.Rule;
 import org.junit.Test;
-
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.test.ImpermanentDatabaseRule;
 
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-
 import static org.neo4j.graphdb.Neo4jMatchers.containsOnly;
 import static org.neo4j.graphdb.Neo4jMatchers.createIndex;
 import static org.neo4j.graphdb.Neo4jMatchers.findNodesByLabelAndProperty;
@@ -318,6 +317,37 @@ public class IndexingAcceptanceTest
 
     }
 
+    @Test
+    public void shouldProperlyUpdateTransactionStateForIndexLookups() throws Exception
+    {
+        GraphDatabaseService db = dbRule.getGraphDatabaseService();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().constraintFor( MY_LABEL ).on( "id" ).unique().create();
+        }
+
+        Node first;
+        try ( Transaction tx = db.beginTx() )
+        {
+            first = db.createNode( MY_LABEL );
+            first.setProperty( "id", 1 );
+        }
+
+
+        Node second, third;
+        try ( Transaction tx = db.beginTx() )
+        {
+//            second = db.createNode( MY_OTHER_LABEL );
+//            second.setProperty( "id", 2 );
+
+            third = single( db.findNodesByLabelAndProperty( MY_LABEL, "id", 1 ) );
+        }
+
+        assertEquals( first, third );
+    }
+
+
     private void assertCanCreateAndFind( GraphDatabaseService db, Label label, String propertyKey, Object value )
     {
         Node created = createNode( db, map( propertyKey, value ), label );
@@ -341,6 +371,8 @@ public class IndexingAcceptanceTest
     ImpermanentDatabaseRule dbRule = new ImpermanentDatabaseRule();
 
     private Label MY_LABEL = DynamicLabel.label( "MY_LABEL" );
+
+    private Label MY_OTHER_LABEL = DynamicLabel.label( "MY_OTHER_LABEL" );
 
     private Node createNode( GraphDatabaseService beansAPI, Map<String, Object> properties, Label... labels )
     {

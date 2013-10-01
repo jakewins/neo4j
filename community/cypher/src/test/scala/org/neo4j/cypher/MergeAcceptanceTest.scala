@@ -380,4 +380,16 @@ class MergeAcceptanceTest
     // then
     assertStats(result, nodesCreated = 3, propertiesSet = 3)
   }
+
+  @Test
+  def should_not_fail() {
+    // given
+    graph.createConstraint("Person", "id")
+    parseAndExecute("MERGE (a:Item {id:1}) MERGE (b:Person {id:1})")
+
+    // when
+    val result = parseAndExecute("MERGE (a:Item {id:2}) MERGE (b:Person {id:1})")
+
+    // then does not throw
+  }
 }

@@ -49,7 +49,6 @@ import org.neo4j.kernel.impl.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.state.TxState;
 
 import static java.util.Collections.emptyList;
-
 import static org.neo4j.helpers.collection.Iterables.filter;
 import static org.neo4j.helpers.collection.Iterables.option;
 import static org.neo4j.helpers.collection.IteratorUtil.single;
@@ -432,7 +431,14 @@ public class StateHandlingStatementOperations implements
                 // load from down below
                 long indexNode = entityReadDelegate.nodeGetUniqueFromIndexLookup( state, index, value );
 
-                return (!diff.isRemoved( indexNode )) ? nodeIfNotDeleted( indexNode, txState ) : NO_SUCH_NODE;
+                if ( NO_SUCH_NODE == indexNode )
+                {
+                    return NO_SUCH_NODE;
+                }
+                else
+                {
+                    return nodeIfNotDeleted( indexNode, txState );
+                }
             }
 
             // created one in current tx

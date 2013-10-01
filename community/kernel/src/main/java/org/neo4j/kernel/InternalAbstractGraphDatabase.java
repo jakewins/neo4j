@@ -1547,8 +1547,24 @@ public abstract class InternalAbstractGraphDatabase
 
         try
         {
-            IndexDescriptor indexRule = statement.readOperations().indexesGetForLabelAndPropertyKey( labelId,
-                    propertyId );
+            IndexDescriptor indexRule = statement.readOperations().uniqueIndexGetForLabelAndPropertyKey( labelId, propertyId );
+
+            if ( statement.readOperations().indexGetState( indexRule ) == InternalIndexState.ONLINE )
+            {
+                // Ha! We found an index - let's use it to find matching nodes
+                return map2nodes( statement.readOperations().nodesGetFromIndexLookup( indexRule, value ),
+                        statement );
+            }
+        }
+        catch ( SchemaRuleNotFoundException | IndexNotFoundKernelException e )
+        {
+            // If we don't find a matching index rule, we'll scan all nodes and filter manually (below)
+        }
+
+        try
+        {
+            IndexDescriptor indexRule = statement.readOperations().indexesGetForLabelAndPropertyKey( labelId, propertyId );
+
             if ( statement.readOperations().indexGetState( indexRule ) == InternalIndexState.ONLINE )
             {
                 // Ha! We found an index - let's use it to find matching nodes
