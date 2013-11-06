@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+
 import static java.util.Arrays.binarySearch;
 
 public enum UpdateMode
@@ -26,7 +27,7 @@ public enum UpdateMode
     ADDED
     {
         @Override
-        public boolean forLabel( long[] before, long[] after, long label )
+        public boolean forLabel( int[] before, int[] after, int label )
         {
             return binarySearch( after, label ) >= 0;
         }
@@ -34,7 +35,7 @@ public enum UpdateMode
     CHANGED
     {
         @Override
-        public boolean forLabel( long[] before, long[] after, long label )
+        public boolean forLabel( int[] before, int[] after, int label )
         {
             return ADDED.forLabel( before, after, label ) && REMOVED.forLabel( before, after, label );
         }
@@ -42,11 +43,11 @@ public enum UpdateMode
     REMOVED
     {
         @Override
-        public boolean forLabel( long[] before, long[] after, long label )
+        public boolean forLabel( int[] before, int[] after, int label )
         {
             return binarySearch( before, label ) >= 0;
         }
     };
     
-    public abstract boolean forLabel( long[] before, long[] after, long label );
+    public abstract boolean forLabel( int[] before, int[] after, int label );
 }

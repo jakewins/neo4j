@@ -57,11 +57,15 @@ import org.neo4j.kernel.impl.nioneo.store.SchemaStore;
 import org.neo4j.kernel.impl.nioneo.store.UniquenessConstraintRule;
 import org.neo4j.kernel.impl.transaction.xaframework.LogBuffer;
 import org.neo4j.kernel.impl.transaction.xaframework.XaCommand;
+import org.neo4j.kernel.impl.util.IoPrimitiveUtils;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableCollection;
-
 import static org.neo4j.helpers.Exceptions.launderedException;
 import static org.neo4j.helpers.collection.IteratorUtil.first;
+import static org.neo4j.kernel.api.index.NodePropertyUpdate.add;
+import static org.neo4j.kernel.api.index.NodePropertyUpdate.change;
+import static org.neo4j.kernel.api.index.NodePropertyUpdate.remove;
 import static org.neo4j.kernel.impl.util.IoPrimitiveUtils.readAndFlip;
 
 /**
@@ -83,9 +87,16 @@ public abstract class Command extends XaCommand
      */
     public enum Mode
     {
-        CREATE,
-        UPDATE,
-        DELETE;
+        CREATE(0x1),
+        UPDATE(0x2),
+        DELETE(0x3);
+
+        private final byte byteValue;
+
+        Mode( int byteValue )
+        {
+            this.byteValue = (byte)byteValue;
+        }
 
         public static Mode fromRecordState( boolean created, boolean inUse )
         {
@@ -99,6 +110,22 @@ public abstract class Command extends XaCommand
         public static Mode fromRecordState( AbstractBaseRecord record )
         {
             return fromRecordState( record.isCreated(), record.inUse() );
+        }
+
+        public static Mode fromByte( byte b ) throws IOException
+        {
+            switch(b)
+            {
+                case 0x1: return CREATE;
+                case 0x2: return UPDATE;
+                case 0x3: return DELETE;
+                default: throw new IOException( "Invalid Mode byte: " + b );
+            }
+        }
+
+        public byte asByte()
+        {
+            return byteValue;
         }
     }
 
@@ -332,6 +359,7 @@ public abstract class Command extends XaCommand
     private static final byte NEOSTORE_COMMAND = (byte) 6;
     private static final byte SCHEMA_RULE_COMMAND = (byte) 7;
     private static final byte LABEL_KEY_COMMAND = (byte) 8;
+    private static final byte INDEX_UPDATE_COMMAND = (byte) 9;
 
     abstract void removeFromCache( CacheAccessBackDoor cacheAccess );
 
@@ -1109,9 +1137,8 @@ public abstract class Command extends XaCommand
         public void writeToFile( LogBuffer buffer ) throws IOException
         {
             // id+in_use(byte)+type_blockId(int)+nr_type_records(int)
-            byte inUse = record.inUse() ? Record.IN_USE.byteValue()
-                : Record.NOT_IN_USE.byteValue();
             buffer.put( LABEL_KEY_COMMAND );
+            byte inUse = record.inUse() ? Record.IN_USE.byteValue() : Record.NOT_IN_USE.byteValue();
             buffer.putInt( record.getId() ).put( inUse ).putInt( record.getNameId() );
             writeDynamicRecords( buffer, record.getNameRecords() );
         }
@@ -1337,7 +1364,235 @@ public abstract class Command extends XaCommand
             return rule;
         }
     }
-    
+
+    static class IndexUpdateCommand extends Command
+    {
+        private final IndexingService indexes;
+        private final int propertyKey;
+        private final Object valueBefore;
+        private final Object valueAfter;
+        private final int[] labelsBefore;
+        private final int[] labelsAfter;
+
+        private static final byte VALUE_TYPE_NULL    = (byte) 0;
+        private static final byte VALUE_TYPE_INT     = (byte) 1;
+        private static final byte VALUE_TYPE_LONG    = (byte) 2;
+        private static final byte VALUE_TYPE_FLOAT   = (byte) 3;
+        private static final byte VALUE_TYPE_DOUBLE  = (byte) 4;
+        private static final byte VALUE_TYPE_STRING  = (byte) 5;
+        private static final byte VALUE_TYPE_ARRAY   = (byte) 6;
+        private static final byte VALUE_TYPE_BOOLEAN = (byte) 7;
+
+        public IndexUpdateCommand( IndexingService indexes, Mode mode, long entityId, int keyId,
+                                   Object valueBefore, Object valueAfter, int[] labelsBefore, int[] labelsAfter )
+        {
+            super( entityId, mode );
+            this.indexes = indexes;
+            this.propertyKey = keyId;
+            this.valueBefore = valueBefore;
+            this.valueAfter = valueAfter;
+            this.labelsBefore = labelsBefore;
+            this.labelsAfter = labelsAfter;
+        }
+
+        @Override
+        public void execute()
+        {
+            switch(getMode())
+            {
+                case CREATE:
+                    indexes.updateIndexes( asList( add( getKey(), propertyKey, valueAfter, labelsAfter ) ) );
+                    break;
+                case UPDATE:
+                    indexes.updateIndexes( asList( change( getKey(), propertyKey,
+                            valueBefore, labelsBefore,
+                            valueAfter, labelsAfter ) ) );
+                    break;
+                case DELETE:
+                    indexes.updateIndexes( asList( remove( getKey(), propertyKey, valueBefore, labelsBefore ) ) );
+                    break;
+            }
+        }
+
+        @Override
+        public void accept( CommandRecordVisitor visitor )
+        {
+            // TODO
+        }
+
+        @Override
+        public String toString()
+        {
+            return null;
+        }
+
+        @Override
+        void removeFromCache( CacheAccessBackDoor cacheAccess )
+        {
+        }
+
+        public int getPropertyId()
+        {
+            return propertyKey;
+        }
+
+        @Override
+        public void writeToFile( LogBuffer buffer ) throws IOException
+        {
+            buffer.put( INDEX_UPDATE_COMMAND );
+            buffer.put( getMode().asByte() );
+            buffer.putLong( getKey() );
+            buffer.putInt( propertyKey );
+
+            writeValue(valueBefore, buffer);
+            writeValue(valueAfter, buffer);
+
+            writeValue( labelsBefore, buffer );
+            writeValue( labelsAfter, buffer );
+        }
+
+        public static Command readFromFile( NeoStore neoStore, IndexingService indexes, ReadableByteChannel byteChannel,
+                                            ByteBuffer buffer ) throws IOException
+        {
+            if ( !readAndFlip( byteChannel, buffer, 1 + 8 + 4) )
+                throw new IllegalStateException( "Unable to read index update command." );
+
+            Mode mode = Mode.fromByte( buffer.get() );
+            long nodeId = buffer.getLong();
+            int propertyKey = buffer.getInt();
+
+            Object valueBefore = readValue( byteChannel, buffer );
+            Object valueAfter = readValue( byteChannel, buffer );
+
+            int[] labelsBefore = (int[]) readValue( byteChannel, buffer );
+            int[] labelsAfter  = (int[]) readValue( byteChannel, buffer );
+
+            return new IndexUpdateCommand( indexes, mode, nodeId, propertyKey,
+                    valueBefore, valueAfter, labelsBefore, labelsAfter );
+        }
+
+        private void writeValue( Object value, LogBuffer buffer ) throws IOException
+        {
+            byte valueType;
+            if ( value == null )
+            {
+                valueType = VALUE_TYPE_NULL;
+            }
+            else if( value instanceof Boolean)
+            {
+                valueType = VALUE_TYPE_BOOLEAN;
+            }
+            else if ( value instanceof Number )
+            {
+                if ( value instanceof Float )
+                {
+                    valueType = VALUE_TYPE_FLOAT;
+                }
+                else if ( value instanceof Double )
+                {
+                    valueType = VALUE_TYPE_DOUBLE;
+                }
+                else if ( value instanceof Long )
+                {
+                    valueType = VALUE_TYPE_LONG;
+                }
+                else
+                {
+                    valueType = VALUE_TYPE_INT;
+                }
+            }
+            else if( value.getClass().isArray() )
+            {
+                valueType = VALUE_TYPE_ARRAY;
+            }
+            else
+            {
+                valueType = VALUE_TYPE_STRING;
+
+            }
+            buffer.put( valueType );
+
+
+            if ( valueType == VALUE_TYPE_STRING )
+            {
+                char[] charValue = value.toString().toCharArray();
+                buffer.putInt( charValue.length );
+                buffer.put( charValue );
+            }
+            else if( valueType == VALUE_TYPE_ARRAY)
+            {
+                IoPrimitiveUtils.writeArray( buffer, value );
+            }
+            else if( valueType == VALUE_TYPE_BOOLEAN)
+            {
+                buffer.put((byte) (value == true ? 0x1 : 0x0) );
+            }
+            else if ( valueType != VALUE_TYPE_NULL )
+            {
+                Number number = (Number) value;
+                switch ( valueType )
+                {
+                    case VALUE_TYPE_FLOAT:
+                        buffer.putInt( Float.floatToRawIntBits( number.floatValue() ) );
+                        break;
+                    case VALUE_TYPE_DOUBLE:
+                        buffer.putLong( Double.doubleToRawLongBits( number.doubleValue() ) );
+                        break;
+                    case VALUE_TYPE_LONG:
+                        buffer.putLong( number.longValue() );
+                        break;
+                    case VALUE_TYPE_INT:
+                        buffer.putInt( number.intValue() );
+                        break;
+                    default:
+                        throw new Error( "Should not reach here." );
+                }
+            }
+        }
+
+        private static Object readValue( ReadableByteChannel channel, ByteBuffer buffer ) throws IOException
+        {
+            if ( !readAndFlip( channel, buffer, 1) )
+                throw new IllegalStateException( "Unable to read index update value." );
+            byte valueType = buffer.get();
+
+            switch ( valueType )
+            {
+                case VALUE_TYPE_INT:    return IoPrimitiveUtils.readInt( channel, buffer );
+                case VALUE_TYPE_LONG:   return IoPrimitiveUtils.readLong( channel, buffer );
+                case VALUE_TYPE_FLOAT:  return IoPrimitiveUtils.readFloat( channel, buffer );
+                case VALUE_TYPE_DOUBLE: return IoPrimitiveUtils.readDouble( channel, buffer );
+                case VALUE_TYPE_STRING: return IoPrimitiveUtils.readLengthAndString( channel, buffer );
+                case VALUE_TYPE_ARRAY:  return IoPrimitiveUtils.readArray( channel, buffer );
+                case VALUE_TYPE_BOOLEAN:return IoPrimitiveUtils.readByte( channel, buffer ) == 0x1;
+                case VALUE_TYPE_NULL:   return null;
+                default:
+                    throw new IOException( "Unrecognized value type: " + valueType );
+            }
+        }
+
+        public Object getValueBefore()
+        {
+            return valueBefore;
+        }
+
+        public Object getValueAfter()
+        {
+            return valueAfter;
+        }
+
+        public int[] getLabelsBefore()
+        {
+            return labelsBefore;
+        }
+
+        public int[] getLabelsAfter()
+        {
+            return labelsAfter;
+        }
+    }
+
+
     private static final DynamicRecordAdder<Collection<DynamicRecord>> COLLECTION_DYNAMIC_RECORD_ADDER =
             new DynamicRecordAdder<Collection<DynamicRecord>>()
     {
@@ -1372,6 +1627,8 @@ public abstract class Command extends XaCommand
                 return NeoStoreCommand.readFromFile( neoStore, byteChannel, buffer );
             case SCHEMA_RULE_COMMAND:
                 return SchemaRuleCommand.readFromFile( neoStore, indexes, byteChannel, buffer );
+            case INDEX_UPDATE_COMMAND:
+                return IndexUpdateCommand.readFromFile( neoStore, indexes, byteChannel, buffer );
             case NONE: return null;
             default:
                 throw new IOException( "Unknown command type[" + commandType + "]" );

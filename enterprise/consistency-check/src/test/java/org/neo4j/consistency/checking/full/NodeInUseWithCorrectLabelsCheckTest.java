@@ -141,7 +141,7 @@ public class NodeInUseWithCorrectLabelsCheckTest
             preAllocatedRecords.add( inUse( new DynamicRecord( i ) ) );
         }
         Collection<DynamicRecord> dynamicRecords =
-                DynamicArrayStore.allocateFromNumbers( prependNodeId( nodeRecord.getId(), labelIds ),
+                DynamicArrayStore.allocateRecords( prependNodeId( nodeRecord.getId(), labelIds ),
                         preAllocatedRecords.iterator(), new PreAllocatedRecords( 4 ) );
         for ( DynamicRecord dynamicRecord : dynamicRecords )
         {

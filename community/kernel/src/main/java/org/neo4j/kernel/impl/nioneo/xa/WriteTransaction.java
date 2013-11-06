@@ -34,6 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.xa.XAException;
@@ -96,7 +97,6 @@ import org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper;
 
 import static java.util.Arrays.binarySearch;
 import static java.util.Arrays.copyOf;
-
 import static org.neo4j.helpers.collection.IteratorUtil.asPrimitiveIterator;
 import static org.neo4j.helpers.collection.IteratorUtil.first;
 import static org.neo4j.kernel.api.index.NodePropertyUpdate.add;
@@ -258,6 +258,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             return list;
         }
     }, true);
+
     private Map<Integer, RelationshipTypeTokenRecord> relationshipTypeTokenRecords;
     private Map<Integer, LabelTokenRecord> labelTokenRecords;
     private Map<Integer, PropertyKeyTokenRecord> propertyKeyTokenRecords;
@@ -270,6 +271,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     private ArrayList<Command.RelationshipTypeTokenCommand> relationshipTypeTokenCommands;
     private ArrayList<Command.LabelTokenCommand> labelTokenCommands;
     private ArrayList<Command.PropertyKeyTokenCommand> propertyKeyTokenCommands;
+
     private Command.NeoStoreCommand neoStoreCommand;
 
     private boolean committed = false;
@@ -568,7 +570,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 {
                     getNodeStore().freeId( record.getId() );
                 }
-                removeNodeFromCache( record.getId() );
+                cacheAccess.removeNodeFromCache( record.getId() );
             }
             for ( RecordChange<Long, RelationshipRecord, Void> change : relRecords.changes() )
             {
@@ -578,13 +580,14 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 {
                     getRelationshipStore().freeId( id );
                 }
-                removeRelationshipFromCache( id );
-                patchDeletedRelationshipNodes( id, record.getFirstNode(), record.getFirstNextRel(),
-                                               record.getSecondNode(), record.getSecondNextRel() );
+                cacheAccess.removeRelationshipFromCache( id );
+                cacheAccess.patchDeletedRelationshipNodes( id, record.getFirstNode(), record.getFirstNextRel(),
+                        record.getSecondNode(), record.getSecondNextRel() );
+
             }
             if ( neoStoreRecord != null )
             {
-                removeGraphPropertiesFromCache();
+                cacheAccess.removeGraphPropertiesFromCache();
             }
             if ( propertyKeyTokenRecords != null )
             {
@@ -612,11 +615,11 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 PropertyRecord record = change.forReadingLinkage();
                 if ( record.getNodeId() != -1 )
                 {
-                    removeNodeFromCache( record.getNodeId() );
+                    cacheAccess.removeNodeFromCache( record.getNodeId() );
                 }
                 else if ( record.getRelId() != -1 )
                 {
-                    removeRelationshipFromCache( record.getRelId() );
+                    cacheAccess.removeRelationshipFromCache( record.getRelId() );
                 }
                 if ( record.isCreated() )
                 {
@@ -675,27 +678,6 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     private void removeRelationshipTypeFromCache( int id )
     {
         cacheAccess.removeRelationshipTypeFromCache( id );
-    }
-
-    private void patchDeletedRelationshipNodes( long id, long firstNodeId, long firstNodeNextRelId, long secondNodeId,
-                                                long secondNextRelId )
-    {
-        cacheAccess.patchDeletedRelationshipNodes( id, firstNodeId, firstNodeNextRelId, secondNodeId, secondNextRelId );
-    }
-
-    private void removeRelationshipFromCache( long id )
-    {
-        cacheAccess.removeRelationshipFromCache( id );
-    }
-
-    private void removeNodeFromCache( long id )
-    {
-        cacheAccess.removeNodeFromCache( id );
-    }
-
-    private void removeGraphPropertiesFromCache()
-    {
-        cacheAccess.removeGraphPropertiesFromCache();
     }
 
     private void addRelationshipType( int id )
@@ -850,7 +832,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 neoStoreCommand.execute();
                 if ( isRecovered )
                 {
-                    removeGraphPropertiesFromCache();
+                    cacheAccess.removeGraphPropertiesFromCache();
                 }
             }
             if ( !isRecovered )

@@ -29,6 +29,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.kernel.impl.nioneo.store.DynamicArrayStore;
+import org.neo4j.kernel.impl.nioneo.store.PropertyStore;
+import org.neo4j.kernel.impl.nioneo.store.PropertyType;
+import org.neo4j.kernel.impl.nioneo.store.ShortArray;
 import org.neo4j.kernel.impl.transaction.xaframework.LogBuffer;
 
 public abstract class IoPrimitiveUtils
@@ -205,6 +209,61 @@ public abstract class IoPrimitiveUtils
             map.put( key, value );
         }
         return map;
+    }
+
+    public static Object readArray( ReadableByteChannel channel, ByteBuffer buffer ) throws IOException
+    {
+        int sizeIncHeader = readInt(channel, buffer);
+
+        byte[] data = readBytes( channel, new byte[sizeIncHeader] );
+
+        byte typeId = data[0];
+        if ( typeId == PropertyType.STRING.intValue() )
+        {
+            ByteBuffer headerBuffer = ByteBuffer.wrap( data, 1/*skip the type*/, data.length - 1 );
+            int arrayLength = headerBuffer.getInt();
+            String[] result = new String[arrayLength];
+
+            ByteBuffer dataBuffer = ByteBuffer.wrap( data, 5, data.length-5 );
+            for ( int i = 0; i < arrayLength; i++ )
+            {
+                int byteLength = dataBuffer.getInt();
+                byte[] stringByteArray = new byte[byteLength];
+                dataBuffer.get( stringByteArray );
+                result[i] = PropertyStore.decodeString( stringByteArray );
+            }
+            return result;
+        }
+        else
+        {
+            ShortArray type = ShortArray.typeOf( typeId );
+            int bitsUsedInLastByte = data[1];
+            int requiredBits = data[2];
+            if ( requiredBits == 0 )
+                return type.createEmptyArray();
+
+            byte[] bArray = new byte[data.length - 3];
+            ByteBuffer.wrap(data, 3, sizeIncHeader-3).get( bArray );
+            Object result;
+            if ( type == ShortArray.BYTE && requiredBits == Byte.SIZE )
+            {   // Optimization for byte arrays (probably large ones)
+                result = bArray;
+            }
+            else
+            {   // Fallback to the generic approach, which is a slower
+                Bits bits = Bits.bitsFromBytes( bArray );
+                int length = (bArray.length*8-(8-bitsUsedInLastByte))/requiredBits;
+                result = type.createArray(length, bits, requiredBits);
+            }
+            return result;
+        }
+    }
+
+    public static void writeArray( LogBuffer buffer, Object value ) throws IOException
+    {
+        byte[] serialized = DynamicArrayStore.serializeArray( value );
+        buffer.putInt( serialized.length );
+        buffer.put(serialized);
     }
 
     public static void writeLengthAndString( FileChannel channel, ByteBuffer buffer, String value )

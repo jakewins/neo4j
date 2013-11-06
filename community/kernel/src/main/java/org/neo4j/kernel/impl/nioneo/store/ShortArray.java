@@ -55,7 +55,7 @@ public enum ShortArray
         }
 
         @Override
-        Object createArray( int length, Bits bits, int requiredBits )
+        public Object createArray( int length, Bits bits, int requiredBits )
         {
             if ( length == 0 )
             {
@@ -129,7 +129,7 @@ public enum ShortArray
         }
 
         @Override
-        Object createArray( int length, Bits bits, int requiredBits )
+        public Object createArray( int length, Bits bits, int requiredBits )
         {
             if ( length == 0 )
             {
@@ -204,7 +204,7 @@ public enum ShortArray
         }
 
         @Override
-        Object createArray( int length, Bits bits, int requiredBits )
+        public Object createArray( int length, Bits bits, int requiredBits )
         {
             if ( length == 0 )
             {
@@ -278,7 +278,7 @@ public enum ShortArray
         }
 
         @Override
-        Object createArray( int length, Bits bits, int requiredBits )
+        public Object createArray( int length, Bits bits, int requiredBits )
         {
             if ( length == 0 )
             {
@@ -352,7 +352,7 @@ public enum ShortArray
         }
 
         @Override
-        Object createArray( int length, Bits bits, int requiredBits )
+        public Object createArray( int length, Bits bits, int requiredBits )
         {
             if ( length == 0 )
             {
@@ -427,7 +427,7 @@ public enum ShortArray
         }
 
         @Override
-        Object createArray( int length, Bits bits, int requiredBits )
+        public Object createArray( int length, Bits bits, int requiredBits )
         {
             if ( length == 0 )
             {
@@ -502,7 +502,7 @@ public enum ShortArray
         }
 
         @Override
-        Object createArray( int length, Bits bits, int requiredBits )
+        public Object createArray( int length, Bits bits, int requiredBits )
         {
             if ( length == 0 )
             {
@@ -577,7 +577,7 @@ public enum ShortArray
         }
 
         @Override
-        Object createArray( int length, Bits bits, int requiredBits )
+        public Object createArray( int length, Bits bits, int requiredBits )
         {
             if ( length == 0 )
             {
@@ -641,7 +641,7 @@ public enum ShortArray
         return type.intValue();
     }
 
-    abstract Object createArray(int length, Bits bits, int requiredBits);
+    public abstract Object createArray( int length, Bits bits, int requiredBits );
 
     public static boolean encode( int keyId, Object array,
                                   PropertyBlock target, int payloadSizeInBytes )

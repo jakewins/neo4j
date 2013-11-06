@@ -42,7 +42,7 @@ import org.neo4j.kernel.impl.nioneo.store.Record;
 import org.neo4j.kernel.impl.nioneo.store.RecordStore;
 import org.neo4j.kernel.impl.nioneo.store.RecordStore.Processor;
 
-import static org.neo4j.kernel.api.index.NodePropertyUpdate.EMPTY_LONG_ARRAY;
+import static org.neo4j.kernel.api.index.NodePropertyUpdate.EMPTY_LABEL_ARRAY;
 import static org.neo4j.kernel.api.labelscan.NodeLabelUpdate.labelChanges;
 import static org.neo4j.kernel.impl.nioneo.store.labels.NodeLabelsField.parseLabelsField;
 import static org.neo4j.kernel.impl.util.IoPrimitiveUtils.safeCastLongToInt;
@@ -187,7 +187,7 @@ public class NeoStoreIndexStoreView implements IndexStoreView
             boolean processPropertyUpdates = propertyUpdateFilter.accept( node );
 
             // label updates
-            labelUpdateVisitor.visit( labelChanges( node.getId(), EMPTY_LONG_ARRAY, labelsReference.get() ) );
+            labelUpdateVisitor.visit( labelChanges( node.getId(), EMPTY_LABEL_ARRAY, labelsReference.get() ) );
 
             // delegate to property updates
             if ( processPropertyUpdates )

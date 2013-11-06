@@ -72,7 +72,7 @@ import static org.neo4j.helpers.collection.IteratorUtil.asIterable;
 import static org.neo4j.helpers.collection.IteratorUtil.iterator;
 import static org.neo4j.kernel.api.labelscan.NodeLabelUpdate.labelChanges;
 import static org.neo4j.kernel.impl.nioneo.store.AbstractDynamicStore.readFullByteArrayFromHeavyRecords;
-import static org.neo4j.kernel.impl.nioneo.store.DynamicArrayStore.allocateFromNumbers;
+import static org.neo4j.kernel.impl.nioneo.store.DynamicArrayStore.allocateRecords;
 import static org.neo4j.kernel.impl.nioneo.store.DynamicArrayStore.getRightArray;
 import static org.neo4j.kernel.impl.nioneo.store.PropertyType.ARRAY;
 import static org.neo4j.kernel.impl.nioneo.store.labels.DynamicNodeLabels.dynamicPointer;
@@ -218,7 +218,8 @@ public class FullCheckIntegrationTest
             {
                 NodeRecord nodeRecord = new NodeRecord( next.node(), -1, -1 );
                 DynamicRecord record = inUse( new DynamicRecord( next.nodeLabel() ) );
-                Collection<DynamicRecord> newRecords = allocateFromNumbers( prependNodeId( nodeRecord.getLongId(), new long[]{42l} ),
+                Collection<DynamicRecord> newRecords = allocateRecords( prependNodeId( nodeRecord.getLongId(),
+                        new long[]{42l} ),
                         iterator( record ), new PreAllocatedRecords( 60 ) );
                 nodeRecord.setLabelField( dynamicPointer( newRecords ), newRecords );
 
@@ -262,7 +263,7 @@ public class FullCheckIntegrationTest
                 DynamicRecord record2 = notInUse( new DynamicRecord( chain.get( 1 ).getId() ) );
                 long[] data = (long[]) getRightArray( readFullByteArrayFromHeavyRecords( chain, ARRAY ) );
                 PreAllocatedRecords allocator = new PreAllocatedRecords( 60 );
-                allocateFromNumbers( Arrays.copyOf( data, 11 ), iterator( record1 ), allocator );
+                allocateRecords( Arrays.copyOf( data, 11 ), iterator( record1 ), allocator );
 
                 NodeRecord before = inUse( new NodeRecord( data[0], -1, -1 ) );
                 NodeRecord after = inUse( new NodeRecord( data[0], -1, -1 ) );
@@ -385,7 +386,7 @@ public class FullCheckIntegrationTest
                 DynamicRecord record3 = inUse( new DynamicRecord( next.nodeLabel() ) );
                 labels[0] = nodeRecord.getLongId(); // the first id should not be a label id, but the id of the node
                 PreAllocatedRecords allocator = new PreAllocatedRecords( 60 );
-                chain.addAll( allocateFromNumbers(
+                chain.addAll( allocateRecords(
                         labels, iterator( record1, record2, record3 ), allocator ) );
 
                 nodeRecord.setLabelField( dynamicPointer( chain ), chain );
@@ -410,7 +411,7 @@ public class FullCheckIntegrationTest
 
                 NodeRecord nodeRecord = new NodeRecord( next.node(), -1, -1 );
                 DynamicRecord record = inUse( new DynamicRecord( next.nodeLabel() ) );
-                Collection<DynamicRecord> newRecords = allocateFromNumbers(
+                Collection<DynamicRecord> newRecords = allocateRecords(
                         prependNodeId( nodeRecord.getLongId(), new long[]{42l, 42l} ),
                         iterator( record ), new PreAllocatedRecords( 60 ) );
                 nodeRecord.setLabelField( dynamicPointer( newRecords ), newRecords );
@@ -440,7 +441,7 @@ public class FullCheckIntegrationTest
 
                 NodeRecord nodeRecord = new NodeRecord( next.node(), -1, -1 );
                 DynamicRecord record = inUse( new DynamicRecord( next.nodeLabel() ) );
-                Collection<DynamicRecord> newRecords = allocateFromNumbers( prependNodeId( next.node(), new long[]{42l} ),
+                Collection<DynamicRecord> newRecords = allocateRecords( prependNodeId( next.node(), new long[]{42l} ),
                         iterator( record ), new PreAllocatedRecords( 60 ) );
                 nodeRecord.setLabelField( dynamicPointer( newRecords ), newRecords );
 

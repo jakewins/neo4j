@@ -35,11 +35,11 @@ public class NodePropertyUpdate
     private final Object valueBefore;
     private final Object valueAfter;
     private final UpdateMode updateMode;
-    private final long[] labelsBefore;
-    private final long[] labelsAfter;
+    private final int[] labelsBefore;
+    private final int[] labelsAfter;
 
-    private NodePropertyUpdate( long nodeId, int propertyKeyId, Object valueBefore, long[] labelsBefore,
-                               Object valueAfter, long[] labelsAfter, UpdateMode updateMode )
+    private NodePropertyUpdate( long nodeId, int propertyKeyId, Object valueBefore, int[] labelsBefore,
+                               Object valueAfter, int[] labelsAfter, UpdateMode updateMode )
     {
         this.nodeId = nodeId;
         this.propertyKeyId = propertyKeyId;
@@ -106,7 +106,7 @@ public class NodePropertyUpdate
      *
      * @param labelId the label id the check.
      */
-    public boolean forLabel( long labelId )
+    public boolean forLabel( int labelId )
     {
         return updateMode.forLabel( labelsBefore, labelsAfter, labelId );
     }
@@ -215,22 +215,22 @@ public class NodePropertyUpdate
         return a.equals( b );
     }
 
-    public static final long[] EMPTY_LONG_ARRAY = new long[0];
+    public static final int[] EMPTY_LABEL_ARRAY = new int[0];
 
-    public static NodePropertyUpdate add( long nodeId, int propertyKeyId, Object value, long[] labels )
+    public static NodePropertyUpdate add( long nodeId, int propertyKeyId, Object value, int[] labels )
     {
-        return new NodePropertyUpdate( nodeId, propertyKeyId, null, EMPTY_LONG_ARRAY, value, labels, ADDED );
+        return new NodePropertyUpdate( nodeId, propertyKeyId, null, EMPTY_LABEL_ARRAY, value, labels, ADDED );
     }
 
-    public static NodePropertyUpdate change( long nodeId, int propertyKeyId, Object valueBefore, long[] labelsBefore,
-            Object valueAfter, long[] labelsAfter )
+    public static NodePropertyUpdate change( long nodeId, int propertyKeyId, Object valueBefore, int[] labelsBefore,
+            Object valueAfter, int[] labelsAfter )
     {
         return new NodePropertyUpdate( nodeId, propertyKeyId, valueBefore, labelsBefore, valueAfter, labelsAfter,
                 CHANGED );
     }
 
-    public static NodePropertyUpdate remove( long nodeId, int propertyKeyId, Object value, long[] labels )
+    public static NodePropertyUpdate remove( long nodeId, int propertyKeyId, Object value, int[] labels )
     {
-        return new NodePropertyUpdate( nodeId, propertyKeyId, value, labels, null, EMPTY_LONG_ARRAY, REMOVED );
+        return new NodePropertyUpdate( nodeId, propertyKeyId, value, labels, null, EMPTY_LABEL_ARRAY, REMOVED );
     }
 }

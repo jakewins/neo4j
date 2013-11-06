@@ -38,7 +38,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import static org.neo4j.kernel.impl.nioneo.store.DynamicArrayStore.allocateFromNumbers;
+import static org.neo4j.kernel.impl.nioneo.store.DynamicArrayStore.allocateRecords;
 import static org.neo4j.kernel.impl.nioneo.store.NodeStore.readOwnerFromDynamicLabelsRecord;
 import static org.neo4j.kernel.impl.nioneo.store.Record.NO_NEXT_PROPERTY;
 import static org.neo4j.kernel.impl.nioneo.store.Record.NO_NEXT_RELATIONSHIP;
@@ -54,7 +54,7 @@ public class NodeStoreTest
         long[] ids = new long[] { expectedId, 23l, 42l };
         DynamicRecord firstRecord = new DynamicRecord( 0l );
         List<DynamicRecord> dynamicRecords = asList( firstRecord );
-        allocateFromNumbers( ids, dynamicRecords.iterator(), new PreAllocatedRecords( 60 ) );
+        allocateRecords( ids, dynamicRecords.iterator(), new PreAllocatedRecords( 60 ) );
 
         // WHEN
         Long firstId = readOwnerFromDynamicLabelsRecord( firstRecord );
@@ -71,7 +71,7 @@ public class NodeStoreTest
         long[] ids = new long[] { };
         DynamicRecord firstRecord = new DynamicRecord( 0l );
         List<DynamicRecord> dynamicRecords = asList( firstRecord );
-        allocateFromNumbers( ids, dynamicRecords.iterator(), new PreAllocatedRecords( 60 ) );
+        allocateRecords( ids, dynamicRecords.iterator(), new PreAllocatedRecords( 60 ) );
 
         // WHEN
         Long firstId = readOwnerFromDynamicLabelsRecord( firstRecord );
@@ -88,7 +88,7 @@ public class NodeStoreTest
         long[] ids = new long[] { expectedId, 1l, 2l, 3l, 4l, 5l, 6l, 7l, 8l, 9l, 10l, 11l };
         DynamicRecord firstRecord = new DynamicRecord( 0l );
         List<DynamicRecord> dynamicRecords = asList( firstRecord, new DynamicRecord( 1l ) );
-        allocateFromNumbers( ids, dynamicRecords.iterator(), new PreAllocatedRecords( 8 ) );
+        allocateRecords( ids, dynamicRecords.iterator(), new PreAllocatedRecords( 8 ) );
 
         // WHEN
         Long firstId = readOwnerFromDynamicLabelsRecord( firstRecord );

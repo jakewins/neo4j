@@ -45,7 +45,7 @@ public class DynamicArrayStore extends AbstractDynamicStore
 {
     static final int NUMBER_HEADER_SIZE = 3;
     static final int STRING_HEADER_SIZE = 5;
-    
+
     // store version, each store ends with this string (byte encoded)
     public static final String TYPE_DESCRIPTOR = "ArrayPropertyStore";
     public static final String VERSION = buildTypeDescriptorAndVersion( TYPE_DESCRIPTOR );
@@ -69,72 +69,6 @@ public class DynamicArrayStore extends AbstractDynamicStore
     {
         return TYPE_DESCRIPTOR;
     }
-
-    public static Collection<DynamicRecord> allocateFromNumbers( Object array, Iterator<DynamicRecord> recordsToUseFirst,
-                                                                 DynamicRecordAllocator recordAllocator )
-    {
-        Class<?> componentType = array.getClass().getComponentType();
-        boolean isPrimitiveByteArray = componentType.equals( Byte.TYPE );
-        boolean isByteArray = componentType.equals( Byte.class ) || isPrimitiveByteArray;
-        ShortArray type = ShortArray.typeOf( array );
-        if ( type == null ) throw new IllegalArgumentException( array + " not a valid array type." );
-        
-        int arrayLength = Array.getLength( array );
-        int requiredBits = isByteArray ? Byte.SIZE : type.calculateRequiredBitsForArray( array, arrayLength);
-        int totalBits = requiredBits*arrayLength;
-        int numberOfBytes = (totalBits-1)/8+1;
-        int bitsUsedInLastByte = totalBits%8;
-        bitsUsedInLastByte = bitsUsedInLastByte == 0 ? 8 : bitsUsedInLastByte;
-        numberOfBytes += NUMBER_HEADER_SIZE; // type + rest + requiredBits header. TODO no need to use full bytes
-        byte[] bytes;
-        if ( isByteArray )
-        {
-            bytes = new byte[NUMBER_HEADER_SIZE+ arrayLength];
-            bytes[0] = (byte) type.intValue();
-            bytes[1] = (byte) bitsUsedInLastByte;
-            bytes[2] = (byte) requiredBits;
-            if ( isPrimitiveByteArray ) arraycopy( array, 0, bytes, NUMBER_HEADER_SIZE, arrayLength );
-            else
-            {
-                Byte[] source = (Byte[]) array;
-                for ( int i = 0; i < source.length; i++ ) bytes[NUMBER_HEADER_SIZE+i] = source[i];
-            }
-        }
-        else
-        {
-            Bits bits = Bits.bits( numberOfBytes );
-            bits.put( (byte)type.intValue() );
-            bits.put( (byte)bitsUsedInLastByte );
-            bits.put( (byte)requiredBits );
-            type.writeAll(array, arrayLength,requiredBits,bits);
-            bytes = bits.asBytes();
-        }
-        return allocateRecordsFromBytes( bytes, recordsToUseFirst, recordAllocator );
-    }
-
-    private static Collection<DynamicRecord> allocateFromString( String[] array, Iterator<DynamicRecord> recordsToUseFirst,
-                                                                 DynamicRecordAllocator recordAllocator )
-    {
-        List<byte[]> stringsAsBytes = new ArrayList<>();
-        int totalBytesRequired = STRING_HEADER_SIZE; // 1b type + 4b array length
-        for ( String string : array )
-        {
-            byte[] bytes = PropertyStore.encodeString( string );
-            stringsAsBytes.add( bytes );
-            totalBytesRequired += 4/*byte[].length*/ + bytes.length;
-        }
-
-        ByteBuffer buf = ByteBuffer.allocate( totalBytesRequired );
-        buf.put( PropertyType.STRING.byteValue() );
-        buf.putInt( array.length );
-        for ( byte[] stringAsBytes : stringsAsBytes )
-        {
-            buf.putInt( stringAsBytes.length );
-            buf.put( stringAsBytes );
-        }
-        return allocateRecordsFromBytes( buf.array(), recordsToUseFirst, recordAllocator );
-    }
-
     public Collection<DynamicRecord> allocateRecords( Object array )
     {
         return allocateRecords( array, Collections.<DynamicRecord>emptyList().iterator() );
@@ -147,14 +81,78 @@ public class DynamicArrayStore extends AbstractDynamicStore
             throw new IllegalArgumentException( array + " not an array" );
         }
 
-        Class<?> type = array.getClass().getComponentType();
-        if ( type.equals( String.class ) )
+        return allocateRecords( array, recordsToUseFirst, recordAllocator );
+    }
+
+    public static Collection<DynamicRecord> allocateRecords( Object array, Iterator<DynamicRecord> recordsToUseFirst,
+                                                             DynamicRecordAllocator recordAllocator )
+    {
+        return allocateRecordsFromBytes( serializeArray( array ), recordsToUseFirst, recordAllocator );
+    }
+
+    public static byte[] serializeArray( Object array )
+    {
+        Class<?> componentType = array.getClass().getComponentType();
+        if( componentType.equals(String.class) )
         {
-            return allocateFromString( (String[]) array, recordsToUseFirst, recordAllocator );
+            String[] strArray = (String[])array;
+            List<byte[]> stringsAsBytes = new ArrayList<>();
+            int totalBytesRequired = STRING_HEADER_SIZE; // 1b type + 4b array length
+            for ( String string : strArray )
+            {
+                byte[] bytes = PropertyStore.encodeString( string );
+                stringsAsBytes.add( bytes );
+                totalBytesRequired += 4/*byte[].length*/ + bytes.length;
+            }
+
+            ByteBuffer buf = ByteBuffer.allocate( totalBytesRequired );
+            buf.put( PropertyType.STRING.byteValue() );
+            buf.putInt( strArray.length );
+            for ( byte[] stringAsBytes : stringsAsBytes )
+            {
+                buf.putInt( stringAsBytes.length );
+                buf.put( stringAsBytes );
+            }
+            return buf.array();
         }
         else
         {
-            return allocateFromNumbers( array, recordsToUseFirst, recordAllocator );
+            boolean isPrimitiveByteArray = componentType.equals( Byte.TYPE );
+            boolean isByteArray = componentType.equals( Byte.class ) || isPrimitiveByteArray;
+            ShortArray type = ShortArray.typeOf( array );
+            if ( type == null ) throw new IllegalArgumentException( array + " not a valid array type." );
+
+            int arrayLength = Array.getLength( array );
+            int requiredBits = isByteArray ? Byte.SIZE : type.calculateRequiredBitsForArray( array, arrayLength);
+            int totalBits = requiredBits*arrayLength;
+            int numberOfBytes = (totalBits-1)/8+1;
+            int bitsUsedInLastByte = totalBits%8;
+            bitsUsedInLastByte = bitsUsedInLastByte == 0 ? 8 : bitsUsedInLastByte;
+            numberOfBytes += NUMBER_HEADER_SIZE; // type + rest + requiredBits header. TODO no need to use full bytes
+            byte[] bytes;
+            if ( isByteArray )
+            {
+                bytes = new byte[NUMBER_HEADER_SIZE+ arrayLength];
+                bytes[0] = (byte) type.intValue();
+                bytes[1] = (byte) bitsUsedInLastByte;
+                bytes[2] = (byte) requiredBits;
+                if ( isPrimitiveByteArray ) arraycopy( array, 0, bytes, NUMBER_HEADER_SIZE, arrayLength );
+                else
+                {
+                    Byte[] source = (Byte[]) array;
+                    for ( int i = 0; i < source.length; i++ ) bytes[NUMBER_HEADER_SIZE+i] = source[i];
+                }
+            }
+            else
+            {
+                Bits bits = Bits.bits( numberOfBytes );
+                bits.put( (byte)type.intValue() );
+                bits.put( (byte)bitsUsedInLastByte );
+                bits.put( (byte)requiredBits );
+                type.writeAll(array, arrayLength,requiredBits,bits);
+                bytes = bits.asBytes();
+            }
+            return bytes;
         }
     }
 
