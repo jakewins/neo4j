@@ -22,9 +22,8 @@ package org.neo4j.kernel.ha;
 import java.io.File;
 import java.lang.reflect.Proxy;
 import java.net.URI;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
+
 import javax.transaction.Transaction;
 
 import org.neo4j.cluster.ClusterSettings;
@@ -62,7 +61,6 @@ import org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher;
 import org.neo4j.kernel.ha.cluster.SimpleHighAvailabilityMemberContext;
 import org.neo4j.kernel.ha.cluster.member.ClusterMembers;
 import org.neo4j.kernel.ha.cluster.member.HighAvailabilitySlaves;
-import org.neo4j.kernel.ha.cluster.zoo.ZooKeeperHighAvailabilityEvents;
 import org.neo4j.kernel.ha.com.RequestContextFactory;
 import org.neo4j.kernel.ha.com.master.DefaultSlaveFactory;
 import org.neo4j.kernel.ha.com.master.Master;
@@ -71,7 +69,6 @@ import org.neo4j.kernel.ha.id.HaIdGeneratorFactory;
 import org.neo4j.kernel.ha.lock.LockManagerModeSwitcher;
 import org.neo4j.kernel.ha.management.ClusterDatabaseInfoProvider;
 import org.neo4j.kernel.ha.management.HighlyAvailableKernelData;
-import org.neo4j.kernel.ha.switchover.Switchover;
 import org.neo4j.kernel.ha.transaction.OnDiskLastTxIdGetter;
 import org.neo4j.kernel.ha.transaction.TxHookModeSwitcher;
 import org.neo4j.kernel.ha.transaction.TxIdGeneratorModeSwitcher;
@@ -88,7 +85,6 @@ import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.kernel.impl.transaction.xaframework.TransactionInterceptorProvider;
 import org.neo4j.kernel.impl.transaction.xaframework.TxIdGenerator;
-import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.logging.LogbackWeakDependency;
@@ -101,12 +97,13 @@ import static org.neo4j.kernel.logging.LogbackWeakDependency.NEW_LOGGER_CONTEXT;
 
 public class HighlyAvailableGraphDatabase extends InternalAbstractGraphDatabase
 {
+    private final InstanceAccessGuard accessGuard;
+
     private RequestContextFactory requestContextFactory;
     private Slaves slaves;
     private ClusterMembers members;
     private DelegateInvocationHandler masterDelegateInvocationHandler;
     private Master master;
-    private final InstanceAccessGuard accessGuard;
     private HighAvailabilityMemberStateMachine memberStateMachine;
     private UpdatePuller updatePuller;
     private LastUpdateTime lastUpdateTime;
@@ -114,30 +111,6 @@ public class HighlyAvailableGraphDatabase extends InternalAbstractGraphDatabase
     private ClusterMemberEvents clusterEvents;
     private ClusterMemberAvailability clusterMemberAvailability;
     private long stateSwitchTimeoutMillis;
-
-    /*
-     * TODO the following are in place of a proper abstraction of component dependencies, in which the compatibility
-     * layer would be an optional component and the paxos layer would depend on it. Since we currently don't have one,
-     * we need to fake it with this life and the accompanying boolean.
-     */
-    /*
-     * paxosLife holds stuff that must be added in global life if we are not in compatibility mode. If in compatibility
-     * mode they will be started only on switchover.
-     */
-     private final LifeSupport paxosLife = new LifeSupport();
-    /*
-     * compatibilityMode is true if we are in ZK compatibility mode. If false, paxosLife is added to the global life.
-     */
-    private boolean compatibilityMode = false;
-    /*
-     * compatibilityLifecycle holds stuff that needs to be shutdown when switching. They can be restarted by adding
-      * them to paxosLife too.
-     */
-    List<Lifecycle> compatibilityLifecycle = new LinkedList<>();
-    private DelegateInvocationHandler clusterEventsDelegateInvocationHandler;
-    private DelegateInvocationHandler memberContextDelegateInvocationHandler;
-    private DelegateInvocationHandler clusterMemberAvailabilityDelegateInvocationHandler;
-    private HighAvailabilityModeSwitcher highAvailabilityModeSwitcher;
 
     public HighlyAvailableGraphDatabase( String storeDir, Map<String, String> params,
                                          Iterable<KernelExtensionFactory<?>> kernelExtensions,
@@ -169,10 +142,6 @@ public class HighlyAvailableGraphDatabase extends InternalAbstractGraphDatabase
                 requestContextFactory, txManager, accessGuard, lastUpdateTime, config, msgLog ) );
 
         stateSwitchTimeoutMillis = config.get( HaSettings.state_switch_timeout );
-        if ( !compatibilityMode )
-        {
-            life.add( paxosLife );
-        }
 
         life.add( new StartupWaiter() );
 
@@ -237,9 +206,9 @@ public class HighlyAvailableGraphDatabase extends InternalAbstractGraphDatabase
     @Override
     protected TxHook createTxHook()
     {
-        clusterEventsDelegateInvocationHandler = new DelegateInvocationHandler();
-        memberContextDelegateInvocationHandler = new DelegateInvocationHandler();
-        clusterMemberAvailabilityDelegateInvocationHandler = new DelegateInvocationHandler();
+        DelegateInvocationHandler clusterEventsDelegateInvocationHandler = new DelegateInvocationHandler();
+        DelegateInvocationHandler memberContextDelegateInvocationHandler = new DelegateInvocationHandler();
+        DelegateInvocationHandler clusterMemberAvailabilityDelegateInvocationHandler = new DelegateInvocationHandler();
 
         clusterEvents = (ClusterMemberEvents) Proxy.newProxyInstance( ClusterMemberEvents.class.getClassLoader(),
                 new Class[]{ClusterMemberEvents.class, Lifecycle.class}, clusterEventsDelegateInvocationHandler );
@@ -323,35 +292,9 @@ public class HighlyAvailableGraphDatabase extends InternalAbstractGraphDatabase
         PaxosClusterMemberAvailability localClusterMemberAvailability = new PaxosClusterMemberAvailability(
             clusterClient.getServerId(), clusterClient, clusterClient, logging, objectStreamFactory, objectStreamFactory );
 
-        // Here we decide whether to start in compatibility mode or mode or not
-        //noinspection deprecation
-        if ( !config.get( HaSettings.coordinators ).isEmpty() &&
-            !config.get( HaSettings.coordinators ).get( 0 ).toString().trim().equals( "" ) )
-        {
-            compatibilityMode = true;
-            compatibilityLifecycle = new LinkedList<>();
-
-            Switchover switchover = new ZooToPaxosSwitchover( life, paxosLife, compatibilityLifecycle,
-                clusterEventsDelegateInvocationHandler, memberContextDelegateInvocationHandler,
-                clusterMemberAvailabilityDelegateInvocationHandler, localClusterEvents,
-                localMemberContext, localClusterMemberAvailability );
-
-            ZooKeeperHighAvailabilityEvents zkEvents =
-                new ZooKeeperHighAvailabilityEvents( logging, config, switchover );
-            compatibilityLifecycle.add( zkEvents );
-            memberContextDelegateInvocationHandler.setDelegate(
-                    new SimpleHighAvailabilityMemberContext( zkEvents.getInstanceId() ) );
-            clusterEventsDelegateInvocationHandler.setDelegate( zkEvents );
-            clusterMemberAvailabilityDelegateInvocationHandler.setDelegate( zkEvents );
-            // Paxos Events added to life, won't be stopped because it isn't started yet
-            paxosLife.add( localClusterEvents );
-        }
-        else
-        {
-            memberContextDelegateInvocationHandler.setDelegate( localMemberContext );
-            clusterEventsDelegateInvocationHandler.setDelegate( localClusterEvents );
-            clusterMemberAvailabilityDelegateInvocationHandler.setDelegate( localClusterMemberAvailability );
-        }
+        memberContextDelegateInvocationHandler.setDelegate( localMemberContext );
+        clusterEventsDelegateInvocationHandler.setDelegate( localClusterEvents );
+        clusterMemberAvailabilityDelegateInvocationHandler.setDelegate( localClusterMemberAvailability );
 
         members = new ClusterMembers( clusterClient, clusterClient, clusterEvents,
                 new InstanceId( config.get( ClusterSettings.server_id ) ) );
@@ -363,28 +306,10 @@ public class HighlyAvailableGraphDatabase extends InternalAbstractGraphDatabase
         clusterEvents.addClusterMemberListener( highAvailabilityConsoleLogger );
         clusterClient.addClusterListener( highAvailabilityConsoleLogger );
 
-        if ( compatibilityMode )
-        {
-            /*
-             * In here goes stuff that needs to stop when switching. If added in paxosLife too they will be restarted.
-             * Adding to life starts them when life.start is called - adding them to compatibilityLifeCycle shuts them
-             * down on switchover
-             */
-            compatibilityLifecycle.add( memberStateMachine );
-            compatibilityLifecycle.add( (Lifecycle) clusterEvents );
-            life.add( memberStateMachine );
-            life.add( clusterEvents );
-        }
-        /*
-        * Here goes stuff that needs to start when paxos kicks in:
-        * In Normal (non compatibility mode): That means they start normally
-        * In Compatibility Mode: That means they start when switchover happens. If added to life too they will be
-        * restarted
-        */
-        paxosLife.add( clusterClient );
-        paxosLife.add( memberStateMachine );
-        paxosLife.add( clusterEvents );
-        paxosLife.add( localClusterMemberAvailability );
+        life.add( clusterClient );
+        life.add( memberStateMachine );
+        life.add( clusterEvents );
+        life.add( localClusterMemberAvailability );
 
         DelegateInvocationHandler<TxHook> txHookDelegate = new DelegateInvocationHandler<>();
         TxHook txHook = (TxHook) Proxy.newProxyInstance( TxHook.class.getClassLoader(), new Class[]{TxHook.class},
@@ -431,20 +356,11 @@ public class HighlyAvailableGraphDatabase extends InternalAbstractGraphDatabase
     protected IdGeneratorFactory createIdGeneratorFactory()
     {
         idGeneratorFactory = new HaIdGeneratorFactory( master, logging );
-        highAvailabilityModeSwitcher = new HighAvailabilityModeSwitcher( clusterClient, masterDelegateInvocationHandler,
+
+        life.add( new HighAvailabilityModeSwitcher( clusterClient,
+                masterDelegateInvocationHandler,
                 clusterMemberAvailability, memberStateMachine, this, (HaIdGeneratorFactory) idGeneratorFactory,
-                config, logging, updateableSchemaState, kernelExtensions.listFactories() );
-        /*
-         * We always need the mode switcher and we need it to restart on switchover. So:
-         * 1) if in compatibility mode, it must be added in all 3 - to start on start and restart on switchover
-         * 2) if not in compatibility mode it must be added in paxosLife, which is started anyway.
-         */
-        paxosLife.add( highAvailabilityModeSwitcher );
-        if ( compatibilityMode )
-        {
-            compatibilityLifecycle.add( 1, highAvailabilityModeSwitcher );
-            life.add( highAvailabilityModeSwitcher );
-        }
+                config, logging, updateableSchemaState, kernelExtensions.listFactories() ) );
 
         /*
          * We don't really switch to master here. We just need to initialize the idGenerator so the initial store
