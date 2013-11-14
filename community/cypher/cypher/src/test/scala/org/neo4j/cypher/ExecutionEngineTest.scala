@@ -1226,7 +1226,7 @@ RETURN x0.name""")
   @Test def shouldToStringArraysPrettily() {
     createNode("foo" -> Array("one", "two"))
 
-    val result = execute( """start n = node(0) return n.foo""")
+    val result = executeLazy( """start n = node(0) return n.foo""")
 
 
     val string = result.dumpToString()
@@ -1720,7 +1720,7 @@ RETURN x0.name""")
   @Test
   def array_prop_output() {
     createNode("foo"->Array(1,2,3))
-    val result = execute("start n = node(0) return n").dumpToString()
+    val result = executeLazy("start n = node(0) return n").dumpToString()
     assertThat(result, containsString("[1,2,3]"))
   }
 
