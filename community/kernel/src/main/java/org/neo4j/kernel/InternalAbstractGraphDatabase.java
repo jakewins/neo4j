@@ -24,12 +24,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import javax.transaction.NotSupportedException;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
+import javax.transaction.xa.Xid;
 
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.DatabaseShutdownException;
@@ -182,6 +184,39 @@ import static org.neo4j.kernel.logging.LogbackWeakDependency.DEFAULT_TO_CLASSIC;
 public abstract class InternalAbstractGraphDatabase
         extends AbstractGraphDatabase implements GraphDatabaseService, GraphDatabaseAPI, SchemaWriteGuard
 {
+
+    public final TxManager.Monitor TXM = new TxManager.Monitor()
+    {
+        private final Map<String, Throwable> txs = new ConcurrentHashMap<>();
+
+        @Override
+        public void txStarted( Xid xid )
+        {
+            txs.put( xid.toString(), new Throwable( "RUNNING TRANSACTION: " + xid + ", " + Thread.currentThread().getName()) );
+        }
+
+        @Override
+        public void txCommitted( Xid xid )
+        {
+            txs.remove( xid.toString() );
+        }
+
+        @Override
+        public void txRolledBack( Xid xid )
+        {
+            txs.remove( xid.toString() );
+        }
+
+        @Override
+        public void txManagerStopped()
+        {
+            for ( String xid : txs.keySet() )
+            {
+                txs.get( xid ).printStackTrace();
+            }
+            txs.clear();
+        }
+    };
 
     public static class Configuration
     {
@@ -381,13 +416,13 @@ public abstract class InternalAbstractGraphDatabase
             @Override
             public void available()
             {
-                msgLog.logMessage( "Database is now ready" );
+                msgLog.info( "Database is now ready" );
             }
 
             @Override
             public void unavailable()
             {
-                msgLog.logMessage( "Database is no longer ready" );
+                msgLog.info( "Database is now unavailable" );
             }
         } );
 
@@ -472,7 +507,7 @@ public abstract class InternalAbstractGraphDatabase
             if ( GraphDatabaseSettings.tx_manager_impl.getDefaultValue().equals( serviceName ) )
             {
                 txManager = new TxManager( this.storeDir, xaDataSourceManager, kernelPanicEventGenerator,
-                        logging.getMessagesLog( TxManager.class ), fileSystem, stateFactory );
+                        logging.getMessagesLog( TxManager.class ), fileSystem, stateFactory, TXM );
             }
             else
             {
@@ -753,6 +788,7 @@ public abstract class InternalAbstractGraphDatabase
     {
         try
         {
+            TXM.txManagerStopped();
             msgLog.info( "Shutdown started" );
             msgLog.flush();
             availabilityGuard.shutdown();
@@ -761,6 +797,7 @@ public abstract class InternalAbstractGraphDatabase
         catch ( LifecycleException throwable )
         {
             msgLog.warn( "Shutdown failed", throwable );
+            throw throwable;
         }
     }
 

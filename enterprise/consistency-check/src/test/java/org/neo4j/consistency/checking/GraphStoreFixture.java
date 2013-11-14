@@ -29,7 +29,6 @@ import java.util.Map;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
-
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -425,9 +424,11 @@ public abstract class GraphStoreFixture implements TestRule, DirectStoreAccess
         GraphDatabaseAPI database = (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(directory).setConfig( configuration( false ) ).newGraphDatabase();
         try
         {
-            database.beginTx();
+            org.neo4j.graphdb.Transaction tx = database.beginTx();
             database.getDependencyResolver().resolveDependency( XaDataSourceManager.class).getNeoStoreDataSource()
                     .applyPreparedTransaction( transaction );
+            tx.success();
+            tx.close();
         }
         finally
         {

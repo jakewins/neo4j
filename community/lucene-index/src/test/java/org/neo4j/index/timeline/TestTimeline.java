@@ -19,10 +19,6 @@
  */
 package org.neo4j.index.timeline;
 
-import static java.util.Collections.sort;
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -44,6 +40,10 @@ import org.neo4j.helpers.Pair;
 import org.neo4j.index.lucene.LuceneTimeline;
 import org.neo4j.index.lucene.TimelineIndex;
 import org.neo4j.test.TestGraphDatabaseFactory;
+
+import static java.util.Collections.sort;
+import static org.junit.Assert.*;
+import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
 
 public class TestTimeline
 {
@@ -209,9 +209,11 @@ public class TestTimeline
     {
         LinkedList<Pair<PropertyContainer, Long>> timestamps = createTimestamps( creator, timeline,
                 -10000, 0, 10000 );
-        beginTx();
-        assertEquals( sortedEntities( timestamps, true ), asCollection( timeline.getBetween( null, 10000L, true ).iterator() ) );
-        commitTx();
+        try(Transaction tx = db.beginTx())
+        {
+            assertEquals( sortedEntities( timestamps, true ), asCollection( timeline.getBetween( null, 10000L, true ).iterator() ) );
+            tx.success();
+        }
     }
 
     private void makeSureUncommittedChangesAreSortedCorrectly( EntityCreator<PropertyContainer> creator,
@@ -220,13 +222,19 @@ public class TestTimeline
         LinkedList<Pair<PropertyContainer, Long>> timestamps = createTimestamps( creator, timeline,
                 300000, 100000, 500000, 900000, 800000 );
 
-        beginTx();
-        timestamps.addAll( createTimestamps( creator, timeline, 40000, 70000, 20000 ) );
-        assertEquals( sortedEntities( timestamps, false ),
-                asCollection( timeline.getBetween( null, null ).iterator() ) );
-        commitTx();
-        assertEquals( sortedEntities( timestamps, false ),
-                asCollection( timeline.getBetween( null, null ).iterator() ) );
+        try(Transaction tx = db.beginTx())
+        {
+            timestamps.addAll( createTimestamps( creator, timeline, 40000, 70000, 20000 ) );
+            assertEquals( sortedEntities( timestamps, false ),
+                    asCollection( timeline.getBetween( null, null ).iterator() ) );
+            tx.success();
+        }
+
+        try(Transaction ignore = db.beginTx())
+        {
+            assertEquals( sortedEntities( timestamps, false ),
+                    asCollection( timeline.getBetween( null, null ).iterator() ) );
+        }
     }
 
     // ======== The tests

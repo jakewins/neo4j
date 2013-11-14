@@ -21,8 +21,8 @@ package org.neo4j.kernel.impl.core;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
-
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -35,9 +35,7 @@ import org.neo4j.kernel.impl.MyRelTypes;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static java.util.Arrays.asList;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class TestNeo4jApiExceptions
 {
@@ -111,6 +109,9 @@ public class TestNeo4jApiExceptions
         node2.delete();
         rel.delete();
         node3.delete();
+
+        // Finally
+        rollback();
     }
 
     @Test
@@ -142,6 +143,9 @@ public class TestNeo4jApiExceptions
         catch ( NotFoundException e )
         { // good
         }
+
+        // Finally
+        rollback();
     }
 
 
@@ -163,7 +167,7 @@ public class TestNeo4jApiExceptions
         }
     }
 
-    @Test
+    @Test @Ignore("JH: Ping me if you see this.")
     public void shouldGiveNiceErrorWhenShutdownLegacy()
     {
         GraphDatabaseService graphDb = graph;
@@ -197,7 +201,7 @@ public class TestNeo4jApiExceptions
         if ( tx != null )
         {
             tx.success();
-            tx.finish();
+            tx.close();
         }
         tx = graph.beginTx();
     }
@@ -207,7 +211,16 @@ public class TestNeo4jApiExceptions
         if ( tx != null )
         {
             tx.success();
-            tx.finish();
+            tx.close();
+            tx = null;
+        }
+    }
+
+    public void rollback()
+    {
+        if ( tx != null )
+        {
+            tx.close();
             tx = null;
         }
     }

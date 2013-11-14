@@ -93,6 +93,8 @@ public abstract class AbstractShellTest
     @After
     public void doAfter() throws Exception
     {
+        if(tx != null) tx.close();
+
         shellClient.shutdown();
         shellServer.shutdown();
         db.shutdown();
@@ -220,27 +222,6 @@ public abstract class AbstractShellTest
         }
     }
 
-    protected void assertRelationshipExists( Relationship relationship )
-    {
-        assertRelationshipExists( relationship.getId() );
-    }
-
-    protected void assertRelationshipExists( long id )
-    {
-        Transaction transaction = db.beginTx();
-        try
-        {
-            db.getRelationshipById( id );
-        }
-        catch ( NotFoundException e )
-        {
-            fail( "Relationship " + id + " should exist" );
-        }
-        finally {
-            transaction.finish();
-        }
-    }
-
     protected void assertRelationshipDoesntExist( Relationship relationship )
     {
         assertRelationshipDoesntExist( relationship.getId() );
@@ -248,7 +229,7 @@ public abstract class AbstractShellTest
 
     protected void assertRelationshipDoesntExist( long id )
     {
-        Transaction transaction = db.beginTx();
+        beginTx();
         try
         {
             db.getRelationshipById( id );
@@ -259,7 +240,7 @@ public abstract class AbstractShellTest
         }
         finally
         {
-            transaction.finish();
+            finishTx();
         }
     }
 
@@ -270,7 +251,7 @@ public abstract class AbstractShellTest
 
     protected void assertNodeExists( long id )
     {
-        Transaction transaction = db.beginTx();
+        beginTx();
         try
         {
             db.getNodeById( id );
@@ -281,7 +262,7 @@ public abstract class AbstractShellTest
         }
         finally
         {
-            transaction.finish();
+            finishTx();
         }
     }
 
@@ -292,7 +273,7 @@ public abstract class AbstractShellTest
 
     protected void assertNodeDoesntExist( long id )
     {
-        Transaction transaction = db.beginTx();
+        beginTx();
         try
         {
             db.getNodeById( id );
@@ -303,7 +284,7 @@ public abstract class AbstractShellTest
         }
         finally
         {
-            transaction.finish();
+            finishTx();
         }
     }
 
