@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.api;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -111,7 +112,30 @@ public class StateHandlingStatementOperations implements
     public void relationshipDelete( KernelStatement state, long relationshipId )
     {
         legacyPropertyTrackers.relationshipDelete( relationshipId );
-        state.txState().relationshipDoDelete( relationshipId );
+        final TxState txState = state.txState();
+        if(txState.relationshipIsAddedInThisTx( relationshipId ))
+        {
+            txState.relationshipDoDeleteAddedInThisTx( relationshipId );
+        }
+        else
+        {
+            try
+            {
+                storeLayer.visit( relationshipId, new StoreReadLayer.RelationshipVisitor()
+                {
+                    @Override
+                    public void visit( long relId, long startNode, long endNode, int type )
+                    {
+                        txState.relationshipDoDelete( relId, startNode, endNode, type );
+                    }
+                });
+            }
+            catch ( EntityNotFoundException e )
+            {
+                // If it doesn't exist, it doesn't exist, and the user got what she wanted.
+                return;
+            }
+        }
     }
 
     @Override
@@ -903,6 +927,101 @@ public class StateHandlingStatementOperations implements
             return txState.augmentRelationships( nodeId, direction, stored );
         }
         return storeLayer.nodeListRelationships( state, nodeId, direction );
+    }
+
+    @Override
+    public int nodeGetDegree( KernelStatement state, long nodeId, Direction direction, int relType ) throws EntityNotFoundException
+
+    {
+        if( state.hasTxStateWithChanges() )
+        {
+            int degree = 0;
+            if(state.txState().nodeIsDeletedInThisTx( nodeId ))
+            {
+                return 0;
+            }
+
+            if( !state.txState().nodeIsAddedInThisTx( nodeId ))
+            {
+                degree = storeLayer.nodeGetDegree( nodeId, direction, relType );
+            }
+
+            return state.txState().augmentNodeDegree( nodeId, degree, direction, relType );
+        }
+        else
+        {
+            return storeLayer.nodeGetDegree( nodeId, direction, relType );
+        }
+    }
+
+    @Override
+    public int nodeGetDegree( KernelStatement state, long nodeId, Direction direction ) throws EntityNotFoundException
+    {
+        if( state.hasTxStateWithChanges() )
+        {
+            int degree = 0;
+            if(state.txState().nodeIsDeletedInThisTx( nodeId ))
+            {
+                return 0;
+            }
+
+            if( !state.txState().nodeIsAddedInThisTx( nodeId ))
+            {
+                degree = storeLayer.nodeGetDegree( nodeId, direction );
+            }
+
+            return state.txState().augmentNodeDegree( nodeId, degree, direction );
+        }
+        else
+        {
+            return storeLayer.nodeGetDegree( nodeId, direction );
+        }
+    }
+
+    @Override
+    public PrimitiveIntIterator nodeGetRelationshipTypes( KernelStatement statement, long nodeId )
+            throws EntityNotFoundException
+    {
+        if(statement.hasTxStateWithChanges() && statement.txState().nodeModifiedInThisTx(nodeId))
+        {
+            TxState tx = statement.txState();
+            if(tx.nodeIsDeletedInThisTx( nodeId ))
+            {
+                return IteratorUtil.emptyPrimitiveIntIterator();
+            }
+
+            if(tx.nodeIsAddedInThisTx( nodeId ))
+            {
+                return tx.nodeRelationshipTypes(nodeId);
+            }
+
+            Set<Integer> types = new HashSet<>();
+
+            // Add types in the current transaction
+            PrimitiveIntIterator typesInTx = tx.nodeRelationshipTypes( nodeId );
+            while(typesInTx.hasNext())
+            {
+                types.add( typesInTx.next() );
+            }
+
+            // Augment with types stored on disk, minus any types where all rels of that type are deleted
+            // in current tx.
+            PrimitiveIntIterator committedTypes = storeLayer.nodeGetRelationshipTypes( nodeId );
+            while(committedTypes.hasNext())
+            {
+                int current = committedTypes.next();
+                if(!types.contains( current ) && nodeGetDegree( statement, nodeId, Direction.BOTH, current ) > 0)
+                {
+                    types.add( current );
+                }
+            }
+
+            return IteratorUtil.toPrimitiveIntIterator( types.iterator() );
+        }
+        else
+        {
+            return storeLayer.nodeGetRelationshipTypes( nodeId );
+        }
     }
 
     //

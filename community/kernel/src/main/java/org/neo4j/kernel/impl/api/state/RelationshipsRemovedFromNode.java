@@ -32,19 +32,17 @@ import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.impl.util.PrimitiveIntIterator;
 import org.neo4j.kernel.impl.util.PrimitiveLongIterator;
 
-/**
- * Maintains relationships that have been added for a specific node.
- *
- * This class is not a trustworthy source of information unless you are careful - it does not, for instance, remove
- * rels if they are added and then removed in the same tx. It trusts wrapping data structures for that filtering.
- */
-public class RelationshipsAddedToNode
+public class RelationshipsRemovedFromNode
 {
     private Map<Integer /* Type */, Set<Long /* Id */>> outgoing;
     private Map<Integer /* Type */, Set<Long /* Id */>> incoming;
     private Map<Integer /* Type */, Set<Long /* Id */>> loops;
 
-    public void addRelationship( long relId, int typeId, Direction direction )
+    private int totalOutgoingRemoved = 0;
+    private int totalIncomingRemoved = 0;
+    private int totalLoopsRemoved = 0;
+
+    public void removeRelationship( long relId, int typeId, Direction direction )
     {
         Map<Integer, Set<Long>> relTypeToRelsMap = getTypeToRelMapForDirection( direction );
 
@@ -56,6 +54,19 @@ public class RelationshipsAddedToNode
         }
 
         rels.add( relId );
+
+        switch ( direction )
+        {
+            case INCOMING:
+                totalIncomingRemoved++;
+                break;
+            case OUTGOING:
+                totalOutgoingRemoved++;
+                break;
+            case BOTH:
+                totalLoopsRemoved++;
+                break;
+        }
     }
 
     public PrimitiveLongIterator augmentRelationships( Direction direction, PrimitiveLongIterator rels )
@@ -104,6 +115,19 @@ public class RelationshipsAddedToNode
         }
 
         return rels;
+    }
+
+    public int augmentDegree( Direction direction, int degree )
+    {
+        switch ( direction )
+        {
+            case INCOMING:
+                return degree + totalIncomingRemoved + totalLoopsRemoved;
+            case OUTGOING:
+                return degree + totalOutgoingRemoved + totalLoopsRemoved;
+            default:
+                return degree + totalIncomingRemoved + totalOutgoingRemoved + totalLoopsRemoved;
+        }
     }
 
     private PrimitiveLongIterator augmentPrimitiveIterator( final PrimitiveLongIterator rels,
@@ -203,7 +227,7 @@ public class RelationshipsAddedToNode
             {
                 return new PrefetchingIterator<Set<Long>>()
                 {
-                    private PrimitiveIntIterator iterTypes = IteratorUtil.asPrimitiveIterator(types);
+                    private PrimitiveIntIterator iterTypes = IteratorUtil.asPrimitiveIterator( types );
 
                     @Override
                     protected Set<Long> fetchNextOrNull()
