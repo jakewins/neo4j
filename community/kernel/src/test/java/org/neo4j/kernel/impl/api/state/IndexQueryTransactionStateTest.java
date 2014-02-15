@@ -29,8 +29,11 @@ import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.properties.DefinedProperty;
+<<<<<<< Updated upstream
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.ConstraintEnforcingEntityOperations;
+=======
+>>>>>>> Stashed changes
 import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.api.LegacyPropertyTrackers;
 import org.neo4j.kernel.impl.api.StateHandlingStatementOperations;
@@ -342,8 +345,8 @@ public class IndexQueryTransactionStateTest
                 store,
                 mock( LegacyPropertyTrackers.class ),
                 mock( ConstraintIndexCreator.class ) );
-        txContext = new ConstraintEnforcingEntityOperations(
-                stateHandlingOperations, stateHandlingOperations, stateHandlingOperations );
+//        txContext = new ConstraintEnforcingEntityOperations(
+//                stateHandlingOperations, stateHandlingOperations, stateHandlingOperations );
     }
 
     private void assertNoSuchNode( long node )

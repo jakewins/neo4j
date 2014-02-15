@@ -28,7 +28,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
-import org.neo4j.kernel.impl.api.operations.LegacyKernelOperations;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.api.store.CacheLayer;
@@ -253,8 +252,9 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
 
         // + Constraints
         ConstraintEnforcingEntityOperations constraintEnforcingEntityOperations =
-                new ConstraintEnforcingEntityOperations( parts.entityWriteOperations(), parts.entityReadOperations(),
-                        parts.schemaReadOperations() );
+                null;
+//                new ConstraintEnforcingEntityOperations( parts.entityWriteOperations(), parts.entityReadOperations(),
+//                        parts.schemaReadOperations() );
 
         // + Data integrity
         DataIntegrityValidatingStatementOperations dataIntegrityContext = new

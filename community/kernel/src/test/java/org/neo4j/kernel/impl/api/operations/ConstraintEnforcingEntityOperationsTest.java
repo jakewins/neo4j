@@ -59,7 +59,7 @@ public class ConstraintEnforcingEntityOperationsTest
         this.locks = mock( LockHolder.class );
         when( state.locks() ).thenReturn( locks );
 
-        this.ops = new ConstraintEnforcingEntityOperations( null, readOps, schemaOps );
+//        this.ops = new ConstraintEnforcingEntityOperations( null, readOps, schemaOps );
     }
 
     @Test
