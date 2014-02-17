@@ -47,8 +47,8 @@ import static org.neo4j.kernel.impl.api.store.CacheUpdateListener.NO_UPDATES;
  *
  * NOTE:
  * NodeImpl/RelationshipImpl manages caching, locking and transaction state merging. In the future
- * they might disappear and split up into {@link CacheLayer},
- * {@link org.neo4j.kernel.impl.api.LockingStatementOperations} and {@link org.neo4j.kernel.impl.api.StateHandlingStatementOperations}.
+ * they might disappear and split up into {@link org.neo4j.kernel.impl.api.layer.CacheLayer},
+ * {@link org.neo4j.kernel.impl.api.layer.LockingStatementOperations} and {@link org.neo4j.kernel.impl.api.layer.StateHandlingStatementOperations}.
  * <p/>
  * The point is that we need a cache and the implementation is a bit temporary, but might end
  * up being the cache to replace the data within NodeImpl/RelationshipImpl.

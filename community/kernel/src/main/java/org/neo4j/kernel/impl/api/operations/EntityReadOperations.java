@@ -120,4 +120,6 @@ public interface EntityReadOperations
     int nodeGetDegree( KernelStatement statement, long nodeId, Direction direction ) throws EntityNotFoundException;
 
     PrimitiveIntIterator nodeGetRelationshipTypes( KernelStatement statement, long nodeId ) throws EntityNotFoundException;
+
+    void accept( long relationshipId, StatementLayer.RelationshipVisitor relationshipVisitor ) throws EntityNotFoundException;
 }

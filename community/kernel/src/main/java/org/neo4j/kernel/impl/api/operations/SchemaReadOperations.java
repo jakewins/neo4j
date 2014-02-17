@@ -21,13 +21,12 @@ package org.neo4j.kernel.impl.api.operations;
 
 import java.util.Iterator;
 
-import org.neo4j.kernel.impl.api.KernelStatement;
-import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
-import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.nioneo.store.SchemaStorage;
 
 public interface SchemaReadOperations
@@ -67,7 +66,7 @@ public interface SchemaReadOperations
     /**
      * Returns the failure description of a failed index.
      */
-    String indexGetFailure( Statement state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
+    String indexGetFailure( KernelStatement state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
 
     /**
      * Get all constraints applicable to label and propertyKey. There are only {@link UniquenessConstraint}

@@ -26,21 +26,20 @@ import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.kernel.api.KernelAPI;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
+import org.neo4j.kernel.impl.api.gen.GeneratedCacheLayer;
+import org.neo4j.kernel.impl.api.gen.GeneratedSchemaStateConcern;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
-import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
+import org.neo4j.kernel.impl.api.operations.LegacyKernelOperations;
 import org.neo4j.kernel.impl.api.state.TxState;
-import org.neo4j.kernel.impl.api.store.CacheLayer;
 import org.neo4j.kernel.impl.api.store.DiskLayer;
 import org.neo4j.kernel.impl.api.store.PersistenceCache;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
-import org.neo4j.kernel.impl.api.store.StoreReadLayer;
 import org.neo4j.kernel.impl.core.LabelTokenHolder;
 import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.core.PropertyKeyTokenHolder;
 import org.neo4j.kernel.impl.core.RelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.core.TransactionState;
-import org.neo4j.kernel.impl.core.Transactor;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.SchemaRule;
 import org.neo4j.kernel.impl.nioneo.store.SchemaStorage;
@@ -67,11 +66,11 @@ import static org.neo4j.helpers.collection.IteratorUtil.loop;
  *
  * The architecture of the kernel is based around a layered design, where one layer performs some task, and potentially
  * delegates down to a lower layer. For instance, writing to the database will pass through
- * {@link LockingStatementOperations}, which will grab locks and delegate to {@link StateHandlingStatementOperations}
+ * {@link org.neo4j.kernel.impl.api.layer.LockingStatementOperations}, which will grab locks and delegate to {@link org.neo4j.kernel.impl.api.layer.StateHandlingStatementOperations}
  * which will store the change in the transaction state, to be applied later if the transaction is committed.
  *
- * A read will, similarly, pass through {@link LockingStatementOperations}, which should (but does not currently) grab
- * read locks. It then reaches {@link StateHandlingStatementOperations}, which includes any changes that exist in the
+ * A read will, similarly, pass through {@link org.neo4j.kernel.impl.api.layer.LockingStatementOperations}, which should (but does not currently) grab
+ * read locks. It then reaches {@link org.neo4j.kernel.impl.api.layer.StateHandlingStatementOperations}, which includes any changes that exist in the
  * current transaction, and then finally {@link org.neo4j.kernel.impl.api.store.DiskLayer} will read the current committed state from
  * the stores or caches.
  *
@@ -237,43 +236,49 @@ public class Kernel extends LifecycleAdapter implements KernelAPI
     private StatementOperationParts buildStatementOperations()
     {
         // Bottom layer: Read-access to committed data
-        StoreReadLayer storeLayer = new CacheLayer( new DiskLayer( propertyKeyTokenHolder, labelTokenHolder,
-                relationshipTypeTokenHolder, new SchemaStorage( neoStore.getSchemaStore() ), neoStore,
-                indexService ), persistenceCache, indexService, schemaCache, nodeManager );
+//        CacheLayer storeLayer = new CacheLayer( new DiskLayer( propertyKeyTokenHolder, labelTokenHolder,
+//                relationshipTypeTokenHolder, new SchemaStorage( neoStore.getSchemaStore() ), neoStore,
+//                indexService ), persistenceCache, indexService, schemaCache, nodeManager );
+//
+//        // + Transaction state handling
+//        StateHandlingStatementOperations stateHandlingContext = new StateHandlingStatementOperations(
+//                storeLayer, legacyPropertyTrackers,
+//                new ConstraintIndexCreator( new Transactor( transactionManager, persistenceManager ), indexService ) );
+//
+//        StatementOperationParts parts = new StatementOperationParts( stateHandlingContext, stateHandlingContext,
+//                stateHandlingContext, stateHandlingContext, stateHandlingContext, stateHandlingContext,
+//                new SchemaStateConcern( schemaState ) );
+//
+//        // + Constraints
+//        ConstraintEnforcingEntityOperations constraintEnforcingEntityOperations =
+//                null;
+////                new ConstraintEnforcingEntityOperations( parts.entityWriteOperations(), parts.entityReadOperations(),
+////                        parts.schemaReadOperations() );
+//
+//        // + Data integrity
+//        DataIntegrityValidatingStatementOperations dataIntegrityContext = new
+//                DataIntegrityValidatingStatementOperations(
+//                parts.keyWriteOperations(),
+//                parts.schemaReadOperations(),
+//                parts.schemaWriteOperations() );
+//
+//        parts = parts.override( null, dataIntegrityContext, constraintEnforcingEntityOperations,
+//                constraintEnforcingEntityOperations, null, dataIntegrityContext, null );
+//
+//        // + Locking
+//        LockingStatementOperations lockingContext = new LockingStatementOperations(
+//                parts.entityWriteOperations(),
+//                parts.schemaReadOperations(),
+//                parts.schemaWriteOperations(),
+//                parts.schemaStateOperations() );
+//        parts = parts.override( null, null, null, lockingContext, lockingContext, lockingContext, lockingContext );
 
-        // + Transaction state handling
-        StateHandlingStatementOperations stateHandlingContext = new StateHandlingStatementOperations(
-                storeLayer, legacyPropertyTrackers,
-                new ConstraintIndexCreator( new Transactor( transactionManager, persistenceManager ), indexService ) );
+        GeneratedCacheLayer cache = new GeneratedCacheLayer( new DiskLayer( propertyKeyTokenHolder, labelTokenHolder,
+                relationshipTypeTokenHolder, new SchemaStorage( neoStore.getSchemaStore() ), neoStore, indexService ),
+                persistenceCache, indexService, schemaCache, nodeManager );
+        GeneratedSchemaStateConcern schema = new GeneratedSchemaStateConcern( cache, schemaState );
+//        GeneratedStateHandlingStatementOperations state = new GeneratedStateHandlingStatementOperations( schema, cache,  )
 
-        StatementOperationParts parts = new StatementOperationParts( stateHandlingContext, stateHandlingContext,
-                stateHandlingContext, stateHandlingContext, stateHandlingContext, stateHandlingContext,
-                new SchemaStateConcern( schemaState ) );
-
-        // + Constraints
-        ConstraintEnforcingEntityOperations constraintEnforcingEntityOperations =
-                null;
-//                new ConstraintEnforcingEntityOperations( parts.entityWriteOperations(), parts.entityReadOperations(),
-//                        parts.schemaReadOperations() );
-
-        // + Data integrity
-        DataIntegrityValidatingStatementOperations dataIntegrityContext = new
-                DataIntegrityValidatingStatementOperations(
-                parts.keyWriteOperations(),
-                parts.schemaReadOperations(),
-                parts.schemaWriteOperations() );
-
-        parts = parts.override( null, dataIntegrityContext, constraintEnforcingEntityOperations,
-                constraintEnforcingEntityOperations, null, dataIntegrityContext, null );
-
-        // + Locking
-        LockingStatementOperations lockingContext = new LockingStatementOperations(
-                parts.entityWriteOperations(),
-                parts.schemaReadOperations(),
-                parts.schemaWriteOperations(),
-                parts.schemaStateOperations() );
-        parts = parts.override( null, null, null, lockingContext, lockingContext, lockingContext, lockingContext );
-
-        return parts;
+        return null;
     }
 }

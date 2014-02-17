@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.api;
+package org.neo4j.kernel.impl.api.layer;
 
 import java.util.Iterator;
 
@@ -31,6 +31,9 @@ import org.neo4j.kernel.api.exceptions.schema.UniqueConstraintViolationKernelExc
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
+import org.neo4j.kernel.impl.api.KernelStatement;
+import org.neo4j.kernel.impl.api.LockHolder;
+import org.neo4j.kernel.impl.api.ReleasableLock;
 import org.neo4j.kernel.impl.api.operations.StatementLayer;
 import org.neo4j.kernel.impl.util.PrimitiveIntIterator;
 import org.neo4j.kernel.impl.util.PrimitiveLongIterator;

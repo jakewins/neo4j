@@ -26,7 +26,7 @@ import org.mockito.stubbing.Answer;
 
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.impl.api.ConstraintEnforcingEntityOperations;
+import org.neo4j.kernel.impl.api.layer.ConstraintEnforcingEntityOperations;
 import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.api.LockHolder;
 import org.neo4j.kernel.impl.api.ReleasableLock;

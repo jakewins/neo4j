@@ -42,7 +42,7 @@ public class KernelStatement implements TxState.Holder, Statement
     protected final TxState.Holder txStateHolder;
     protected final IndexReaderFactory indexReaderFactory;
     protected final LabelScanStore labelScanStore;
-    protected NeoStoreTransaction neoStoreTransaction;
+    public NeoStoreTransaction neoStoreTransaction;
     
     private LabelScanReader labelScanReader;
     private int referenceCount;

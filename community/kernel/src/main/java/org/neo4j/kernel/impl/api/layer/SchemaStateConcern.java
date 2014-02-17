@@ -17,12 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.api;
+package org.neo4j.kernel.impl.api.layer;
 
 import org.neo4j.helpers.Function;
-import org.neo4j.kernel.impl.api.operations.SchemaStateOperations;
+import org.neo4j.kernel.impl.api.KernelStatement;
+import org.neo4j.kernel.impl.api.UpdateableSchemaState;
+import org.neo4j.kernel.impl.api.operations.StatementLayer;
 
-public class SchemaStateConcern implements SchemaStateOperations
+public abstract class SchemaStateConcern implements StatementLayer
 {
     private final UpdateableSchemaState schemaState;
 

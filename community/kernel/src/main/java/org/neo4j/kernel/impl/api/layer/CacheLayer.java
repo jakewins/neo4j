@@ -36,7 +36,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.api.store;
+package org.neo4j.kernel.impl.api.layer;
 
 import java.util.Iterator;
 
@@ -60,6 +60,11 @@ import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
 import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.api.operations.StatementLayer;
+import org.neo4j.kernel.impl.api.store.CacheLoader;
+import org.neo4j.kernel.impl.api.store.DiskLayer;
+import org.neo4j.kernel.impl.api.store.PersistenceCache;
+import org.neo4j.kernel.impl.api.store.SchemaCache;
 import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.kernel.impl.core.RelationshipImpl;
 import org.neo4j.kernel.impl.core.Token;
@@ -82,7 +87,7 @@ import static org.neo4j.kernel.impl.util.PrimitiveIntIteratorForArray.primitiveI
  * An important consideration when working on this is that there are plans to remove the object cache, which means that
  * the aim for this layer is to disappear.
  */
-public class CacheLayer implements StoreReadLayer
+public abstract class CacheLayer implements StatementLayer
 {
     private static final Function<? super SchemaRule, IndexDescriptor> TO_INDEX_RULE =
             new Function<SchemaRule, IndexDescriptor>()
@@ -222,7 +227,6 @@ public class CacheLayer implements StoreReadLayer
         return diskLayer.indexGetCommittedId( index );
     }
 
-    @Override
     public IndexRule indexRule( IndexDescriptor index, SchemaStorage.IndexRuleKind kind )
     {
         for ( SchemaRule rule : schemaCache.schemaRulesForLabel( index.getLabelId() ) )
@@ -317,13 +321,13 @@ public class CacheLayer implements StoreReadLayer
     }
 
     @Override
-    public PrimitiveLongIterator nodeGetUniqueFromIndexLookup(
+    public long nodeGetUniqueFromIndexLookup(
             KernelStatement state,
             IndexDescriptor index,
             Object value )
             throws IndexNotFoundKernelException, IndexBrokenKernelException
     {
-        return diskLayer.nodeGetUniqueFromIndexLookup( state, schemaCache.indexId( index ), value );
+        return diskLayer.nodeGetUniqueFromIndexLookup( state, schemaCache.indexId( index ), value ).next();
     }
 
     @Override
@@ -354,110 +358,111 @@ public class CacheLayer implements StoreReadLayer
     }
 
     @Override
-    public String indexGetFailure( Statement state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public String indexGetFailure( KernelStatement state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         return diskLayer.indexGetFailure( descriptor );
     }
 
     @Override
-    public int labelGetForName( String labelName )
+    public int labelGetForName( Statement state, String labelName )
     {
         return diskLayer.labelGetForName( labelName );
     }
 
     @Override
-    public String labelGetName( int labelId ) throws LabelNotFoundKernelException
+    public String labelGetName( Statement state, int labelId ) throws LabelNotFoundKernelException
     {
         return diskLayer.labelGetName( labelId );
     }
 
     @Override
-    public int propertyKeyGetForName( String propertyKeyName )
+    public int propertyKeyGetForName( Statement state, String propertyKeyName )
     {
         return diskLayer.propertyKeyGetForName( propertyKeyName );
     }
 
     @Override
-    public int propertyKeyGetOrCreateForName( String propertyKeyName )
+    public int propertyKeyGetOrCreateForName( Statement state, String propertyKeyName )
     {
         return diskLayer.propertyKeyGetOrCreateForName( propertyKeyName );
     }
 
     @Override
-    public String propertyKeyGetName( int propertyKeyId ) throws PropertyKeyIdNotFoundKernelException
+    public String propertyKeyGetName( Statement state, int propertyKeyId ) throws PropertyKeyIdNotFoundKernelException
     {
         return diskLayer.propertyKeyGetName( propertyKeyId );
     }
 
     @Override
-    public Iterator<Token> propertyKeyGetAllTokens()
+    public Iterator<Token> propertyKeyGetAllTokens(Statement state)
     {
         return diskLayer.propertyKeyGetAllTokens().iterator();
     }
 
     @Override
-    public Iterator<Token> labelsGetAllTokens()
+    public Iterator<Token> labelsGetAllTokens(Statement state)
     {
         return diskLayer.labelGetAllTokens().iterator();
     }
 
     @Override
-    public int relationshipTypeGetForName( String relationshipTypeName )
+    public int relationshipTypeGetForName( Statement state, String relationshipTypeName )
     {
         return diskLayer.relationshipTypeGetForName( relationshipTypeName );
     }
 
     @Override
-    public String relationshipTypeGetName( int relationshipTypeId ) throws RelationshipTypeIdNotFoundKernelException
+    public String relationshipTypeGetName( Statement state, int relationshipTypeId ) throws RelationshipTypeIdNotFoundKernelException
     {
         return diskLayer.relationshipTypeGetName( relationshipTypeId );
     }
 
     @Override
-    public int labelGetOrCreateForName( String labelName ) throws TooManyLabelsException
+    public int labelGetOrCreateForName( Statement state, String labelName ) throws TooManyLabelsException
     {
         return diskLayer.labelGetOrCreateForName( labelName );
     }
 
     @Override
-    public int relationshipTypeGetOrCreateForName( String relationshipTypeName )
+    public int relationshipTypeGetOrCreateForName( Statement state, String relationshipTypeName )
     {
         return diskLayer.relationshipTypeGetOrCreateForName( relationshipTypeName );
     }
 
     @Override
-    public PrimitiveLongIterator nodeListRelationships( KernelStatement state, long nodeId, Direction direction ) throws EntityNotFoundException
+    public PrimitiveLongIterator nodeGetRelationships( KernelStatement statement, long nodeId, Direction direction ) throws EntityNotFoundException
     {
         return persistenceCache.nodeGetRelationships( nodeId, direction );
     }
 
     @Override
-    public PrimitiveLongIterator nodeListRelationships( KernelStatement state, long nodeId, Direction direction,
+    public PrimitiveLongIterator nodeGetRelationships( KernelStatement state, long nodeId, Direction direction,
                                                         int[] relTypes ) throws EntityNotFoundException
     {
         return persistenceCache.nodeGetRelationships( nodeId, direction, relTypes );
     }
 
     @Override
-    public int nodeGetDegree( long nodeId, Direction direction ) throws EntityNotFoundException
-    {
-        return persistenceCache.getNode( nodeId ).getDegree( nodeManager, direction );
-    }
-
-    @Override
-    public int nodeGetDegree( long nodeId, Direction direction, int relType ) throws EntityNotFoundException
+    public int nodeGetDegree( KernelStatement statement, long nodeId, Direction direction, int relType ) throws EntityNotFoundException
     {
         return persistenceCache.getNode( nodeId ).getDegree( nodeManager, relType, direction );
     }
 
     @Override
-    public PrimitiveIntIterator nodeGetRelationshipTypes( long nodeId ) throws EntityNotFoundException
+    public int nodeGetDegree( KernelStatement statement, long nodeId, Direction direction ) throws EntityNotFoundException
+    {
+        return persistenceCache.getNode( nodeId ).getDegree( nodeManager, direction );
+    }
+
+    @Override
+    public PrimitiveIntIterator nodeGetRelationshipTypes( KernelStatement statement, long nodeId ) throws EntityNotFoundException
+
     {
         return toPrimitiveIntIterator( persistenceCache.getNode( nodeId ).getRelationshipTypes( nodeManager ) );
     }
 
     @Override
-    public void visit( long relationshipId, RelationshipVisitor relationshipVisitor ) throws EntityNotFoundException
+    public void accept( long relationshipId, RelationshipVisitor relationshipVisitor ) throws EntityNotFoundException
     {
         RelationshipImpl relationship = persistenceCache.getRelationship( relationshipId );
         relationshipVisitor.visit( relationshipId, relationship.getStartNodeId(), relationship.getEndNodeId(),

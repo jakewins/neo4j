@@ -19,158 +19,32 @@
  */
 package org.neo4j.kernel.impl.api.gen;
 
-import java.util.Iterator;
-
-import org.neo4j.kernel.api.constraints.UniquenessConstraint;
-import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
-import org.neo4j.kernel.api.exceptions.schema.IndexBrokenKernelException;
-import org.neo4j.kernel.api.exceptions.schema.UnableToValidateConstraintKernelException;
-import org.neo4j.kernel.api.exceptions.schema.UniqueConstraintViolationKernelException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.properties.DefinedProperty;
-import org.neo4j.kernel.api.properties.Property;
+import org.neo4j.helpers.Function;
 import org.neo4j.kernel.impl.api.KernelStatement;
-import org.neo4j.kernel.impl.api.LockHolder;
-import org.neo4j.kernel.impl.api.ReleasableLock;
+import org.neo4j.kernel.impl.api.UpdateableSchemaState;
 import org.neo4j.kernel.impl.api.operations.StatementLayer;
-import org.neo4j.kernel.impl.util.PrimitiveIntIterator;
-import org.neo4j.kernel.impl.util.PrimitiveLongIterator;
 
-import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE;
-
-public final class GeneratedConstraintEnforcingEntityOperations implements StatementLayer
+public final class GeneratedSchemaStateConcern implements StatementLayer
 {
-    public GeneratedConstraintEnforcingEntityOperations(
-            GeneratedStateHandlingStatementOperations __StateHandlingStatementOperations,
-            GeneratedSchemaStateConcern __SchemaStateConcern,
-            GeneratedCacheLayer __CacheLayer) {
-        this.__StateHandlingStatementOperations = __StateHandlingStatementOperations;
-        this.__SchemaStateConcern = __SchemaStateConcern;
-        this.__CacheLayer = __CacheLayer;
-    }
-
-    private final GeneratedStateHandlingStatementOperations __StateHandlingStatementOperations;
-    private final GeneratedSchemaStateConcern __SchemaStateConcern;
     private final GeneratedCacheLayer __CacheLayer;
+    private final UpdateableSchemaState schemaState;
 
-    @Override
-    public boolean nodeAddLabel( KernelStatement state, long nodeId, int labelId )
-            throws EntityNotFoundException, ConstraintValidationKernelException
+    public GeneratedSchemaStateConcern( GeneratedCacheLayer __CacheLayer, UpdateableSchemaState schemaState )
     {
-        Iterator<UniquenessConstraint> constraints = this.__StateHandlingStatementOperations.constraintsGetForLabel( state, labelId );
-        while ( constraints.hasNext() )
-        {
-            UniquenessConstraint constraint = constraints.next();
-            int propertyKeyId = constraint.propertyKeyId();
-            Property property = this.__StateHandlingStatementOperations.nodeGetProperty( state, nodeId, propertyKeyId );
-            if ( property.isDefined() )
-            {
-                validateNoExistingNodeWithLabelAndProperty( state, labelId, (DefinedProperty) property, nodeId );
-            }
-        }
-        return this.__StateHandlingStatementOperations.nodeAddLabel( state, nodeId, labelId );
+        this.__CacheLayer = __CacheLayer;
+        this.schemaState = schemaState;
     }
 
     @Override
-    public Property nodeSetProperty( KernelStatement state, long nodeId, DefinedProperty property )
-            throws EntityNotFoundException, ConstraintValidationKernelException
+    public <K, V> V schemaStateGetOrCreate( KernelStatement state, K key, Function<K, V> creator )
     {
-        PrimitiveIntIterator labelIds = this.__StateHandlingStatementOperations.nodeGetLabels( state, nodeId );
-        while ( labelIds.hasNext() )
-        {
-            int labelId = labelIds.next();
-            int propertyKeyId = property.propertyKeyId();
-            Iterator<UniquenessConstraint> constraintIterator =
-                    this.__StateHandlingStatementOperations.constraintsGetForLabelAndPropertyKey( state, labelId, propertyKeyId );
-            if ( constraintIterator.hasNext() )
-            {
-                validateNoExistingNodeWithLabelAndProperty( state, labelId, property, nodeId );
-            }
-        }
-        return this.__StateHandlingStatementOperations.nodeSetProperty( state, nodeId, property );
-    }
-
-    private void validateNoExistingNodeWithLabelAndProperty( KernelStatement state, int labelId,
-                                                             DefinedProperty property, long modifiedNode )
-            throws ConstraintValidationKernelException
-    {
-        try
-        {
-            Object value = property.value();
-            IndexDescriptor indexDescriptor = new IndexDescriptor( labelId, property.propertyKeyId() );
-            assertIndexOnline( state, indexDescriptor );
-            state.locks().acquireIndexEntryWriteLock( labelId, property.propertyKeyId(), property.valueAsString() );
-            PrimitiveLongIterator existingNodes = delegate().nodesGetFromIndexLookup(
-                    state, indexDescriptor, value );
-            while ( existingNodes.hasNext() )
-            {
-                long existingNode = existingNodes.next();
-                if ( existingNode != modifiedNode )
-                {
-                    throw new UniqueConstraintViolationKernelException( labelId, property.propertyKeyId(), value,
-                            existingNode );
-                }
-            }
-        }
-        catch ( IndexNotFoundKernelException | IndexBrokenKernelException e )
-        {
-            throw new UnableToValidateConstraintKernelException( e );
-        }
-    }
-
-    private void assertIndexOnline( KernelStatement state, IndexDescriptor indexDescriptor )
-            throws IndexNotFoundKernelException, IndexBrokenKernelException
-    {
-        switch ( this.__StateHandlingStatementOperations.indexGetState( state, indexDescriptor ) )
-        {
-            case ONLINE:
-                return;
-            default:
-                throw new IndexBrokenKernelException( this.__StateHandlingStatementOperations.indexGetFailure( state, indexDescriptor ) );
-        }
+        return schemaState.getOrCreate( key, creator );
     }
 
     @Override
-    public long nodeGetUniqueFromIndexLookup(
-            KernelStatement state,
-            IndexDescriptor index,
-            Object value )
-            throws IndexNotFoundKernelException, IndexBrokenKernelException
+    public <K> boolean schemaStateContains( KernelStatement state, K key )
     {
-        assertIndexOnline( state, index );
-
-        int labelId = index.getLabelId();
-        int propertyKeyId = index.getPropertyKeyId();
-        String stringVal = "";
-        if ( null != value )
-        {
-            DefinedProperty property = Property.property( propertyKeyId, value );
-            stringVal = property.valueAsString();
-        }
-
-        // If we find the node - hold a READ lock. If we don't find a node - hold a WRITE lock.
-        LockHolder holder = state.locks();
-        try ( ReleasableLock r = holder.getReleasableIndexEntryReadLock( labelId, propertyKeyId, stringVal ) )
-        {
-            long nodeId = delegate().nodeGetUniqueFromIndexLookup( state, index, value );
-            if ( NO_SUCH_NODE == nodeId )
-            {
-                r.release(); // and change to a WRITE lock
-                try ( ReleasableLock w = holder.getReleasableIndexEntryWriteLock( labelId, propertyKeyId, stringVal ) )
-                {
-                    nodeId = delegate().nodeGetUniqueFromIndexLookup( state, index, value );
-                    if ( NO_SUCH_NODE != nodeId ) // we found it under the WRITE lock
-                    { // downgrade to a READ lock
-                        holder.getReleasableIndexEntryReadLock( labelId, propertyKeyId, stringVal )
-                              .registerWithTransaction();
-                        w.release();
-                    }
-                }
-            }
-            return nodeId;
-        }
+        return schemaState.get( key ) != null;
     }
 
     public final void indexDrop(
@@ -247,8 +121,21 @@ public final class GeneratedConstraintEnforcingEntityOperations implements State
         throw new java.lang.UnsupportedOperationException();
     }
 
+    public final long nodeGetUniqueFromIndexLookup(
+            org.neo4j.kernel.impl.api.KernelStatement _ignore0,
+            org.neo4j.kernel.api.index.IndexDescriptor _ignore1,
+            java.lang.Object _ignore2) {
+        throw new java.lang.UnsupportedOperationException();
+    }
+
     public final void nodeDelete(
             org.neo4j.kernel.impl.api.KernelStatement _ignore0, long _ignore1) {
+        throw new java.lang.UnsupportedOperationException();
+    }
+
+    public final boolean nodeAddLabel(
+            org.neo4j.kernel.impl.api.KernelStatement _ignore0, long _ignore1,
+            int _ignore2) {
         throw new java.lang.UnsupportedOperationException();
     }
 
@@ -314,12 +201,6 @@ public final class GeneratedConstraintEnforcingEntityOperations implements State
 
     public final java.util.Iterator nodeGetAllProperties(
             org.neo4j.kernel.impl.api.KernelStatement _ignore0, long _ignore1) {
-        throw new java.lang.UnsupportedOperationException();
-    }
-
-    public final java.lang.Object schemaStateGetOrCreate(
-            org.neo4j.kernel.impl.api.KernelStatement _ignore0,
-            java.lang.Object _ignore1, org.neo4j.helpers.Function _ignore2) {
         throw new java.lang.UnsupportedOperationException();
     }
 
@@ -441,6 +322,12 @@ public final class GeneratedConstraintEnforcingEntityOperations implements State
         throw new java.lang.UnsupportedOperationException();
     }
 
+    public final org.neo4j.kernel.api.properties.Property nodeSetProperty(
+            org.neo4j.kernel.impl.api.KernelStatement _ignore0, long _ignore1,
+            org.neo4j.kernel.api.properties.DefinedProperty _ignore2) {
+        throw new java.lang.UnsupportedOperationException();
+    }
+
     public final java.util.Iterator relationshipGetAllProperties(
             org.neo4j.kernel.impl.api.KernelStatement _ignore0, long _ignore1) {
         throw new java.lang.UnsupportedOperationException();
@@ -460,12 +347,6 @@ public final class GeneratedConstraintEnforcingEntityOperations implements State
     public final void uniqueIndexDrop(
             org.neo4j.kernel.impl.api.KernelStatement _ignore0,
             org.neo4j.kernel.api.index.IndexDescriptor _ignore1) {
-        throw new java.lang.UnsupportedOperationException();
-    }
-
-    public final boolean schemaStateContains(
-            org.neo4j.kernel.impl.api.KernelStatement _ignore0,
-            java.lang.Object _ignore1) {
         throw new java.lang.UnsupportedOperationException();
     }
 

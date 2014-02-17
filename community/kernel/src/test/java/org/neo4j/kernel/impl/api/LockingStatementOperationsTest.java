@@ -29,6 +29,7 @@ import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
+import org.neo4j.kernel.impl.api.layer.LockingStatementOperations;
 import org.neo4j.kernel.impl.api.operations.EntityWriteOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
@@ -54,7 +55,7 @@ public class LockingStatementOperationsTest
         schemaReadOps = mock( SchemaReadOperations.class );
         schemaWriteOps = mock( SchemaWriteOperations.class );
         order = inOrder( locks, entityWriteOps, schemaReadOps, schemaWriteOps );
-        lockingOps = new LockingStatementOperations( entityWriteOps, schemaReadOps, schemaWriteOps, null );
+        lockingOps = null;//new LockingStatementOperations( entityWriteOps, schemaReadOps, schemaWriteOps, null );
     }
 
     @Test

@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.api;
+package org.neo4j.kernel.impl.api.gen;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -49,6 +49,8 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
+import org.neo4j.kernel.impl.api.KernelStatement;
+import org.neo4j.kernel.impl.api.LegacyPropertyTrackers;
 import org.neo4j.kernel.impl.api.operations.EntityOperations;
 import org.neo4j.kernel.impl.api.operations.KeyReadOperations;
 import org.neo4j.kernel.impl.api.operations.KeyWriteOperations;
@@ -73,21 +75,25 @@ import static org.neo4j.helpers.collection.IteratorUtil.singleOrNull;
 import static org.neo4j.helpers.collection.IteratorUtil.toPrimitiveIntIterator;
 import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE;
 
-public class StateHandlingStatementOperations implements
+public final class GeneratedStateHandlingStatementOperations implements
         KeyReadOperations,
         KeyWriteOperations,
         EntityOperations,
         SchemaReadOperations,
         SchemaWriteOperations
 {
+    private final GeneratedSchemaStateConcern __SchemaStateConcern;
+    private final GeneratedCacheLayer __CacheLayer;
     private final StoreReadLayer storeLayer;
     private final LegacyPropertyTrackers legacyPropertyTrackers;
     private final ConstraintIndexCreator constraintIndexCreator;
 
-    public StateHandlingStatementOperations(
-            StoreReadLayer storeLayer, LegacyPropertyTrackers propertyTrackers,
+    public GeneratedStateHandlingStatementOperations(
+            GeneratedSchemaStateConcern __SchemaStateConcern, GeneratedCacheLayer __CacheLayer, StoreReadLayer storeLayer, LegacyPropertyTrackers propertyTrackers,
             ConstraintIndexCreator constraintIndexCreator )
     {
+        this.__SchemaStateConcern = __SchemaStateConcern;
+        this.__CacheLayer = __CacheLayer;
         this.storeLayer = storeLayer;
         this.legacyPropertyTrackers = propertyTrackers;
         this.constraintIndexCreator = constraintIndexCreator;
@@ -1046,7 +1052,7 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public String indexGetFailure( Statement state, IndexDescriptor descriptor )
+    public String indexGetFailure( KernelStatement state, IndexDescriptor descriptor )
             throws IndexNotFoundKernelException
     {
         return storeLayer.indexGetFailure( state, descriptor );
@@ -1144,5 +1150,21 @@ public class StateHandlingStatementOperations implements
             types = Arrays.copyOf( types, unique );
         }
         return types;
+    }
+
+    public final java.lang.Object schemaStateGetOrCreate(
+            org.neo4j.kernel.impl.api.KernelStatement _ignore0,
+            java.lang.Object _ignore1, org.neo4j.helpers.Function _ignore2) {
+        throw new java.lang.UnsupportedOperationException();
+    }
+
+    public final org.neo4j.kernel.impl.api.operations.StatementLayer delegate() {
+        throw new java.lang.UnsupportedOperationException();
+    }
+
+    public final boolean schemaStateContains(
+            org.neo4j.kernel.impl.api.KernelStatement _ignore0,
+            java.lang.Object _ignore1) {
+        throw new java.lang.UnsupportedOperationException();
     }
 }
