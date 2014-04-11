@@ -32,10 +32,15 @@ public class RelstoreReader implements Closeable
         private long nextProp;
 
         private RelationshipRecord record;
+        private boolean firstInFirstChain;
+        private boolean firstInSecondChain;
 
-        public void reset(long id, boolean inUse, long firstNode, long secondNode, int type, long firstPrevRel,
-                          long firstNextRel, long secondNextRel, long secondPrevRel, long nextProp)
+        public void reset( long id, boolean inUse, long firstNode, long secondNode, int type, long firstPrevRel,
+                           long firstNextRel, long secondNextRel, long secondPrevRel, long nextProp, boolean
+                firstInFirstChain, boolean firstInSecondChain )
         {
+            this.firstInFirstChain = firstInFirstChain;
+            this.firstInSecondChain = firstInSecondChain;
             this.record = null;
             this.recordId = id;
             this.inUse = inUse;
@@ -100,9 +105,26 @@ public class RelstoreReader implements Closeable
                 record.setSecondPrevRel( secondPrevRel );
                 record.setSecondNextRel( secondNextRel );
                 record.setNextProp( nextProp );
+                record.setFirstInFirstChain( firstInFirstChain );
+                record.setFirstInSecondChain( firstInSecondChain );
 
             }
             return record;
+        }
+
+        public int getType()
+        {
+            return type;
+        }
+
+        public boolean firstInFirstChain()
+        {
+            return firstInFirstChain;
+        }
+
+        public boolean firstInSecondChain()
+        {
+            return firstInSecondChain;
         }
     }
 
@@ -232,10 +254,10 @@ public class RelstoreReader implements Closeable
         boolean inUse = (inUseByte & 0x1) == Record.IN_USE.intValue();
         if ( inUse )
         {
-            long firstNode = LegacyStore.getUnsignedInt( buffer );
+            long firstNode = getUnsignedInt( buffer );
             long firstNodeMod = (inUseByte & 0xEL) << 31;
 
-            long secondNode = LegacyStore.getUnsignedInt( buffer );
+            long secondNode = getUnsignedInt( buffer );
 
             // [ xxx,    ][    ,    ][    ,    ][    ,    ] second node high order bits,     0x70000000
             // [    ,xxx ][    ,    ][    ,    ][    ,    ] first prev rel high order bits,  0xE000000
@@ -270,14 +292,17 @@ public class RelstoreReader implements Closeable
             long nextPropMod = (inUseByte & 0xF0L) << 28;
             nextProp = longFromIntAndMod( nextProp, nextPropMod );
 
-            buffer.get();
+            byte extraByte = buffer.get();
+
+            boolean firstInFirstChain =  (extraByte & 0x1) != 0;
+            boolean firstInSecondChain = ( (extraByte & 0x2) != 0 );
 
             rel.reset( id, true, firstNode, secondNode, type,
-                    firstPrevRel, firstNextRel, secondNextRel, secondPrevRel, nextProp );
+                    firstPrevRel, firstNextRel, secondNextRel, secondPrevRel, nextProp,firstInFirstChain, firstInSecondChain );
         }
         else
         {
-            rel.reset( id, false, -1, -1, -1, -1, -1, -1, -1, -1 );
+            rel.reset( id, false, -1, -1, -1, -1, -1, -1, -1, -1, false, false );
         }
     }
     public static long getUnsignedInt( ByteBuffer buf )

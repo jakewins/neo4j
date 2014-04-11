@@ -1,44 +1,50 @@
 package org.neo4j.batch;
 
+import java.util.HashMap;
+
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.impl.nioneo.store.Record;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
-import org.neo4j.kernel.impl.util.collection.LongObjectOpenHashMap;
 
 public class RelChain
 {
-    private final long nodeId;
+    public static final byte INCOMING = (byte)0;
+    public static final byte OUTGOING = (byte)1;
 
-    private LongObjectOpenHashMap<RelationshipRecord> records = new LongObjectOpenHashMap<>();
+    private HashMap<Long, RelationshipRecord> known = new HashMap<>();
 
     private int missing = 0;
 
     public RelChain( long nodeId )
     {
-        this.nodeId = nodeId;
     }
 
-    public void append( RelationshipRecord record, long prevRel, long nextRel )
+    public void append( long id, long prevRel, long nextRel, RelationshipRecord record )
     {
-        if( records.containsKey( prevRel ))
+        if( !(prevRel == Record.NO_PREV_RELATIONSHIP.intValue()) )
+        {
+            missing++;
+        } else if( known.containsKey( prevRel ))
         {
             missing--;
         }
-        else if( !(prevRel == Record.NO_PREV_RELATIONSHIP.intValue()) )
+
+        if( !(nextRel == Record.NO_NEXT_RELATIONSHIP.intValue()) )
         {
             missing++;
-        }
-
-        if( records.containsKey( nextRel ))
+        } else if( known.containsKey( nextRel ))
         {
             missing--;
         }
-        else if( !(nextRel == Record.NO_NEXT_RELATIONSHIP.intValue()) )
-        {
-            missing++;
-        }
 
-        records.put( record.getId(), record );
+        known.put( id, record );
+    }
+
+    public RelChain reset()
+    {
+        known.clear();
+        missing = 0;
+        return this;
     }
 
     public boolean isComplete()
@@ -48,25 +54,19 @@ public class RelChain
 
     public int size()
     {
-        return records.size();
-    }
-
-    public long nodeId()
-    {
-        return nodeId;
+        return known.size();
     }
 
     public String toString()
     {
         return "RelChainBuilder{" +
-                "nodeId=" + nodeId +
-                ", records=" + records +
+                ", known=" + known +
                 ", missing=" + missing +
                 '}';
     }
 
     public void accept( final Visitor<RelationshipRecord, RuntimeException> visitor )
     {
-        records.visitValues( visitor );
+        // TODO
     }
 }
