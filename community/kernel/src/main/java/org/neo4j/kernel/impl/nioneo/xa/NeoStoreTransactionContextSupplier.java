@@ -19,9 +19,11 @@
  */
 package org.neo4j.kernel.impl.nioneo.xa;
 
-import org.neo4j.helpers.Clock;
+import org.neo4j.function.primitive.LongSupplier;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.util.FlyweightPool;
+
+import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
 
 public class NeoStoreTransactionContextSupplier extends FlyweightPool<NeoStoreTransactionContext>
 {
@@ -30,7 +32,14 @@ public class NeoStoreTransactionContextSupplier extends FlyweightPool<NeoStoreTr
     public NeoStoreTransactionContextSupplier( NeoStore neoStore )
     {
         super( Runtime.getRuntime().availableProcessors() * 2,
-                new CheckStrategy.TimeoutCheckStrategy( 1000, Clock.SYSTEM_CLOCK ), new Monitor.Adapter<>() );
+                new CheckStrategy.TimeoutCheckStrategy( 1000, new LongSupplier()
+                {
+                    @Override
+                    public long getAsLong()
+                    {
+                        return SYSTEM_CLOCK.currentTimeMillis();
+                    }
+                } ), new Monitor.Adapter<>() );
         this.neoStore = neoStore;
     }
 

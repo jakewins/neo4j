@@ -17,12 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.helpers;
+package org.neo4j.collection.pool;
 
-/**
- * @deprecated Use {@link org.neo4j.function.Factory} instead.
- */
-@Deprecated
-public interface Factory<T> extends org.neo4j.function.Factory<T>
+public interface Pool<T>
 {
+    T acquire();
+    void release(T obj);
 }
