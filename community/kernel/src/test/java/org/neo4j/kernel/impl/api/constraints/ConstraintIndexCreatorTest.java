@@ -237,6 +237,12 @@ public class ConstraintIndexCreatorTest
         }
 
         @Override
+        public Iterable<KernelTransaction> liveTransactions()
+        {
+            return null;
+        }
+
+        @Override
         public StatisticsData heuristics()
         {
             throw new UnsupportedOperationException( "Please implement" );

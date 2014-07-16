@@ -1,5 +1,10 @@
 package org.neo4j.kernel.impl.api;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.neo4j.collection.pool.LinkedQueuePool;
 import org.neo4j.collection.pool.MarshlandPool;
 import org.neo4j.collection.pool.Pool;
@@ -24,44 +29,18 @@ import org.neo4j.kernel.impl.transaction.xaframework.TransactionHeaderInformatio
 import org.neo4j.kernel.impl.transaction.xaframework.TransactionMonitor;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 
+import static java.util.Collections.newSetFromMap;
+
 /**
  * Central source of transactions in the database.
  *
- * This class maintains a pool of passive kernel transactions, and provides capabilities for listing all active
- * transactions.
+ * This class maintains references to all transactions, a pool of passive kernel transactions, and provides capabilities
+ * for enumerating all running transactions. During normal operation, acquiring new transactions and enumerating live
+ * ones requires no synchronization (although the live list is not guaranteed to be exact).
  */
 public class KernelTransactions implements Factory<KernelTransaction>
 {
-    private final Factory<KernelTransactionImplementation> factory = new Factory<KernelTransactionImplementation>()
-    {
-        @Override
-        public KernelTransactionImplementation newInstance()
-        {
-            NeoStoreTransactionContext context = neoStoreTransactionContextSupplier.acquire();
-            Locks.Client locksClient = locks.newClient();
-            context.bind( locksClient );
-            TransactionRecordState neoStoreTransaction = new TransactionRecordState(
-                    neoStore.getLastCommittingTransactionId(), neoStore, integrityValidator, context );
-            LegacyIndexTransactionState legacyIndexTransactionState =
-                    new LegacyIndexTransactionState( indexConfigStore, legacyIndexProviderLookup );
-            return new KernelTransactionImplementation( statementOperations, readOnly, schemaWriteGuard,
-                    labelScanStore, indexingService, updateableSchemaState, neoStoreTransaction, providerMap,
-                    neoStore, locksClient, hooks, constraintIndexCreator, transactionHeaderInformationFactory.create(),
-                    commitProcess, transactionMonitor, neoStore, persistenceCache, storeLayer,
-                    legacyIndexTransactionState, txPool );
-        }
-    };
-
-    private final Pool<KernelTransactionImplementation> txPool = new MarshlandPool<>(
-            new LinkedQueuePool<KernelTransactionImplementation>(8, factory )
-    {
-        @Override
-        protected void dispose( KernelTransactionImplementation tx )
-        {
-            tx.dispose();
-            super.dispose( tx );
-        }
-    });
+    // Transaction dependencies
 
     private final NeoStoreTransactionContextSupplier neoStoreTransactionContextSupplier;
     private final NeoStore neoStore;
@@ -84,6 +63,65 @@ public class KernelTransactions implements Factory<KernelTransaction>
     private final TransactionMonitor transactionMonitor;
     private final LifeSupport dataSourceLife;
     private final boolean readOnly;
+
+    // End Tx Dependencies
+
+    /**
+     * Used to enumerate all transactions in the system, active and idle ones.
+     *
+     * This data structure is *only* updated when brand-new transactions are created, or when transactions are disposed
+     * of. During normal operation (where all transactions come from and are returned to the pool), this will be left
+     * in peace, working solely as a collection of references to all transaction objects (idle and active) in the
+     * database.
+     *
+     * As such, it provides a good mechanism for listing all transactions without requiring synchronization when
+     * starting and committing transactions.
+     */
+    private final Set<KernelTransactionImplementation> allTransactions = newSetFromMap(
+            new ConcurrentHashMap<KernelTransactionImplementation, Boolean>() );
+
+    /**
+     * This is the factory that actually builds brand-new instances.
+     */
+    private final Factory<KernelTransactionImplementation> factory = new Factory<KernelTransactionImplementation>()
+    {
+        @Override
+        public KernelTransactionImplementation newInstance()
+        {
+            NeoStoreTransactionContext context = neoStoreTransactionContextSupplier.acquire();
+            Locks.Client locksClient = locks.newClient();
+            context.bind( locksClient );
+            TransactionRecordState neoStoreTransaction = new TransactionRecordState(
+                    neoStore.getLastCommittingTransactionId(), neoStore, integrityValidator, context );
+            LegacyIndexTransactionState legacyIndexTransactionState =
+                    new LegacyIndexTransactionState( indexConfigStore, legacyIndexProviderLookup );
+            KernelTransactionImplementation tx = new KernelTransactionImplementation(
+                    statementOperations, readOnly, schemaWriteGuard,
+                    labelScanStore, indexingService, updateableSchemaState, neoStoreTransaction, providerMap,
+                    neoStore, locksClient, hooks, constraintIndexCreator, transactionHeaderInformationFactory.create(),
+                    commitProcess, transactionMonitor, neoStore, persistenceCache, storeLayer,
+                    legacyIndexTransactionState, txPool );
+
+            allTransactions.add( tx );
+
+            return tx;
+        }
+    };
+
+    /**
+     * Pool of unused transactions, ready for combat.
+     */
+    private final Pool<KernelTransactionImplementation> txPool = new MarshlandPool<>(
+            new LinkedQueuePool<KernelTransactionImplementation>(8, factory )
+            {
+                @Override
+                protected void dispose( KernelTransactionImplementation tx )
+                {
+                    allTransactions.remove( tx );
+                    tx.dispose();
+                    super.dispose( tx );
+                }
+            });
 
     public KernelTransactions( NeoStoreTransactionContextSupplier neoStoreTransactionContextSupplier,
                                NeoStore neoStore, Locks locks, IntegrityValidator integrityValidator,
@@ -125,6 +163,24 @@ public class KernelTransactions implements Factory<KernelTransaction>
     {
         assertDatabaseIsRunning();
         return txPool.acquire().initialize(transactionHeaderInformationFactory.create());
+    }
+
+    /**
+     * Give an approximate list of all transactions currently running. This is not guaranteed to be exact, as
+     * transactions may stop and start while this list is gathered.
+     */
+    public List<KernelTransaction> activeTransactions()
+    {
+        List<KernelTransaction> output = new ArrayList<>();
+        for ( KernelTransactionImplementation tx : allTransactions )
+        {
+            if(tx.isOpen())
+            {
+                output.add( tx );
+            }
+        }
+
+        return output;
     }
 
     private void assertDatabaseIsRunning()

@@ -61,6 +61,8 @@ public class DatabaseAvailability
         // Deny beginning new transactions
         availabilityGuard.deny(this);
 
+
+
         // TODO make stop-deadline configurable
         long deadline = Clock.SYSTEM_CLOCK.currentTimeMillis() + 20 * 1000;
 

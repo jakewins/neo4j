@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.function.Factory;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
@@ -44,7 +43,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.TransactionEventHandlers;
 import org.neo4j.kernel.api.KernelAPI;
-import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.TokenNameLookup;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
@@ -515,7 +513,7 @@ public class NeoStoreXaDataSource implements NeoStoreProvider, Lifecycle, LogRot
             StatementOperationParts statementOperations = buildStatementOperations( storeLayer, legacyPropertyTrackers,
                     constraintIndexCreator, updateableSchemaState, guard, legacyIndexStore );
 
-            Factory<KernelTransaction> transactionFactory = new KernelTransactions( neoStoreTransactionContextSupplier,
+            KernelTransactions transactionFactory = new KernelTransactions( neoStoreTransactionContextSupplier,
                     neoStore, locks, integrityValidator, constraintIndexCreator, indexingService, labelScanStore,
                     statementOperations, updateableSchemaState, schemaWriteGuard, providerMap,
                     transactionHeaderInformationFactory, persistenceCache, storeLayer, commitProcess, indexConfigStore,

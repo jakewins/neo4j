@@ -53,6 +53,11 @@ public interface KernelAPI
      */
     void unregisterTransactionHook( TransactionHook hook );
 
+    /**
+     * Enumerate live transactions in the database.
+     */
+    Iterable<KernelTransaction> liveTransactions();
+
     /** Access live updated statistics for the data the kernel manages. */
     StatisticsData heuristics();
 }
