@@ -19,9 +19,12 @@
  */
 package org.neo4j.kernel;
 
-import org.neo4j.helpers.Clock;
+import org.neo4j.kernel.api.KernelAPI;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.transaction.xaframework.TransactionMonitor;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+
+import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
 
 /**
  * This class handles whether the database as a whole is available to use at all.
@@ -33,11 +36,14 @@ public class DatabaseAvailability
 {
     private final AvailabilityGuard availabilityGuard;
     private final TransactionMonitor transactionMonitor;
+    private final KernelAPI kernel;
 
-    public DatabaseAvailability( AvailabilityGuard availabilityGuard, TransactionMonitor transactionMonitor )
+    public DatabaseAvailability( AvailabilityGuard availabilityGuard, TransactionMonitor transactionMonitor,
+                                 KernelAPI kernel )
     {
         this.availabilityGuard = availabilityGuard;
         this.transactionMonitor = transactionMonitor;
+        this.kernel = kernel;
     }
 
     @Override
@@ -61,13 +67,24 @@ public class DatabaseAvailability
         // Deny beginning new transactions
         availabilityGuard.deny(this);
 
+        // Give existing transactions a minuscule window to wrap up
+        awaitNoTransactionsOr( 500 /* ms */ );
 
+        // Times' up, kill remaining live transactions
+        for ( KernelTransaction tx : kernel.liveTransactions() )
+        {
+            tx.markForTermination();
+        }
 
+        // Wait a little bit longer to let transactions in separate threads finish up dying
         // TODO make stop-deadline configurable
-        long deadline = Clock.SYSTEM_CLOCK.currentTimeMillis() + 20 * 1000;
+        awaitNoTransactionsOr( 10_000  /* ms */);
+    }
 
-        while ( transactionMonitor.getNumberOfActiveTransactions() > 0 &&
-                Clock.SYSTEM_CLOCK.currentTimeMillis() < deadline)
+    private void awaitNoTransactionsOr( int orUntilDeadline )
+    {
+        long deadline = SYSTEM_CLOCK.currentTimeMillis() + orUntilDeadline;
+        while ( transactionMonitor.getNumberOfActiveTransactions() > 0 && SYSTEM_CLOCK.currentTimeMillis() < deadline)
         {
             Thread.yield();
         }
