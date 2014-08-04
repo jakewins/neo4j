@@ -194,7 +194,8 @@ public class NeoStoreXaDataSource implements NeoStoreProvider, Lifecycle, LogRot
     private AutoLoadingCache<RelationshipImpl> relationshipCache;
     private SchemaCache schemaCache;
     private LabelScanStore labelScanStore;
-    private CacheLayer storeLayer;
+
+    private StoreReadLayer storeLayer;
     private LogFile logFile;
 
     private final AtomicInteger recoveredCount = new AtomicInteger();
@@ -430,13 +431,23 @@ public class NeoStoreXaDataSource implements NeoStoreProvider, Lifecycle, LogRot
                     return getNeoStore();
                 }
             };
-            storeLayer = new CacheLayer( new DiskLayer( propertyKeyTokenHolder, labelTokens, relationshipTypeTokens,
-                    new SchemaStorage( neoStore.getSchemaStore() ), neoStoreProvider, indexingService ),
-                    persistenceCache, indexingService, schemaCache );
+
+            if(config.get( GraphDatabaseSettings.cache_type ).equals( CacheLayer.EXPERIMENTAL_OFF ))
+            {
+                storeLayer = new DiskLayer( propertyKeyTokenHolder, labelTokens, relationshipTypeTokens,
+                        new SchemaStorage( neoStore.getSchemaStore() ), neoStoreProvider, indexingService );
+            }
+            else
+            {
+                storeLayer = new CacheLayer( new DiskLayer( propertyKeyTokenHolder, labelTokens, relationshipTypeTokens,
+                        new SchemaStorage( neoStore.getSchemaStore() ), neoStoreProvider, indexingService ),
+                        persistenceCache, indexingService, schemaCache
+                );
+            }
+
 
             // CHANGE STARTS HERE
-            VersionAwareLogEntryReader logEntryReader =
-                    new VersionAwareLogEntryReader( CommandReaderFactory.DEFAULT );
+            VersionAwareLogEntryReader logEntryReader = new VersionAwareLogEntryReader( CommandReaderFactory.DEFAULT );
             // Recovery process ties log and commit process together
 
             LegacyPropertyTrackers legacyPropertyTrackers = new LegacyPropertyTrackers( propertyKeyTokenHolder,
