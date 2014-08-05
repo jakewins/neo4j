@@ -23,6 +23,7 @@ import java.util.Iterator;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
@@ -34,6 +35,7 @@ import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.impl.api.operations.EntityReadOperations;
 import org.neo4j.kernel.impl.api.operations.EntityWriteOperations;
+import org.neo4j.register.Register;
 
 public class GuardingStatementOperations implements
         EntityWriteOperations,
@@ -321,5 +323,14 @@ public class GuardingStatementOperations implements
     {
         guard.check();
         entityReadDelegate.relationshipVisit( statement, relId, visitor );
+    }
+
+    @Override
+    public Cursor traverse( KernelStatement statement, Cursor inputCursor, Register.Int64.Read nodeId,
+                            Register.Obj.Read<int[]> types, Register.Obj.Read<Direction> direction,
+                            Register.Int64.Write relId, Register.Int64.Write neighborNodeId )
+    {
+        guard.check();
+        return entityReadDelegate.traverse( statement, inputCursor, nodeId, types, direction, relId, neighborNodeId );
     }
 }

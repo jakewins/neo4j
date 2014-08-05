@@ -42,6 +42,7 @@ import java.util.Iterator;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.helpers.Function;
 import org.neo4j.helpers.Predicate;
@@ -68,6 +69,7 @@ import org.neo4j.kernel.impl.nioneo.store.IndexRule;
 import org.neo4j.kernel.impl.nioneo.store.SchemaRule;
 import org.neo4j.kernel.impl.nioneo.store.SchemaStorage;
 import org.neo4j.kernel.impl.util.PrimitiveLongResourceIterator;
+import org.neo4j.register.Register;
 
 import static org.neo4j.collection.primitive.PrimitiveIntCollections.asArray;
 import static org.neo4j.collection.primitive.PrimitiveIntCollections.iterator;
@@ -478,6 +480,13 @@ public class CacheLayer implements StoreReadLayer
         RelationshipImpl relationship = persistenceCache.getRelationship( relationshipId );
         relationshipVisitor.visit( relationshipId, relationship.getStartNodeId(), relationship.getEndNodeId(),
                 relationship.getTypeId());
+    }
+
+    @Override
+    public Cursor traverse( Cursor inputCursor, Register.Int64.Read nodeId, Register.Obj.Read<int[]> relTypes, Register.Obj
+            .Read<Direction> direction, Register.Int64.Write relId, Register.Int64.Write neighborNodeId )
+    {
+        return new StoreTraverseCursor( this, inputCursor, nodeId, relTypes, direction, relId, neighborNodeId );
     }
 
     @Override

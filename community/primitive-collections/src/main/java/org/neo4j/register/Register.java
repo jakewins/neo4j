@@ -17,14 +17,50 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.util;
+package org.neo4j.register;
 
-import org.neo4j.kernel.impl.transaction.xaframework.IOCursor;
-
-public interface Cursor<T> extends IOCursor<T>
+/**
+ * Collection of common register types.
+ */
+public interface Register
 {
-    boolean next();
+    interface Int64
+    {
+        interface Read
+        {
+            long read();
+        }
 
-    @Override
-    void close();
+        interface Write
+        {
+            void write( long value );
+        }
+    }
+
+    interface Int32
+    {
+        interface Read
+        {
+            int read();
+        }
+
+        interface Write
+        {
+            void write( int value );
+        }
+    }
+
+    interface Obj
+    {
+        interface Read<T>
+        {
+            T read();
+        }
+
+        interface Write<T>
+        {
+            void write(T value);
+        }
+
+    }
 }

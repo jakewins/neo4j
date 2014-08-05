@@ -29,6 +29,7 @@ import org.neo4j.collection.primitive.PrimitiveIntCollections;
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.cursor.Cursor;
 import org.neo4j.function.primitive.PrimitiveLongPredicate;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.helpers.Predicate;
@@ -64,6 +65,7 @@ import org.neo4j.kernel.impl.api.operations.LegacyIndexReadOperations;
 import org.neo4j.kernel.impl.api.operations.LegacyIndexWriteOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
+import org.neo4j.kernel.impl.api.state.AugmentWithLocalStateTraverseCursor;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.store.StoreReadLayer;
 import org.neo4j.kernel.impl.core.Token;
@@ -72,6 +74,7 @@ import org.neo4j.kernel.impl.index.LegacyIndexStore;
 import org.neo4j.kernel.impl.nioneo.store.SchemaStorage;
 import org.neo4j.kernel.impl.util.DiffSets;
 import org.neo4j.kernel.impl.util.PrimitiveLongResourceIterator;
+import org.neo4j.register.Register;
 
 import static java.util.Collections.emptyList;
 
@@ -1226,7 +1229,7 @@ public class StateHandlingStatementOperations implements
     public <EXCEPTION extends Exception> void relationshipVisit( KernelStatement statement,
             long relId, RelationshipVisitor<EXCEPTION> visitor ) throws EntityNotFoundException, EXCEPTION
     {
-        if ( statement.hasTxState() )
+        if ( statement.hasTxStateWithChanges() )
         {
             TxState txState = statement.txState();
             if ( txState.relationshipVisit( relId, visitor ) )
@@ -1235,6 +1238,19 @@ public class StateHandlingStatementOperations implements
             }
         }
         storeLayer.relationshipVisit( relId, visitor );
+    }
+
+    @Override
+    public Cursor traverse( KernelStatement statement, Cursor inputCursor, Register.Int64.Read nodeId,
+                            Register.Obj.Read<int[]> types, Register.Obj.Read<Direction> direction,
+                            Register.Int64.Write relId, Register.Int64.Write neighborNodeId )
+    {
+        if( statement.hasTxStateWithChanges() )
+        {
+            return new AugmentWithLocalStateTraverseCursor( storeLayer, statement.txState(),
+                    inputCursor, nodeId, types, direction, relId, neighborNodeId );
+        }
+        return storeLayer.traverse( inputCursor, nodeId, types, direction, relId, neighborNodeId );
     }
 
     @Override

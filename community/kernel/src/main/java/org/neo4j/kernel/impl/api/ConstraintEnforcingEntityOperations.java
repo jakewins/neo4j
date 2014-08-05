@@ -23,6 +23,7 @@ import java.util.Iterator;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
@@ -39,6 +40,7 @@ import org.neo4j.kernel.impl.api.operations.EntityReadOperations;
 import org.neo4j.kernel.impl.api.operations.EntityWriteOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.register.Register;
 
 import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.INDEX_ENTRY;
@@ -390,5 +392,13 @@ public class ConstraintEnforcingEntityOperations implements EntityOperations
             throws EntityNotFoundException, EXCEPTION
     {
         entityReadOperations.relationshipVisit( statement, relId, visitor );
+    }
+
+    @Override
+    public Cursor traverse( KernelStatement statement, Cursor inputCursor, Register.Int64.Read nodeId,
+                            Register.Obj.Read<int[]> types, Register.Obj.Read<Direction> direction,
+                            Register.Int64.Write relId, Register.Int64.Write neighborNodeId )
+    {
+        return entityReadOperations.traverse( statement, inputCursor, nodeId, types, direction, relId, neighborNodeId );
     }
 }

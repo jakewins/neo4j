@@ -25,6 +25,7 @@ import java.util.Map;
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.helpers.Function;
 import org.neo4j.kernel.api.DataWriteOperations;
@@ -65,6 +66,7 @@ import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaStateOperations;
 import org.neo4j.kernel.impl.core.Token;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.register.Register;
 
 public class OperationsFacade implements ReadOperations, DataWriteOperations, SchemaWriteOperations
 {
@@ -297,6 +299,14 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     {
         statement.assertOpen();
         dataRead().relationshipVisit( statement, relId, visitor );
+    }
+
+    @Override
+    public Cursor traverse( Cursor inputCursor, Register.Int64.Read nodeId, Register.Obj.Read<int[]> types, Register.Obj
+            .Read<Direction> direction, Register.Int64.Write relId, Register.Int64.Write neighborNodeId )
+    {
+        statement.assertOpen();
+        return dataRead().traverse( statement, inputCursor, nodeId, types, direction, relId, neighborNodeId );
     }
 
     // </DataRead>
