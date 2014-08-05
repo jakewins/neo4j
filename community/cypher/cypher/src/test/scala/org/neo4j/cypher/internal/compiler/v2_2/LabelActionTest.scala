@@ -27,6 +27,8 @@ import org.neo4j.cypher.internal.compiler.v2_2.spi.{IdempotentResult, LockingQue
 import org.neo4j.graphdb.{Direction, Node}
 import org.neo4j.kernel.api.constraints.UniquenessConstraint
 import org.neo4j.kernel.api.index.IndexDescriptor
+import org.neo4j.cursor.Cursor
+import org.neo4j.register.Register.{Obj, Int64}
 
 class LabelActionTest extends GraphDatabaseFunSuite {
   val queryContext = new SnitchingQueryContext
@@ -97,6 +99,9 @@ class SnitchingQueryContext extends QueryContext {
   def getLabelsForNode(node: Long) = ???
 
   def getRelationshipsFor(node: Node, dir: Direction, types: Seq[String]) = ???
+
+  def traverse(inputCursor: Cursor, node: Int64.Read, types: Obj.Read[Array[Int]], dir: Obj.Read[Direction],
+                        relId: Int64.Write, neighbor: Int64.Write) = ???
 
   def nodeOps = ???
 

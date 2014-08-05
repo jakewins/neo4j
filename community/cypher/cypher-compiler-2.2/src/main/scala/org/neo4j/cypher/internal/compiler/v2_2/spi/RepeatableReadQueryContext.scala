@@ -21,6 +21,8 @@ package org.neo4j.cypher.internal.compiler.v2_2.spi
 
 import org.neo4j.graphdb.{PropertyContainer, Relationship, Direction, Node}
 import org.neo4j.kernel.api.index.IndexDescriptor
+import org.neo4j.cursor.Cursor
+import org.neo4j.register.Register.{Obj, Int64}
 
 
 trait Locker {
@@ -34,6 +36,12 @@ final class RepeatableReadQueryContext(inner: QueryContext, locker: Locker) exte
   override def getRelationshipsFor(node: Node, dir: Direction, types: Seq[String]): Iterator[Relationship] = {
     locker.acquireLock(node)
     lockAll(inner.getRelationshipsFor(node, dir, types))
+  }
+
+  override def traverse(inputCursor: Cursor, node: Int64.Read, types: Obj.Read[Array[Int]], dir: Obj.Read[Direction],
+                        relId: Int64.Write, neighbor: Int64.Write) = {
+    // TODO: Locking
+    inner.traverse(inputCursor, node, types, dir, relId, neighbor)
   }
 
   override def getLabelsForNode(node: Long): Iterator[Int] = {

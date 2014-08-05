@@ -25,6 +25,8 @@ import org.neo4j.cypher.CypherExecutionException
 import org.neo4j.cypher.internal.compiler.v2_2.spi
 import org.neo4j.kernel.api.index.IndexDescriptor
 import org.neo4j.kernel.api.TokenNameLookup
+import org.neo4j.cursor.Cursor
+import org.neo4j.register.Register.{Obj, Int64}
 
 class ExceptionTranslatingQueryContext(inner: QueryContext) extends DelegatingQueryContext(inner) {
   override def setLabelsOnNode(node: Long, labelIds: Iterator[Int]): Int =
@@ -57,6 +59,10 @@ class ExceptionTranslatingQueryContext(inner: QueryContext) extends DelegatingQu
 
   override def getRelationshipsFor(node: Node, dir: Direction, types: Seq[String]): Iterator[Relationship] =
     translateException(super.getRelationshipsFor(node, dir, types))
+
+  override def traverse(inputCursor: Cursor, node: Int64.Read, types: Obj.Read[Array[Int]], dir: Obj.Read[Direction],
+               relId: Int64.Write, neighbor: Int64.Write) =
+    translateException(inner.traverse(inputCursor, node, types, dir, relId, neighbor))
 
   override def nodeOps: Operations[Node] =
     new ExceptionTranslatingOperations[Node](super.nodeOps)

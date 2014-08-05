@@ -21,6 +21,8 @@ package org.neo4j.cypher.internal.compiler.v2_2.spi
 
 import org.neo4j.graphdb.{Relationship, PropertyContainer, Direction, Node}
 import org.neo4j.kernel.api.index.IndexDescriptor
+import org.neo4j.cursor.Cursor
+import org.neo4j.register.Register.{Obj, Int64}
 
 class DelegatingQueryContext(inner: QueryContext) extends QueryContext {
 
@@ -53,6 +55,10 @@ class DelegatingQueryContext(inner: QueryContext) extends QueryContext {
   def getOrCreateLabelId(labelName: String): Int = singleDbHit(inner.getOrCreateLabelId(labelName))
 
   def getRelationshipsFor(node: Node, dir: Direction, types: Seq[String]): Iterator[Relationship] = manyDbHits(inner.getRelationshipsFor(node, dir, types))
+
+  // TODO: dbHits
+  def traverse(inputCursor: Cursor, node: Int64.Read, types: Obj.Read[Array[Int]], dir: Obj.Read[Direction],
+               relId: Int64.Write, neighbor: Int64.Write) = inner.traverse(inputCursor, node, types, dir, relId, neighbor)
 
   def nodeOps = inner.nodeOps
 

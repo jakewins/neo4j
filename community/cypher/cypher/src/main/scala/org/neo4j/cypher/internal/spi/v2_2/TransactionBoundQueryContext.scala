@@ -39,6 +39,8 @@ import org.neo4j.cypher.internal.compiler.v2_2.spi._
 import org.neo4j.collection.primitive.PrimitiveLongIterator
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
+import org.neo4j.cursor.Cursor
+import org.neo4j.register.Register.{Obj, Int64}
 
 final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
                                          var tx: Transaction,
@@ -112,6 +114,11 @@ final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
   def getRelationshipsFor(node: Node, dir: Direction, types: Seq[String]): Iterator[Relationship] = types match {
     case Seq() => node.getRelationships(dir).iterator().asScala
     case _     => node.getRelationships(dir, types.map(withName): _*).iterator().asScala
+  }
+
+  def traverse(inputCursor: Cursor, node: Int64.Read, types: Obj.Read[Array[Int]], dir: Obj.Read[Direction],
+                        relId: Int64.Write, neighbor: Int64.Write) = {
+    statement.readOperations().traverse( inputCursor, node, types, dir, relId, neighbor )
   }
 
   def exactIndexSearch(index: IndexDescriptor, value: Any) =

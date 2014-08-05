@@ -25,28 +25,72 @@ import org.neo4j.cypher.internal.compiler.v2_2.executionplan.Effects
 import org.neo4j.cypher.internal.compiler.v2_2.planDescription.PlanDescription.Arguments.IntroducedIdentifier
 import org.neo4j.cypher.internal.compiler.v2_2.symbols._
 import org.neo4j.graphdb.{Direction, Node, Relationship}
+import org.neo4j.cursor.Cursor
+import org.neo4j.register.{ObjectRegister, LongRegister, Register}
+import org.neo4j.cypher.internal.compiler.v2_2.spi.QueryContext
+
+/**
+ * Input cursor passed to the kernel.
+ */
+private class ExpandInputCursor(input:Iterator[ExecutionContext], from: String, nodeReg: Register.Int64.Write,
+                                currentRow: Register.Obj.Write[ExecutionContext]) extends Cursor
+{
+  override def next() = if(input.hasNext) {
+    val row: ExecutionContext = input.next()
+    currentRow.write(row)
+
+    getFromNode( row ) match {
+      case n: Node =>
+        nodeReg.write(n.getId)
+        true
+      case null => next()
+      case value => throw new InternalException(s"Expected to find a node at $from but found $value instead")
+    }
+  } else false
+
+  override def close() = ???
+  override def reset() = ???
+
+  def getFromNode(row: ExecutionContext): Any =
+    row.getOrElse(from, throw new InternalException(s"Expected to find a node at $from but found nothing"))
+}
+
+private class ExpandOutputIterator( cursor:Cursor, relName: String, to: String, state: QueryState,
+                                   currentRow: Register.Obj.Read[ExecutionContext], relReg: Register.Int64.Read,
+                                   neighbor: Register.Int64.Read) extends Iterator[ExecutionContext]
+{
+  var nextRow:ExecutionContext = null
+
+  override def hasNext = nextRow != null || prefetch
+
+  override def next() = if(hasNext) { val current = nextRow; nextRow = null; current } else null
+
+  private def prefetch = if(cursor.next)
+  {
+    nextRow = currentRow.read().newWith(Seq(
+                              relName -> state.query.relationshipOps.getById( relReg.read() ),
+                              to -> state.query.nodeOps.getById( neighbor.read() )))
+    true
+  } else false
+
+}
 
 case class ExpandPipe(source: Pipe, from: String, relName: String, to: String, dir: Direction, types: Seq[String])
                      (implicit pipeMonitor: PipeMonitor) extends PipeWithSource(source, pipeMonitor) {
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-    input.flatMap {
-      row =>
-        getFromNode(row) match {
-          case n: Node =>
-            val relationships: Iterator[Relationship] = state.query.getRelationshipsFor(n, dir, types)
-            relationships.map {
-              case r => row.newWith(Seq(relName -> r, to -> r.getOtherNode(n)))
-            }
+    val nodeReg     = new LongRegister()
+    val typeReg     = new ObjectRegister[Array[Int]](typeIds(state.query))
+    val dirReg      = new ObjectRegister[Direction](dir)
+    val relReg      = new LongRegister()
+    val neighborReg = new LongRegister()
 
-          case null => None
+    val currentRow = new ObjectRegister[ExecutionContext]()
 
-          case value => throw new InternalException(s"Expected to find a node at $from but found $value instead")
-        }
-    }
+    new ExpandOutputIterator(state.query.traverse( new ExpandInputCursor(input, from, nodeReg, currentRow),
+      nodeReg, typeReg, dirReg, relReg, neighborReg), relName, to, state, currentRow, relReg, neighborReg )
   }
 
-  def getFromNode(row: ExecutionContext): Any =
-    row.getOrElse(from, throw new InternalException(s"Expected to find a node at $from but found nothing"))
+  def typeIds(state:QueryContext) : Array[Int] = types.flatMap ( t => state.getOptRelTypeId(t).toList ).toArray // Putting on my functional pants!
 
   def planDescription = {
     val arguments = Seq(IntroducedIdentifier(relName), IntroducedIdentifier(to))

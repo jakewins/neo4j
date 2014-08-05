@@ -24,6 +24,9 @@ import org.neo4j.graphdb._
 import org.neo4j.kernel.api.constraints.UniquenessConstraint
 import org.neo4j.kernel.api.index.IndexDescriptor
 import org.neo4j.cypher.QueryStatistics
+import org.neo4j.cursor.Cursor
+import org.neo4j.register.Register.Int64
+import org.neo4j.register.Register
 
 /*
  * Developer note: This is an attempt at an internal graph database API, which defines a clean cut between
@@ -47,6 +50,10 @@ trait QueryContext extends TokenContext {
   def createRelationship(start: Node, end: Node, relType: String): Relationship
 
   def getRelationshipsFor(node: Node, dir: Direction, types: Seq[String]): Iterator[Relationship]
+
+  def traverse( inputCursor: Cursor,
+                node: Register.Int64.Read, types: Register.Obj.Read[Array[Int]], dir: Register.Obj.Read[Direction],
+                relId: Register.Int64.Write, neighbor: Register.Int64.Write) : Cursor
 
   def getOrCreateLabelId(labelName: String): Int
 

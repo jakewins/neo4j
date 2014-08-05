@@ -26,6 +26,11 @@ public class ObjectRegister<T> implements Register.Obj.Read<T>, Register.Obj.Wri
 {
     private T value;
 
+    public ObjectRegister( )
+    {
+        this(null);
+    }
+
     public ObjectRegister( T initialValue )
     {
         this.value = initialValue;
