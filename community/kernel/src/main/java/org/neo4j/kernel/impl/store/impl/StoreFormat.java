@@ -38,6 +38,15 @@ public interface StoreFormat<RECORD, CURSOR extends Store.RecordCursor>
     /** Access the format for reading individual records. */
     RecordFormat<RECORD> recordFormat();
 
+    /**
+     * The version of this store format, this gets persisted to ensure we are reading a store with the same version
+     * as the format we're using to read it.
+     */
+    String version();
+
+    /** A short, unique, type name for this storage format, this is not allowed to change across versions. */
+    String type();
+
     /** The format is allowed a fixed-size header for metadata, and must specify the size of that header here. */
     int headerSize();
 

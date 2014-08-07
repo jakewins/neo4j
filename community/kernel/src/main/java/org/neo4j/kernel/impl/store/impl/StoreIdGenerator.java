@@ -23,4 +23,6 @@ public interface StoreIdGenerator
 {
     public long allocate();
     public void free( long id );
+
+    long highestIdInUse();
 }

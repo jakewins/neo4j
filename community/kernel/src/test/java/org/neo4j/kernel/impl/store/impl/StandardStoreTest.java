@@ -31,6 +31,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.standard.StandardPageCache;
 import org.neo4j.kernel.impl.store.Store;
+import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.test.EphemeralFileSystemRule;
 
@@ -56,11 +57,11 @@ public class StandardStoreTest
     }
 
     @Test
-    public void shouldReadRecords() throws Exception
+    public void shouldReadRecords() throws Throwable
     {
         // Given
         Store<MyRecord, MyCursor> store = life.add(new StandardStore<>( new MyHeaderlessStoreFormat(), new File("/store"),
-                new TestStoreIdGenerator(), pageCache, fsRule.get() ));
+                new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL ));
 
         long firstId = store.allocate();
         long secondId = store.allocate();
@@ -76,6 +77,14 @@ public class StandardStoreTest
         assertThat(firstRecord.value, equalTo(1337l));
         assertThat(secondRecord.value, equalTo(1338l));
 
+        // And when I restart the store
+        life.shutdown();
+
+        store = new StandardStore<>( new MyHeaderlessStoreFormat(), new File("/store"),
+                new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL );
+        store.init();
+        store.start();
+
         assertThat( StoreMatchers.records( store ),
            equalTo( asList( new MyRecord( firstId, 1337 ), new MyRecord( secondId, 1338 ) ) ) );
     }
@@ -85,7 +94,7 @@ public class StandardStoreTest
     {
         // Given
         Store<MyRecord, MyCursor> store = life.add(new StandardStore<>( new MyFormatWithHeader(14), new File("/store"),
-                new TestStoreIdGenerator(), pageCache, fsRule.get() ));
+                new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL ));
 
         long recordId = store.allocate();
 
@@ -101,7 +110,7 @@ public class StandardStoreTest
         life.shutdown();
 
         store = new StandardStore<>( new MyFormatWithHeader(14), new File("/store"),
-                new TestStoreIdGenerator(), pageCache, fsRule.get() );
+                new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL );
         store.init();
         store.start();
 
@@ -157,7 +166,7 @@ class MyHeaderlessStoreFormat extends FixedSizeRecordStoreFormat<MyRecord, MyCur
 
     public MyHeaderlessStoreFormat()
     {
-        super( 8 );
+        super( 8, "HeaderlessFormat", "v0.1.0" );
         this.recordFormat = new MyRecordFormat();
     }
 
@@ -219,6 +228,18 @@ class MyFormatWithHeader implements StoreFormat<MyRecord, MyCursor>
     public int headerSize()
     {
         return 4;
+    }
+
+    @Override
+    public String version()
+    {
+        return "v0.1.0";
+    }
+
+    @Override
+    public String type()
+    {
+        return "MyFormatWithHeader";
     }
 }
 

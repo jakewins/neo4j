@@ -25,8 +25,14 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 
 public interface Store<RECORD, CURSOR extends Store.RecordCursor> extends Lifecycle
 {
+    /**
+     * Gives you a cursor for efficiently reading the store. The cursor you get back will always at least implement
+     * the {@link org.neo4j.kernel.impl.store.Store.RecordCursor} interface, but most stores are expected to provide
+     * richer cursor interfaces that allow reading individual fields of whatever record you are currently positioned at.
+     */
     CURSOR cursor();
 
+    /** Read the specified record. */
     RECORD read(long id);
 
     void write(RECORD record) throws IOException;

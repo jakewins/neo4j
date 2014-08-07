@@ -36,4 +36,10 @@ public class TestStoreIdGenerator implements StoreIdGenerator
     {
 
     }
+
+    @Override
+    public long highestIdInUse()
+    {
+        return next.get();
+    }
 }

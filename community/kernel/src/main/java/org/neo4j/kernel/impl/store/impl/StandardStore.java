@@ -30,6 +30,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
 import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.store.Store;
+import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static org.neo4j.io.pagecache.PagedFile.PF_EXCLUSIVE_LOCK;
@@ -46,12 +47,13 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final File dbFileName;
+    private final StoreOpenCloseLogic openCloseLogic;
 
     private StoreToolkit toolkit;
     private PagedFile file;
 
     public StandardStore(StoreFormat<RECORD, CURSOR> format, File baseFileName, StoreIdGenerator idGenerator,
-                         PageCache pageCache, FileSystemAbstraction fs )
+                         PageCache pageCache, FileSystemAbstraction fs, StringLogger log )
     {
         this.storeFormat = format;
         this.recordFormat = format.recordFormat();
@@ -59,6 +61,7 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
         this.idGenerator = idGenerator;
         this.pageCache = pageCache;
         this.fs = fs;
+        this.openCloseLogic = new StoreOpenCloseLogic( log, dbFileName, storeFormat );
     }
 
     @Override
@@ -140,6 +143,7 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
         }
         else
         {
+            checkVersion();
             initializeToolkit();
         }
     }
@@ -163,6 +167,14 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
             // "Throw away" record slots at the beginning of the file until we've covered the full size of the header
             allocate();
             headerSize -= toolkit.recordSize();
+        }
+    }
+
+    private void checkVersion() throws IOException
+    {
+        try(StoreChannel channel = fs.open( dbFileName, "rw" ))
+        {
+            openCloseLogic.openStore( channel );
         }
     }
 
@@ -193,7 +205,19 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     @Override
     public void stop() throws Throwable
     {
-        file.close();
-        file = null;
+        if(file != null)
+        {
+            file = null;
+            pageCache.unmap( dbFileName );
+        }
+    }
+
+    @Override
+    public void shutdown() throws Throwable
+    {
+        try(StoreChannel channel = fs.open( dbFileName, "rw" ))
+        {
+            openCloseLogic.closeStore( channel, idGenerator.highestIdInUse() );
+        }
     }
 }
