@@ -39,7 +39,9 @@ import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_LOCK;
 public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends LifecycleAdapter
              implements Store<RECORD, CURSOR>
 {
-    private final StoreFormat<RECORD, CURSOR> format;
+    private final StoreFormat<RECORD, CURSOR> storeFormat;
+    private final StoreFormat.RecordFormat<RECORD> recordFormat;
+
     private final StoreIdGenerator idGenerator;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
@@ -51,7 +53,8 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     public StandardStore(StoreFormat<RECORD, CURSOR> format, File baseFileName, StoreIdGenerator idGenerator,
                          PageCache pageCache, FileSystemAbstraction fs )
     {
-        this.format = format;
+        this.storeFormat = format;
+        this.recordFormat = format.recordFormat();
         this.dbFileName = new File(baseFileName.getAbsolutePath() + ".db");
         this.idGenerator = idGenerator;
         this.pageCache = pageCache;
@@ -61,7 +64,7 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     @Override
     public CURSOR cursor()
     {
-        return format.createCursor(file, toolkit);
+        return storeFormat.createCursor(file, toolkit);
     }
 
     @Override
@@ -77,15 +80,14 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
                 RECORD record;
                 do
                 {
-                    cursor.setOffset( offset );
-                    record = format.deserialize( id, cursor );
+                    record = recordFormat.deserialize( cursor, offset, id );
                 } while ( cursor.retry() );
 
                 return record;
             }
             else
             {
-                throw new InvalidRecordException( format.recordName() + "[" + id + "] not in use" );
+                throw new InvalidRecordException( recordFormat.recordName() + "[" + id + "] not in use" );
             }
         }
         catch ( IOException e )
@@ -97,7 +99,7 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     @Override
     public void write( RECORD record )
     {
-        long id = format.id( record );
+        long id = recordFormat.id( record );
         long pageId = toolkit.pageId( id );
         int offset = toolkit.recordOffset( id );
 
@@ -107,8 +109,7 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
             {
                 do
                 {
-                    cursor.setOffset( offset );
-                    format.serialize( cursor, record );
+                    recordFormat.serialize( cursor, offset, record );
                 } while ( cursor.retry() );
             }
         }
@@ -149,14 +150,14 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
         fs.create( dbFileName );
         try(StoreChannel channel = fs.open( dbFileName, "rw" ))
         {
-            format.createStore( channel );
+            storeFormat.createStore( channel );
         }
 
         initializeToolkit();
 
         // If this is the first time the store is started, and the store has a header, we need to reserve enough
         // initial records to make space for that header.
-        int headerSize = format.headerSize();
+        int headerSize = storeFormat.headerSize();
         while(headerSize > 0)
         {
             // "Throw away" record slots at the beginning of the file until we've covered the full size of the header
@@ -169,8 +170,8 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     {
         try(StoreChannel channel = fs.open( dbFileName, "rw" ))
         {
-            int recordSize = format.recordSize( channel );
-            int headerSize = format.headerSize();
+            int recordSize = storeFormat.recordSize( channel );
+            int headerSize = storeFormat.headerSize();
             int firstRecordId = headerSize == 0 ? 0 : (int) Math.ceil( headerSize / (1.0 * recordSize) );
 
             // Note that the store page size is always divisible by recordSize. Since the pageCache reuses pages across

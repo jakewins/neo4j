@@ -37,7 +37,7 @@ import org.neo4j.test.EphemeralFileSystemRule;
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.*;
-import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_LOCK;
+import static org.neo4j.kernel.impl.store.impl.StoreFormat.RecordFormat;
 
 public class StandardStoreTest
 {
@@ -59,7 +59,7 @@ public class StandardStoreTest
     public void shouldReadRecords() throws Exception
     {
         // Given
-        Store<MyRecord, MyCursor> store = life.add(new StandardStore<>( new MyHeaderLessFormat(), new File("/store"),
+        Store<MyRecord, MyCursor> store = life.add(new StandardStore<>( new MyHeaderlessStoreFormat(), new File("/store"),
                 new TestStoreIdGenerator(), pageCache, fsRule.get() ));
 
         long firstId = store.allocate();
@@ -109,6 +109,118 @@ public class StandardStoreTest
     }
 }
 
+
+class MyCursor extends BaseRecordCursor<MyRecord>
+{
+    MyCursor( PagedFile file, StoreToolkit toolkit, MyRecordFormat format )
+    {
+        super(file, toolkit, format);
+    }
+}
+
+class MyRecordFormat implements RecordFormat<MyRecord>
+{
+    @Override
+    public String recordName()
+    {
+        return "MyRecord";
+    }
+
+    @Override
+    public long id( MyRecord myRecord )
+    {
+        return myRecord.id;
+    }
+
+    @Override
+    public void serialize( PageCursor cursor, int offset, MyRecord myRecord )
+    {
+        cursor.putLong(offset, myRecord.value);
+    }
+
+    @Override
+    public MyRecord deserialize( PageCursor cursor, int offset, long id )
+    {
+        return new MyRecord( id, cursor.getLong(offset) );
+    }
+
+    @Override
+    public boolean inUse( PageCursor pageCursor, int offset )
+    {
+        return pageCursor.getLong(offset) != 0;
+    }
+}
+
+class MyHeaderlessStoreFormat extends FixedSizeRecordStoreFormat<MyRecord, MyCursor>
+{
+    private final MyRecordFormat recordFormat;
+
+    public MyHeaderlessStoreFormat()
+    {
+        super( 8 );
+        this.recordFormat = new MyRecordFormat();
+    }
+
+    @Override
+    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit )
+    {
+        return new MyCursor( file, toolkit, recordFormat );
+    }
+
+    @Override
+    public RecordFormat<MyRecord> recordFormat()
+    {
+        return recordFormat;
+    }
+}
+
+class MyFormatWithHeader implements StoreFormat<MyRecord, MyCursor>
+{
+    private final int configuredRecordSize;
+    private final MyRecordFormat recordFormat;
+
+    MyFormatWithHeader( int configuredRecordSize )
+    {
+        this.configuredRecordSize = configuredRecordSize;
+        this.recordFormat = new MyRecordFormat();
+    }
+
+    @Override
+    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit )
+    {
+        return new MyCursor( file, toolkit, recordFormat );
+    }
+
+    @Override
+    public RecordFormat<MyRecord> recordFormat()
+    {
+        return recordFormat;
+    }
+
+    @Override
+    public int recordSize( StoreChannel channel ) throws IOException
+    {
+        ByteBuffer buf = ByteBuffer.allocate( 4 );
+        channel.read( buf, 0 );
+        buf.flip();
+        return buf.getInt();
+    }
+
+    @Override
+    public void createStore( StoreChannel channel ) throws IOException
+    {
+        ByteBuffer buf = ByteBuffer.allocate( 4 );
+        buf.putInt( configuredRecordSize );
+        buf.flip();
+        channel.write( buf, 0 );
+    }
+
+    @Override
+    public int headerSize()
+    {
+        return 4;
+    }
+}
 
 class MyRecord
 {
@@ -162,215 +274,5 @@ class MyRecord
                 "id=" + id +
                 ", value=" + value +
                 '}';
-    }
-}
-
-class MyCursor implements Store.RecordCursor<MyRecord>
-{
-    private final PagedFile file;
-    private final StoreToolkit toolkit;
-    private final MyHeaderLessFormat format;
-
-    private PageCursor pageCursor;
-    private long currentRecordId = -1;
-
-    MyCursor( PagedFile file, StoreToolkit toolkit, MyHeaderLessFormat format )
-    {
-        this.file = file;
-        this.toolkit = toolkit;
-        this.format = format;
-        this.currentRecordId = toolkit.firstRecordId() - 1;
-    }
-
-    @Override
-    public MyRecord currentRecord()
-    {
-        MyRecord record = format.deserialize( currentRecordId, pageCursor );
-        pageCursor.setOffset( toolkit.recordOffset( currentRecordId ) );
-        return record;
-    }
-
-    public boolean inUse()
-    {
-        boolean inUse = format.inUse( pageCursor );
-        pageCursor.setOffset( toolkit.recordOffset( currentRecordId ) );
-        return inUse;
-    }
-
-    @Override
-    public boolean next( long id )
-    {
-        long pageId = toolkit.pageId( id );
-        int recordOffset = toolkit.recordOffset( id );
-
-        if( pageCursor == null)
-        {
-            return moveToFirstPage( id, pageId );
-        }
-        else if( pageId == pageCursor.getCurrentPageId())
-        {
-            // The next record is in the same page, just reposition the cursor
-            currentRecordId = id;
-            pageCursor.setOffset( recordOffset );
-            return true;
-        }
-        else
-        {
-            return moveToNextPage( id, pageId, recordOffset );
-        }
-    }
-
-    private boolean moveToFirstPage( long id, long pageId )
-    {
-        try
-        {
-            pageCursor = file.io( pageId, PF_SHARED_LOCK );
-            return next(id);
-        }
-        catch ( IOException e )
-        {
-            return false;
-        }
-    }
-
-    private boolean moveToNextPage( long id, long pageId, int recordOffset )
-    {
-        try
-        {
-            if( pageCursor.next( pageId ))
-            {
-                currentRecordId = id;
-                pageCursor.setOffset( recordOffset );
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-        catch ( IOException e )
-        {
-            return false;
-        }
-    }
-
-    @Override
-    public boolean next()
-    {
-        while(next(currentRecordId+1))
-        {
-            if(inUse())
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public void close()
-    {
-        pageCursor.close();
-    }
-}
-
-class MyHeaderLessFormat extends FixedSizeRecordStoreFormat<MyRecord, MyCursor>
-{
-    public MyHeaderLessFormat()
-    {
-        super( 8, "MyRecord" );
-    }
-
-    @Override
-    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit )
-    {
-        return new MyCursor( file, toolkit, this );
-    }
-
-    @Override
-    public long id( MyRecord myRecord )
-    {
-        return myRecord.id;
-    }
-
-    @Override
-    public void serialize( PageCursor cursor, MyRecord myRecord )
-    {
-        cursor.putLong( myRecord.value );
-    }
-
-    @Override
-    public MyRecord deserialize( long id, PageCursor cursor )
-    {
-        return new MyRecord( id, cursor.getLong() );
-    }
-
-    public boolean inUse( PageCursor pageCursor )
-    {
-        return pageCursor.getLong() != 0;
-    }
-}
-
-class MyFormatWithHeader implements StoreFormat<MyRecord, MyCursor>
-{
-    private final int configuredRecordSize;
-
-    MyFormatWithHeader( int configuredRecordSize )
-    {
-        this.configuredRecordSize = configuredRecordSize;
-    }
-
-    @Override
-    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit )
-    {
-        return new MyCursor( file, toolkit, new MyHeaderLessFormat() );
-    }
-
-    @Override
-    public long id( MyRecord myRecord )
-    {
-        return myRecord.id;
-    }
-
-    @Override
-    public void serialize( PageCursor cursor, MyRecord myRecord )
-    {
-        cursor.putLong( myRecord.value );
-    }
-
-    @Override
-    public MyRecord deserialize( long id, PageCursor cursor )
-    {
-        return new MyRecord( id, cursor.getLong() );
-    }
-
-    @Override
-    public String recordName()
-    {
-        return "MyHeaderedRecord";
-    }
-
-    @Override
-    public int recordSize( StoreChannel channel ) throws IOException
-    {
-        ByteBuffer buf = ByteBuffer.allocate( 4 );
-        channel.read( buf, 0 );
-        buf.flip();
-        return buf.getInt();
-    }
-
-    @Override
-    public void createStore( StoreChannel channel ) throws IOException
-    {
-        ByteBuffer buf = ByteBuffer.allocate( 4 );
-        buf.putInt( configuredRecordSize );
-        buf.flip();
-        channel.write( buf, 0 );
-    }
-
-    @Override
-    public int headerSize()
-    {
-        return 4;
     }
 }

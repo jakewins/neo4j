@@ -26,18 +26,10 @@ public abstract class FixedSizeRecordStoreFormat<RECORD, CURSOR extends Store.Re
         implements StoreFormat<RECORD, CURSOR>
 {
     private final int recordSize;
-    private final String recordName;
 
-    public FixedSizeRecordStoreFormat(int recordSize, String recordName)
+    public FixedSizeRecordStoreFormat( int recordSize )
     {
         this.recordSize = recordSize;
-        this.recordName = recordName;
-    }
-
-    @Override
-    public String recordName()
-    {
-        return recordName;
     }
 
     @Override
@@ -47,10 +39,7 @@ public abstract class FixedSizeRecordStoreFormat<RECORD, CURSOR extends Store.Re
     }
 
     @Override
-    public void createStore( StoreChannel channel )
-    {
-
-    }
+    public void createStore( StoreChannel channel ) { }
 
     @Override
     public int headerSize()

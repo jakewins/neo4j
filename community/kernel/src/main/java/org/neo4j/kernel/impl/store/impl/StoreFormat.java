@@ -35,24 +35,33 @@ public interface StoreFormat<RECORD, CURSOR extends Store.RecordCursor>
 {
     CURSOR createCursor( PagedFile file, StoreToolkit toolkit );
 
-    /** Get the id from a record. */
-    long id( RECORD record );
+    /** Access the format for reading individual records. */
+    RecordFormat<RECORD> recordFormat();
 
-    /** Serialize a full record into the offset the cursor is currently positioned at. */
-    void serialize( PageCursor cursor, RECORD record );
-
-    /** Deserialize a full record at the offset the cursor is currently positioned at. */
-    RECORD deserialize( long id, PageCursor cursor );
-
-    /** A simple name for the record type, such as "NodeRecord" */
-    String recordName();
+    /** The format is allowed a fixed-size header for metadata, and must specify the size of that header here. */
+    int headerSize();
 
     /** Determine the record size, given access to the raw file on disk. */
     int recordSize( StoreChannel channel ) throws IOException;
 
-    /** The format is allowed a fixed-size header, and must specify the size of that header here. */
-    int headerSize();
-
     /** Given a completely empty file, do any setup work needed to create the new store. */
     void createStore( StoreChannel channel ) throws IOException;
+
+    interface RecordFormat<RECORD>
+    {
+        /** A simple name for the record type, such as "NodeRecord" */
+        String recordName();
+
+        /** Get the id from a record. */
+        long id( RECORD record );
+
+        /** Serialize a full record at the specified offset. */
+        void serialize( PageCursor cursor, int offset, RECORD record );
+
+        /** Deserialize a full record at the specified offset. */
+        RECORD deserialize( PageCursor cursor, int offset, long id );
+
+        /** Determine if a record at the specified offset is in use. */
+        boolean inUse( PageCursor pageCursor, int offset );
+    }
 }
