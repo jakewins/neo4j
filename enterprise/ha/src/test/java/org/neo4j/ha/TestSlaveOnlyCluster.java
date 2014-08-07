@@ -19,11 +19,6 @@
  */
 package org.neo4j.ha;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertThat;
-import static org.neo4j.test.ha.ClusterManager.fromXml;
-import static org.neo4j.test.ha.ClusterManager.masterAvailable;
-
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -41,6 +36,11 @@ import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.ha.ClusterManager;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.*;
+import static org.neo4j.test.ha.ClusterManager.fromXml;
+import static org.neo4j.test.ha.ClusterManager.masterAvailable;
 public class TestSlaveOnlyCluster
 {
     public final TargetDirectory directory = TargetDirectory.forTest( getClass() );
@@ -101,6 +101,13 @@ public class TestSlaveOnlyCluster
             ClusterManager.RepairKit repairKit = clusterManager.getDefaultCluster().fail( master );
 
             failedLatch.await();
+
+            HighlyAvailableGraphDatabase slave = clusterManager.getDefaultCluster().getAnySlave();
+            try( Transaction tx = slave.beginTx() )
+            {
+                System.out.println(slave.getNodeById( 1 ));
+                tx.success();
+            }
 
             repairKit.repair();
 
