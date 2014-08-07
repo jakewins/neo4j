@@ -22,11 +22,15 @@ package org.neo4j.kernel.impl.store.impl;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.OverlappingFileLockException;
 
 import org.neo4j.helpers.UTF8;
+import org.neo4j.io.fs.FileLock;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.nioneo.store.NotCurrentStoreVersionException;
+import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.util.Charsets;
 import org.neo4j.kernel.impl.util.StringLogger;
 
@@ -52,7 +56,7 @@ import static org.neo4j.io.fs.FileUtils.windowsSafeIOOperation;
  *   Wrong version  WRONG_VERSION |  UNCLEAN
  *
  */
-public class StoreOpenCloseLogic
+public class StoreOpenCloseCycle
 {
     enum StoreState
     {
@@ -70,7 +74,7 @@ public class StoreOpenCloseLogic
     }
 
     /**
-     * Wraps a {@link StoreOpenCloseLogic.StoreState} with a description of the reason
+     * Wraps a {@link StoreOpenCloseCycle.StoreState} with a description of the reason
      * for it, to help with error messages.
      */
     public static class StateDescription
@@ -105,18 +109,23 @@ public class StoreOpenCloseLogic
     private final StringLogger log;
     private final File dbFileName;
     private final StoreFormat<?, ?> format;
+    private final FileSystemAbstraction fs;
 
-    public StoreOpenCloseLogic( StringLogger log, File dbFileName, StoreFormat<?, ?> format )
+    private FileLock fileLock;
+
+    public StoreOpenCloseCycle( StringLogger log, File dbFileName, StoreFormat<?, ?> format, FileSystemAbstraction fs )
     {
         this.log = log;
         this.dbFileName = dbFileName;
         this.format = format;
+        this.fs = fs;
     }
 
-    public void openStore( StoreChannel channel ) throws IOException
+    public void openStore(StoreChannel channel) throws IOException
     {
+        lock(channel);
         StateDescription result = determineState( channel );
-        switch(result.state())
+        switch ( result.state() )
         {
             case CLEAN:
                 // Cut off the footer, indicating the store is open
@@ -127,6 +136,24 @@ public class StoreOpenCloseLogic
                 break;
             case WRONG_VERSION:
                 throw new NotCurrentStoreVersionException( result.expectedFooter(), result.foundFooter(), "", false );
+        }
+    }
+
+    private void lock( StoreChannel channel )
+    {
+        try
+        {
+            this.fileLock = fs.tryLock( dbFileName, channel );
+        }
+        catch ( IOException e )
+        {
+            throw new UnderlyingStorageException( "Unable to lock store[" + dbFileName + "]", e );
+        }
+        catch ( OverlappingFileLockException e )
+        {
+            throw new IllegalStateException( "Unable to lock store [" + dbFileName +
+                    "], this is usually caused by another Neo4j kernel already running in " +
+                    "this JVM for this particular store" );
         }
     }
 
@@ -144,8 +171,11 @@ public class StoreOpenCloseLogic
                         " vs file size " + channel.size() );
                 channel.truncate( channel.position() );
                 channel.force( false );
-                // TODO
-//                releaseFileLockAndCloseFileChannel();
+                if ( fileLock != null )
+                {
+                    fileLock.release();
+                    fileLock = null;
+                }
             }
         } );
     }
@@ -166,6 +196,12 @@ public class StoreOpenCloseLogic
         if ( fileSize < expected.length )
         {
             // File is too small to have a footer, must be unclean
+            return new StateDescription(StoreState.UNCLEAN, expectedTypeAndVersion, "None" );
+        }
+
+        int recordSize = format.recordSize( channel );
+        if( recordSize != 0 && (fileSize - expected.length) % recordSize != 0)
+        {
             return new StateDescription(StoreState.UNCLEAN, expectedTypeAndVersion, "None" );
         }
 

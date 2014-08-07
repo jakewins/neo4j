@@ -47,21 +47,29 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final File dbFileName;
-    private final StoreOpenCloseLogic openCloseLogic;
+    private final StringLogger log;
+    private final StoreOpenCloseCycle openCloseLogic;
 
     private StoreToolkit toolkit;
     private PagedFile file;
+
+    /**
+     * This MUST NOT be accessed while the store is in STARTED state, all interaction with the file while the store is
+     * open must be done via {@link #file}.
+     */
+    private StoreChannel rawChannel;
 
     public StandardStore(StoreFormat<RECORD, CURSOR> format, File baseFileName, StoreIdGenerator idGenerator,
                          PageCache pageCache, FileSystemAbstraction fs, StringLogger log )
     {
         this.storeFormat = format;
+        this.log = log;
         this.recordFormat = format.recordFormat();
         this.dbFileName = new File(baseFileName.getAbsolutePath() + ".db");
         this.idGenerator = idGenerator;
         this.pageCache = pageCache;
         this.fs = fs;
-        this.openCloseLogic = new StoreOpenCloseLogic( log, dbFileName, storeFormat );
+        this.openCloseLogic = new StoreOpenCloseCycle( log, dbFileName, storeFormat, fs );
     }
 
     @Override
@@ -143,56 +151,9 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
         }
         else
         {
-            checkVersion();
+            rawChannel = fs.open(dbFileName, "rw");
+            openCloseLogic.openStore(rawChannel);
             initializeToolkit();
-        }
-    }
-
-    private void createNewStore() throws IOException
-    {
-        fs.mkdirs( dbFileName.getParentFile() );
-        fs.create( dbFileName );
-        try(StoreChannel channel = fs.open( dbFileName, "rw" ))
-        {
-            storeFormat.createStore( channel );
-        }
-
-        initializeToolkit();
-
-        // If this is the first time the store is started, and the store has a header, we need to reserve enough
-        // initial records to make space for that header.
-        int headerSize = storeFormat.headerSize();
-        while(headerSize > 0)
-        {
-            // "Throw away" record slots at the beginning of the file until we've covered the full size of the header
-            allocate();
-            headerSize -= toolkit.recordSize();
-        }
-    }
-
-    private void checkVersion() throws IOException
-    {
-        try(StoreChannel channel = fs.open( dbFileName, "rw" ))
-        {
-            openCloseLogic.openStore( channel );
-        }
-    }
-
-    private void initializeToolkit() throws IOException
-    {
-        try(StoreChannel channel = fs.open( dbFileName, "rw" ))
-        {
-            int recordSize = storeFormat.recordSize( channel );
-            int headerSize = storeFormat.headerSize();
-            int firstRecordId = headerSize == 0 ? 0 : (int) Math.ceil( headerSize / (1.0 * recordSize) );
-
-            // Note that the store page size is always divisible by recordSize. Since the pageCache reuses pages across
-            // stores, it has a larger in-memory page size, but it will honor the size we calculate here as the on-disk
-            // size for our file. In any case, the calculation below tries to fit as many records as possible within
-            // the page size used in-memory by the pageCache.
-            int pageSize = pageCache.pageSize() - pageCache.pageSize() % recordSize;
-
-            toolkit = new StoreToolkit( recordSize, pageSize, firstRecordId );
         }
     }
 
@@ -215,9 +176,48 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     @Override
     public void shutdown() throws Throwable
     {
-        try(StoreChannel channel = fs.open( dbFileName, "rw" ))
+        if(rawChannel != null)
         {
-            openCloseLogic.closeStore( channel, idGenerator.highestIdInUse() );
+            openCloseLogic.closeStore( rawChannel, idGenerator.highestIdInUse() );
+            rawChannel.close();
+            rawChannel = null;
         }
+    }
+
+    private void createNewStore() throws IOException
+    {
+        fs.mkdirs( dbFileName.getParentFile() );
+        fs.create( dbFileName );
+        rawChannel = fs.open( dbFileName, "rw" );
+
+        storeFormat.createStore( rawChannel );
+
+        initializeToolkit();
+
+        // If this is the first time the store is started, and the store has a header, we need to reserve enough
+        // initial records to make space for that header.
+        int headerSize = storeFormat.headerSize();
+        while(headerSize > 0)
+        {
+            // "Throw away" record slots at the beginning of the file until we've covered the full size of the header
+            allocate();
+            headerSize -= toolkit.recordSize();
+        }
+    }
+
+    private void initializeToolkit() throws IOException
+    {
+
+        int recordSize = storeFormat.recordSize( rawChannel );
+        int headerSize = storeFormat.headerSize();
+        int firstRecordId = headerSize == 0 ? 0 : (int) Math.ceil( headerSize / (1.0 * recordSize) );
+
+        // Note that the store page size is always divisible by recordSize. Since the pageCache reuses pages across
+        // stores, it has a larger in-memory page size, but it will honor the size we calculate here as the on-disk
+        // size for our file. In any case, the calculation below tries to fit as many records as possible within
+        // the page size used in-memory by the pageCache.
+        int pageSize = pageCache.pageSize() - pageCache.pageSize() % recordSize;
+
+        toolkit = new StoreToolkit( recordSize, pageSize, firstRecordId );
     }
 }
