@@ -75,8 +75,8 @@ public class StandardStoreVersioningTest
         } catch( NotCurrentStoreVersionException e )
         {
             // Then
-            assertThat( e.getMessage(), equalTo( "Was expecting store version [VersionedStoreFormatv0.2.0] " +
-                    "but found [VersionedStoreFormatv0.1.0]. Store cannot be upgraded automatically. " ));
+            assertThat( e.getMessage(), equalTo( "Was expecting store version [VersionedStoreFormat v0.2.0] " +
+                    "but found [VersionedStoreFormat v0.1.0]. Store cannot be upgraded automatically. " ));
         }
 
     }

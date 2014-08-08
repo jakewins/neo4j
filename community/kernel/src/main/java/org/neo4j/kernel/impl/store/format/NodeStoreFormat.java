@@ -27,9 +27,9 @@ import org.neo4j.kernel.impl.nioneo.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.nioneo.store.DynamicRecord;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.Record;
-import org.neo4j.kernel.impl.store.Store;
 import org.neo4j.kernel.impl.store.standard.BaseRecordCursor;
 import org.neo4j.kernel.impl.store.standard.FixedSizeRecordStoreFormat;
+import org.neo4j.kernel.impl.store.standard.StoreFormat;
 import org.neo4j.kernel.impl.store.standard.StoreToolkit;
 
 import static org.neo4j.kernel.impl.store.format.NeoStoreFormatUtils.longFromIntAndMod;
@@ -37,7 +37,7 @@ import static org.neo4j.kernel.impl.store.format.NeoStoreFormatUtils.longFromInt
 /**
  * This defines the full format of the NodeStore, and contains an inner class that defines the record format.
  */
-public class NodeStoreFormat extends FixedSizeRecordStoreFormat<NodeRecord,Store.RecordCursor<NodeRecord>>
+public class NodeStoreFormat extends FixedSizeRecordStoreFormat<NodeRecord, NodeStoreFormat.NodeRecordCursor>
 {
     private final NodeRecordFormat recordFormat;
 
@@ -48,22 +48,19 @@ public class NodeStoreFormat extends FixedSizeRecordStoreFormat<NodeRecord,Store
     }
 
     @Override
-    public Store.RecordCursor<NodeRecord> createCursor( PagedFile file, StoreToolkit toolkit )
+    public NodeStoreFormat.NodeRecordCursor createCursor( PagedFile file, StoreToolkit toolkit )
     {
-        // Note that we are returning a "vanilla" cursor here, with only basic ability to read whole records.
-        // However, we could easily return our own NodeCursor that added specialized methods for reading individual
-        // fields rather than whole record objects.
-        return new BaseRecordCursor<>( file, toolkit, recordFormat() );
+        return new NodeRecordCursor( file, toolkit, recordFormat );
     }
 
     @Override
-    public RecordFormat<NodeRecord> recordFormat()
+    public StoreFormat.RecordFormat<NodeRecord> recordFormat()
     {
         return recordFormat;
     }
 
     /** Full definition of the record format */
-    public static class NodeRecordFormat implements RecordFormat<NodeRecord>
+    public static class NodeRecordFormat implements StoreFormat.RecordFormat<NodeRecord>
     {
         private final static int IN_USE         = 0;
         private final static int NEXT_REL_BASE  = 1 + IN_USE ;
@@ -150,6 +147,31 @@ public class NodeStoreFormat extends FixedSizeRecordStoreFormat<NodeRecord,Store
         public boolean inUse( PageCursor cursor, int offset )
         {
             return (cursor.getByte( offset + IN_USE ) & 0x1) == 1;
+        }
+
+        public long firstRelationship( PageCursor cursor, int offset )
+        {
+            return longFromIntAndMod(
+                     cursor.getUnsignedInt( offset + NEXT_REL_BASE ),
+                    (cursor.getByte(offset + IN_USE) & 0xEL) << 31 );
+        }
+    }
+
+    /**
+     * This is our custom record cursor, extending {@link org.neo4j.kernel.impl.store.standard.BaseRecordCursor} to
+     * get required common functionality, but adding some custom field-reading of our own.
+     */
+    public static class NodeRecordCursor extends BaseRecordCursor<NodeRecord, NodeRecordFormat>
+    {
+        public NodeRecordCursor( PagedFile file, StoreToolkit toolkit, NodeRecordFormat format )
+        {
+            super( file, toolkit, format );
+        }
+
+        /** Read the first rel id from the record the cursor currently points at. */
+        public long firstRelationship()
+        {
+            return format.firstRelationship( pageCursor, currentRecordOffset );
         }
     }
 }

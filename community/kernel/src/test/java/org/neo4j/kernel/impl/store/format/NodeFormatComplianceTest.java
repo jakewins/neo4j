@@ -31,7 +31,6 @@ import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.NodeStore;
 import org.neo4j.kernel.impl.nioneo.store.StoreFactory;
-import org.neo4j.kernel.impl.store.Store;
 import org.neo4j.kernel.impl.store.impl.TestStoreIdGenerator;
 import org.neo4j.kernel.impl.store.standard.StandardStore;
 import org.neo4j.kernel.impl.util.StringLogger;
@@ -41,6 +40,7 @@ import org.neo4j.test.EphemeralFileSystemRule;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
+import static org.neo4j.kernel.impl.store.format.NodeStoreFormat.NodeRecordCursor;
 import static org.neo4j.kernel.impl.store.impl.StoreMatchers.records;
 
 /**
@@ -74,7 +74,7 @@ public class NodeFormatComplianceTest
         neoStore.close();
 
         // When
-        StandardStore<NodeRecord, Store.RecordCursor<NodeRecord>> store = new
+        StandardStore<NodeRecord, NodeRecordCursor> store = new
                 StandardStore<>( new NodeStoreFormat(), new File( "/neostore.nodestore" ),
                 new TestStoreIdGenerator(), new StandardPageCache( fsRule.get(), 1024, 1024 ), fsRule.get(),
                 StringLogger.DEV_NULL );
@@ -91,7 +91,7 @@ public class NodeFormatComplianceTest
         // Given
         storeFactory.createNeoStore().close(); // NodeStore wont start unless it's child stores exist, so creat those
 
-        StandardStore<NodeRecord, Store.RecordCursor<NodeRecord>> store = new
+        StandardStore<NodeRecord, NodeRecordCursor> store = new
                 StandardStore<>( new NodeStoreFormat(), new File( "/neostore.nodestore" ),
                 new TestStoreIdGenerator(), new StandardPageCache( fsRule.get(), 1024, 1024 ), fsRule.get(),
                 StringLogger.DEV_NULL );
@@ -110,6 +110,34 @@ public class NodeFormatComplianceTest
         NodeStore nodeStore = storeFactory.newNodeStore();
         NodeRecord record = nodeStore.getRecord( expectedRecord.getId() );
         assertThat( record, equalTo( expectedRecord ) );
+    }
+
+    @Test
+    public void customCursorShouldReadNextRel() throws Throwable
+    {
+        // Given
+        StandardStore<NodeRecord, NodeRecordCursor> store = new StandardStore<>( new NodeStoreFormat(),
+                new File( "/neostore.nodestore" ),
+                new TestStoreIdGenerator(), new StandardPageCache( fsRule.get(), 1024, 1024 ), fsRule.get(),
+                StringLogger.DEV_NULL );
+        store.init();
+        store.start();
+
+        long nextRel = 1337;
+        NodeRecord record = new NodeRecord( store.allocate(), false, nextRel, 2 );
+        record.setInUse( true );
+
+        store.write( record );
+
+        // Given I have a cursor positioned at the record I want
+        NodeRecordCursor cursor = store.cursor();
+        cursor.next(record.getId());
+
+        // When
+        long l = cursor.firstRelationship();
+
+        // Then
+        assertThat(l, equalTo(nextRel));
     }
 
 }

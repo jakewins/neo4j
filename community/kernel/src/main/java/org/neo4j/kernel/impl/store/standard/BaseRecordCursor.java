@@ -23,21 +23,27 @@ import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.store.Store;
 
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_LOCK;
+import static org.neo4j.kernel.impl.store.standard.StoreFormat.RecordFormat;
 
-public class BaseRecordCursor<RECORD> implements Store.RecordCursor<RECORD>
+public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> implements Store.RecordCursor<RECORD>
 {
     private final PagedFile file;
-    private final StoreToolkit toolkit;
-    private final StoreFormat.RecordFormat<RECORD> format;
 
-    private PageCursor pageCursor;
-    private long currentRecordId = -1;
-    private int  currentRecordOffset = -1;
+    // We share most of our fields with subclasses, as this is meant as an easy-to-use base for building custom
+    // record cursors.
 
-    public BaseRecordCursor( PagedFile file, StoreToolkit toolkit, StoreFormat.RecordFormat<RECORD> format )
+    protected final StoreToolkit toolkit;
+    protected final FORMAT format;
+
+    protected PageCursor pageCursor;
+    protected long currentRecordId = -1;
+    protected int  currentRecordOffset = -1;
+
+    public BaseRecordCursor( PagedFile file, StoreToolkit toolkit, FORMAT format )
     {
         this.file = file;
         this.toolkit = toolkit;
@@ -48,72 +54,35 @@ public class BaseRecordCursor<RECORD> implements Store.RecordCursor<RECORD>
     @Override
     public RECORD currentRecord()
     {
-        RECORD record = format.deserialize( pageCursor, currentRecordOffset, currentRecordId );
-        pageCursor.setOffset( toolkit.recordOffset( currentRecordId ) );
-        return record;
+        return format.deserialize( pageCursor, currentRecordOffset, currentRecordId );
     }
 
     public boolean inUse()
     {
-        boolean inUse = format.inUse( pageCursor, currentRecordOffset );
-        pageCursor.setOffset( toolkit.recordOffset( currentRecordId ) );
-        return inUse;
+        return format.inUse( pageCursor, currentRecordOffset );
     }
 
     @Override
     public boolean next( long id )
     {
-        long pageId = toolkit.pageId( id );
-        currentRecordOffset = toolkit.recordOffset( id );
-
-        if( pageCursor == null)
+        try
         {
-            return moveToFirstPage( id, pageId );
-        }
-        else if( pageId == pageCursor.getCurrentPageId())
-        {
-            // The next record is in the same page, just reposition the cursor
+            long pageId = toolkit.pageId( id );
             currentRecordId = id;
-            pageCursor.setOffset( currentRecordOffset );
-            return true;
-        }
-        else
-        {
-            return moveToNextPage( id, pageId, currentRecordOffset );
-        }
-    }
+            currentRecordOffset = toolkit.recordOffset( id );
 
-    private boolean moveToFirstPage( long id, long pageId )
-    {
-        try
-        {
-            pageCursor = file.io( pageId, PF_SHARED_LOCK );
-            return next(id);
-        }
-        catch ( IOException e )
-        {
-            return false;
-        }
-    }
-
-    private boolean moveToNextPage( long id, long pageId, int recordOffset )
-    {
-        try
-        {
-            if( pageCursor.next( pageId ))
+            // This may be the first next() call, so we may need to initialize a PageCursor
+            if ( pageCursor == null )
             {
-                currentRecordId = id;
-                pageCursor.setOffset( recordOffset );
-                return true;
+                pageCursor = file.io( pageId, PF_SHARED_LOCK );
+                return pageCursor.next( pageId );
             }
-            else
-            {
-                return false;
-            }
+            // Either we're on the right page, or we move to it
+            else return pageId == pageCursor.getCurrentPageId() || pageCursor.next( pageId );
         }
-        catch ( IOException e )
+        catch(IOException e)
         {
-            return false;
+            throw new UnderlyingStorageException( "Failed to read record " + id + ".", e );
         }
     }
 

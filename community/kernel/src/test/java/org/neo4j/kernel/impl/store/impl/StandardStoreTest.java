@@ -124,7 +124,7 @@ public class StandardStoreTest
 }
 
 
-class MyCursor extends BaseRecordCursor<MyRecord>
+class MyCursor extends BaseRecordCursor<MyRecord, RecordFormat<MyRecord>>
 {
     MyCursor( PagedFile file, StoreToolkit toolkit, MyRecordFormat format )
     {
