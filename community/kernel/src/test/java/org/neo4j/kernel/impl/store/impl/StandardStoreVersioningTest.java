@@ -30,6 +30,9 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.standard.StandardPageCache;
 import org.neo4j.kernel.impl.nioneo.store.NotCurrentStoreVersionException;
 import org.neo4j.kernel.impl.store.Store;
+import org.neo4j.kernel.impl.store.standard.StandardStore;
+import org.neo4j.kernel.impl.store.standard.StoreFormat;
+import org.neo4j.kernel.impl.store.standard.StoreToolkit;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.test.EphemeralFileSystemRule;
 

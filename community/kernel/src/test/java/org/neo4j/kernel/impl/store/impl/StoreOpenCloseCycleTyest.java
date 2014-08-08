@@ -25,6 +25,8 @@ import org.junit.Test;
 import org.neo4j.io.fs.FileLock;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.impl.store.standard.StoreFormat;
+import org.neo4j.kernel.impl.store.standard.StoreOpenCloseCycle;
 import org.neo4j.kernel.impl.util.StringLogger;
 
 import static org.mockito.Mockito.*;

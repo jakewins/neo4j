@@ -31,6 +31,11 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.standard.StandardPageCache;
 import org.neo4j.kernel.impl.store.Store;
+import org.neo4j.kernel.impl.store.standard.BaseRecordCursor;
+import org.neo4j.kernel.impl.store.standard.FixedSizeRecordStoreFormat;
+import org.neo4j.kernel.impl.store.standard.StandardStore;
+import org.neo4j.kernel.impl.store.standard.StoreFormat;
+import org.neo4j.kernel.impl.store.standard.StoreToolkit;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.test.EphemeralFileSystemRule;
@@ -38,7 +43,7 @@ import org.neo4j.test.EphemeralFileSystemRule;
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.*;
-import static org.neo4j.kernel.impl.store.impl.StoreFormat.RecordFormat;
+import static org.neo4j.kernel.impl.store.standard.StoreFormat.RecordFormat;
 
 public class StandardStoreTest
 {

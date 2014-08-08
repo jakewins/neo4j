@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.impl;
+package org.neo4j.kernel.impl.store.standard;
 
 import java.io.IOException;
 
@@ -26,19 +26,18 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.store.Store;
 
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_LOCK;
-import static org.neo4j.kernel.impl.store.impl.StoreFormat.RecordFormat;
 
 public class BaseRecordCursor<RECORD> implements Store.RecordCursor<RECORD>
 {
     private final PagedFile file;
     private final StoreToolkit toolkit;
-    private final RecordFormat<RECORD> format;
+    private final StoreFormat.RecordFormat<RECORD> format;
 
     private PageCursor pageCursor;
     private long currentRecordId = -1;
     private int  currentRecordOffset = -1;
 
-    public BaseRecordCursor( PagedFile file, StoreToolkit toolkit, RecordFormat<RECORD> format )
+    public BaseRecordCursor( PagedFile file, StoreToolkit toolkit, StoreFormat.RecordFormat<RECORD> format )
     {
         this.file = file;
         this.toolkit = toolkit;

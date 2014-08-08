@@ -17,31 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.impl;
+package org.neo4j.kernel.impl.store.format;
 
-import java.util.concurrent.atomic.AtomicLong;
+import org.neo4j.kernel.impl.nioneo.store.IdGeneratorImpl;
 
-import org.neo4j.kernel.impl.store.standard.StoreIdGenerator;
-
-public class TestStoreIdGenerator implements StoreIdGenerator
+public class NeoStoreFormatUtils
 {
-    private final AtomicLong next = new AtomicLong(0);
-
-    @Override
-    public long allocate()
+    public static long longFromIntAndMod( long base, long modifier )
     {
-        return next.getAndIncrement();
-    }
-
-    @Override
-    public void free( long id )
-    {
-
-    }
-
-    @Override
-    public long highestIdInUse()
-    {
-        return next.get();
+        return modifier == 0 && base == IdGeneratorImpl.INTEGER_MINUS_ONE ? -1 : base | modifier;
     }
 }

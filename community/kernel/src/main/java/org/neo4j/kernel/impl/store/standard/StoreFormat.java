@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.impl;
+package org.neo4j.kernel.impl.store.standard;
 
 import java.io.IOException;
 
@@ -27,7 +27,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.store.Store;
 
 /**
- * Defines the format of headers and records in a {@link org.neo4j.kernel.impl.store.impl.StandardStore}
+ * Defines the format of headers and records in a {@link StandardStore}
  * @param <RECORD> the record type in this store
  * @param <CURSOR> the cursor type for this store, see {@link org.neo4j.kernel.impl.store.Store.RecordCursor}
  */
@@ -71,6 +71,6 @@ public interface StoreFormat<RECORD, CURSOR extends Store.RecordCursor>
         RECORD deserialize( PageCursor cursor, int offset, long id );
 
         /** Determine if a record at the specified offset is in use. */
-        boolean inUse( PageCursor pageCursor, int offset );
+        boolean inUse( PageCursor cursor, int offset );
     }
 }

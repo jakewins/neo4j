@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.impl;
+package org.neo4j.kernel.impl.store.standard;
 
 /** Utility methods used by a store and its store format. */
 public class StoreToolkit
