@@ -25,12 +25,18 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 
 public interface Store<RECORD, CURSOR extends Store.RecordCursor> extends Lifecycle
 {
+    /** No flags */
+    static int SF_NO_FLAGS = 0;
+
+    /** Instead of a cursor starting at the beginning of the store, have a cursor start at the end and move backwards */
+    static int SF_REVERSE_CURSOR = 1;
+
     /**
      * Gives you a cursor for efficiently reading the store. The cursor you get back will always at least implement
      * the {@link org.neo4j.kernel.impl.store.Store.RecordCursor} interface, but most stores are expected to provide
      * richer cursor interfaces that allow reading individual fields of whatever record you are currently positioned at.
      */
-    CURSOR cursor();
+    CURSOR cursor(int flags);
 
     /** Read the specified record. */
     RECORD read(long id);
@@ -40,13 +46,16 @@ public interface Store<RECORD, CURSOR extends Store.RecordCursor> extends Lifecy
     /** Allocate a new free record id. */
     long allocate();
 
-    /** Signal that a record slot is no longer used, freeing it up for others. */
+    /** Signal that a record id is no longer used, freeing it up for others. */
     void free(long id);
 
     interface RecordCursor<RECORD>
     {
         /** Read a full record from the current position. */
         RECORD currentRecord();
+
+        /** The id of the current record. */
+        long currentId();
 
         /** Moves to an explicit record position, independent of if that position is in use or not. */
         boolean next( long id );

@@ -39,11 +39,12 @@ import static org.neo4j.helpers.UTF8.encode;
 import static org.neo4j.io.fs.FileUtils.windowsSafeIOOperation;
 
 /**
- * Manages the "opening" and "closing" of store files. In this context, that means managing a footer that is written
- * to the end of store files on proper shutdown.
+ * Manages the "opening" and "closing" of store files. In this context, a "closed" store is one that has a footer
+ * appended at the end of the file, while an "open" store has had that footer removed. Using this footer, we can
+ * determine if a store was cleanly closed (contains footer) or not (no footer), as well as ensure that the format
+ * is one we can read.
  *
- * The store footers are used to signal and determine the state of the store. We use it to tell if a store was cleanly
- * shut down and if it is the correct version. We do this by writing two values to the end of the store on shutdown.
+ * The footer contains two values written to the end of the store on shutdown.
  *
  * - A store "type descriptor", such as "NodeStore", which does not change across versions
  * - A store version, which must change when store format changes. Must always be 6 bytes long when serialized to UTF-8,
@@ -110,15 +111,18 @@ public class StoreOpenCloseCycle
     private final File dbFileName;
     private final StoreFormat<?, ?> format;
     private final FileSystemAbstraction fs;
+    private final IdGeneratorRebuilder idGenRebuilder;
 
     private FileLock fileLock;
 
-    public StoreOpenCloseCycle( StringLogger log, File dbFileName, StoreFormat<?, ?> format, FileSystemAbstraction fs )
+    public StoreOpenCloseCycle( StringLogger log, File dbFileName, StoreFormat<?, ?> format, FileSystemAbstraction fs,
+                                IdGeneratorRebuilder idGenRebuilder )
     {
         this.log = log;
         this.dbFileName = dbFileName;
         this.format = format;
         this.fs = fs;
+        this.idGenRebuilder = idGenRebuilder;
     }
 
     public void openStore(StoreChannel channel) throws IOException
@@ -132,7 +136,9 @@ public class StoreOpenCloseCycle
                 channel.truncate( channel.size() - UTF8.encode( footer() ).length );
                 break;
             case UNCLEAN:
-                // Recovery takes care of this, and will double check the version for us when doing that.
+                // Store was not closed properly, indicating a crash or some other event causing the process
+                // to exit without running shut down procedures. We need to rebuild our id generator at this point.
+                idGenRebuilder.rebuildIdGeneratorFor( channel, format );
                 break;
             case WRONG_VERSION:
                 throw new NotCurrentStoreVersionException( result.expectedFooter(), result.foundFooter(), "", false );
@@ -182,7 +188,6 @@ public class StoreOpenCloseCycle
 
     private StateDescription determineState( StoreChannel channel ) throws IOException
     {
-
         assert format.version().getBytes( Charsets.UTF_8 ).length == 6: "Version must, for historical reasons, be 6 bytes long.";
 
         String expectedTypeAndVersion = footer();

@@ -31,6 +31,7 @@ import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.NodeStore;
 import org.neo4j.kernel.impl.nioneo.store.StoreFactory;
+import org.neo4j.kernel.impl.store.Store;
 import org.neo4j.kernel.impl.store.impl.TestStoreIdGenerator;
 import org.neo4j.kernel.impl.store.standard.StandardStore;
 import org.neo4j.kernel.impl.util.StringLogger;
@@ -130,7 +131,7 @@ public class NodeFormatComplianceTest
         store.write( record );
 
         // Given I have a cursor positioned at the record I want
-        NodeRecordCursor cursor = store.cursor();
+        NodeRecordCursor cursor = store.cursor( Store.SF_NO_FLAGS );
         cursor.next(record.getId());
 
         // When

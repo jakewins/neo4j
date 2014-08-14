@@ -47,7 +47,6 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final File dbFileName;
-    private final StringLogger log;
     private final StoreOpenCloseCycle openCloseLogic;
 
     private StoreToolkit toolkit;
@@ -63,19 +62,19 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
                          PageCache pageCache, FileSystemAbstraction fs, StringLogger log )
     {
         this.storeFormat = format;
-        this.log = log;
         this.recordFormat = format.recordFormat();
         this.dbFileName = new File(baseFileName.getAbsolutePath() + ".db");
         this.idGenerator = idGenerator;
         this.pageCache = pageCache;
         this.fs = fs;
-        this.openCloseLogic = new StoreOpenCloseCycle( log, dbFileName, storeFormat, fs );
+        this.openCloseLogic = new StoreOpenCloseCycle( log, dbFileName, storeFormat, fs,
+                new IdGeneratorRebuilder.FindHighestInUseRebuilder() );
     }
 
     @Override
-    public CURSOR cursor()
+    public CURSOR cursor(int flags)
     {
-        return storeFormat.createCursor(file, toolkit);
+        return storeFormat.createCursor(file, toolkit, flags);
     }
 
     @Override
@@ -207,7 +206,6 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
 
     private void initializeToolkit() throws IOException
     {
-
         int recordSize = storeFormat.recordSize( rawChannel );
         int headerSize = storeFormat.headerSize();
         int firstRecordId = headerSize == 0 ? 0 : (int) Math.ceil( headerSize / (1.0 * recordSize) );
@@ -218,6 +216,6 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
         // the page size used in-memory by the pageCache.
         int pageSize = pageCache.pageSize() - pageCache.pageSize() % recordSize;
 
-        toolkit = new StoreToolkit( recordSize, pageSize, firstRecordId );
+        toolkit = new StoreToolkit( recordSize, pageSize, firstRecordId, idGenerator );
     }
 }

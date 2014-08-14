@@ -121,14 +121,56 @@ public class StandardStoreTest
 
         assertThat( StoreMatchers.records( store ), equalTo( asList( new MyRecord( recordId, 1338 ) ) ) );
     }
+
+    @Test
+    public void shouldAllowRunningCursorBackwards() throws Throwable
+    {
+        // Given
+        Store<MyRecord, MyCursor> store = life.add(new StandardStore<>( new MyHeaderlessStoreFormat(), new File("/store"),
+                new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL ));
+
+        long firstId  = store.allocate();
+        long secondId = store.allocate();
+        long thirdId  = store.allocate(); // One id that we'll leave unused
+        long fourthId = store.allocate();
+
+        store.write( new MyRecord( firstId, 1337) );
+        store.write( new MyRecord( secondId, 1338) );
+        // thirdId missing here on purpose, to include a gap in the store, to make sure we don't see that record
+        store.write( new MyRecord( fourthId, 1338) );
+
+        // When
+        MyCursor cursor = store.cursor(Store.SF_REVERSE_CURSOR);
+
+        // Then
+        assertTrue(cursor.next());
+        assertEquals(fourthId, cursor.currentId());
+        assertTrue(cursor.next());
+        assertEquals(secondId, cursor.currentId());
+        assertTrue(cursor.next());
+        assertEquals(firstId, cursor.currentId());
+        assertFalse(cursor.next());
+    }
+
+    @Test
+    public void shouldDoSomethingWithIdGenerators() throws Exception
+    {
+        fail("Figure out what we need to do with id generators.");
+    }
+
+    @Test
+    public void shouldPassOnNoStatsFlagToPageCache() throws Exception
+    {
+        fail("Implement this");
+    }
 }
 
 
 class MyCursor extends BaseRecordCursor<MyRecord, RecordFormat<MyRecord>>
 {
-    MyCursor( PagedFile file, StoreToolkit toolkit, MyRecordFormat format )
+    MyCursor( PagedFile file, StoreToolkit toolkit, MyRecordFormat format, int flags )
     {
-        super(file, toolkit, format);
+        super(file, toolkit, format, flags);
     }
 }
 
@@ -176,9 +218,9 @@ class MyHeaderlessStoreFormat extends FixedSizeRecordStoreFormat<MyRecord, MyCur
     }
 
     @Override
-    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit )
+    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit, int flags )
     {
-        return new MyCursor( file, toolkit, recordFormat );
+        return new MyCursor( file, toolkit, recordFormat, flags );
     }
 
     @Override
@@ -200,9 +242,9 @@ class MyFormatWithHeader implements StoreFormat<MyRecord, MyCursor>
     }
 
     @Override
-    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit )
+    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit, int flags )
     {
-        return new MyCursor( file, toolkit, recordFormat );
+        return new MyCursor( file, toolkit, recordFormat, flags );
     }
 
     @Override

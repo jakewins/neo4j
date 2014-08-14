@@ -24,13 +24,15 @@ public class StoreToolkit
 {
     private final int recordSize;
     private final int pageSize;
-    private final int firstRecordId;
+    private final long firstRecordId;
+    private final StoreIdGenerator idGenerator;
 
-    public StoreToolkit( int recordSize, int pageSize, int firstRecordId )
+    public StoreToolkit( int recordSize, int pageSize, long firstRecordId, StoreIdGenerator idGenerator )
     {
         this.recordSize = recordSize;
         this.pageSize = pageSize;
         this.firstRecordId = firstRecordId;
+        this.idGenerator = idGenerator;
     }
 
     long pageId( long id )
@@ -55,10 +57,10 @@ public class StoreToolkit
         return recordSize;
     }
 
-    /**
-     * Get the id of the first record in the store. This exists because initial "records" may be reserved for store
-     * headers.
-     */
+    /** An id that has only one guarantee: No in-use records will have ids higher than this. */
+    public long highestKnownId() { return idGenerator.highestIdInUse(); }
+
+    /** Get the id of the first record in the store. This exists because initial ids may be reserved for headers. */
     public long firstRecordId()
     {
         return firstRecordId;

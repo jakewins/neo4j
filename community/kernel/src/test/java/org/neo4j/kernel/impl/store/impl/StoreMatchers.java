@@ -29,7 +29,7 @@ public class StoreMatchers
     public static <R> List<R> records( Store<R, ? extends Store.RecordCursor<R>> store )
     {
         List<R> records = new ArrayList<>();
-        Store.RecordCursor<R> cursor = store.cursor();
+        Store.RecordCursor<R> cursor = store.cursor(0);
         while(cursor.next())
         {
             records.add(cursor.currentRecord());

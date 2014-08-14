@@ -21,22 +21,31 @@ package org.neo4j.kernel.impl.store.impl;
 
 import java.io.File;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileLock;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.impl.store.standard.IdGeneratorRebuilder;
 import org.neo4j.kernel.impl.store.standard.StoreFormat;
 import org.neo4j.kernel.impl.store.standard.StoreOpenCloseCycle;
 import org.neo4j.kernel.impl.util.StringLogger;
+import org.neo4j.test.EphemeralFileSystemRule;
 
 import static org.mockito.Mockito.*;
 
-public class StoreOpenCloseCycleTyest
+public class StoreOpenCloseCycleTest
 {
+    @Rule
+    public EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
+
     @Test
     public void shouldLockAndUnlock() throws Exception
     {
         // Given
+        IdGeneratorRebuilder idGenRebuilder = mock(IdGeneratorRebuilder.class);
+
         StoreFormat<?,?> format = mock(StoreFormat.class);
         when(format.version()).thenReturn( "v1.0.0" );
         when(format.type()).thenReturn( "SomeFormat" );
@@ -49,9 +58,8 @@ public class StoreOpenCloseCycleTyest
         FileSystemAbstraction fs = mock(FileSystemAbstraction.class);
         when(fs.tryLock( dbFileName, channel )).thenReturn( lock );
 
-
         StoreOpenCloseCycle logic = new StoreOpenCloseCycle( StringLogger.DEV_NULL,
-                dbFileName, format, fs );
+                dbFileName, format, fs, idGenRebuilder );
 
         // When
         logic.openStore(channel);
@@ -64,5 +72,30 @@ public class StoreOpenCloseCycleTyest
 
         // Then
         verify( lock ).release();
+        verifyNoMoreInteractions( idGenRebuilder, fs, format );
+    }
+
+    @Test
+    public void shouldRebuildIdGeneratorIfStoreIsNotClean() throws Exception
+    {
+        // Given
+        File storeFile = new File( "store" );
+        IdGeneratorRebuilder idGenRebuilder = mock(IdGeneratorRebuilder.class);
+        EphemeralFileSystemAbstraction fs = fsRule.get();
+        MyHeaderlessStoreFormat format = new MyHeaderlessStoreFormat();
+
+        StoreOpenCloseCycle cycle = new StoreOpenCloseCycle( StringLogger.DEV_NULL,
+                storeFile, format, fs, idGenRebuilder );
+
+        // And given the file exists (but contains no headers, and should thus be considered unclean)
+        fs.create( storeFile );
+        StoreChannel channel = fs.open( storeFile, "rw" );
+
+        // When
+        cycle.openStore( channel );
+
+        // Then
+        verify( idGenRebuilder ).rebuildIdGeneratorFor( channel, format );
+        verifyNoMoreInteractions( idGenRebuilder );
     }
 }

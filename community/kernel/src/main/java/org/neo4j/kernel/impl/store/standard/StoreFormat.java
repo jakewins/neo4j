@@ -33,7 +33,17 @@ import org.neo4j.kernel.impl.store.Store;
  */
 public interface StoreFormat<RECORD, CURSOR extends Store.RecordCursor>
 {
-    CURSOR createCursor( PagedFile file, StoreToolkit toolkit );
+    /**
+     * Create a cursor for the specified store file. Cursors are reasonably complicated, and it is advised that you
+     * rather than implementing the whole cursor interface extend {@link org.neo4j.kernel.impl.store.standard.BaseRecordCursor}
+     * and add whatever format-specific methods you may want.
+     *
+     * @param file
+     * @param toolkit
+     * @param sf_flags
+     * @return
+     */
+    CURSOR createCursor( PagedFile file, StoreToolkit toolkit, int sf_flags );
 
     /** Access the format for reading individual records. */
     RecordFormat<RECORD> recordFormat();
