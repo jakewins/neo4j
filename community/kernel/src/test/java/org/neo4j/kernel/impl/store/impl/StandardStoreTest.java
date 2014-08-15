@@ -20,22 +20,17 @@
 package org.neo4j.kernel.impl.store.impl;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.standard.StandardPageCache;
 import org.neo4j.kernel.impl.store.Store;
-import org.neo4j.kernel.impl.store.standard.BaseRecordCursor;
-import org.neo4j.kernel.impl.store.standard.FixedSizeRecordStoreFormat;
+import org.neo4j.kernel.impl.store.format.TestCursor;
+import org.neo4j.kernel.impl.store.format.TestFormatWithHeader;
+import org.neo4j.kernel.impl.store.format.TestHeaderlessStoreFormat;
+import org.neo4j.kernel.impl.store.format.TestRecord;
 import org.neo4j.kernel.impl.store.standard.StandardStore;
-import org.neo4j.kernel.impl.store.standard.StoreFormat;
-import org.neo4j.kernel.impl.store.standard.StoreToolkit;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.test.EphemeralFileSystemRule;
@@ -43,7 +38,6 @@ import org.neo4j.test.EphemeralFileSystemRule;
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.*;
-import static org.neo4j.kernel.impl.store.standard.StoreFormat.RecordFormat;
 
 public class StandardStoreTest
 {
@@ -65,18 +59,18 @@ public class StandardStoreTest
     public void shouldReadRecords() throws Throwable
     {
         // Given
-        Store<MyRecord, MyCursor> store = life.add(new StandardStore<>( new MyHeaderlessStoreFormat(), new File("/store"),
+        Store<TestRecord, TestCursor> store = life.add(new StandardStore<>( new TestHeaderlessStoreFormat(), new File("/store"),
                 new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL ));
 
         long firstId = store.allocate();
         long secondId = store.allocate();
 
-        store.write( new MyRecord( firstId, 1337) );
-        store.write( new MyRecord( secondId, 1338) );
+        store.write( new TestRecord( firstId, 1337) );
+        store.write( new TestRecord( secondId, 1338) );
 
         // When
-        MyRecord firstRecord = store.read( firstId );
-        MyRecord secondRecord = store.read( secondId );
+        TestRecord firstRecord = store.read( firstId );
+        TestRecord secondRecord = store.read( secondId );
 
         // Then
         assertThat(firstRecord.value, equalTo(1337l));
@@ -85,28 +79,28 @@ public class StandardStoreTest
         // And when I restart the store
         life.shutdown();
 
-        store = new StandardStore<>( new MyHeaderlessStoreFormat(), new File("/store"),
+        store = new StandardStore<>( new TestHeaderlessStoreFormat(), new File("/store"),
                 new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL );
         store.init();
         store.start();
 
         assertThat( StoreMatchers.records( store ),
-           equalTo( asList( new MyRecord( firstId, 1337 ), new MyRecord( secondId, 1338 ) ) ) );
+           equalTo( asList( new TestRecord( firstId, 1337 ), new TestRecord( secondId, 1338 ) ) ) );
     }
 
     @Test
     public void shouldAllowStoresWithHeaders() throws Throwable
     {
         // Given
-        Store<MyRecord, MyCursor> store = life.add(new StandardStore<>( new MyFormatWithHeader(14), new File("/store"),
+        Store<TestRecord, TestCursor> store = life.add(new StandardStore<>( new TestFormatWithHeader(14), new File("/store"),
                 new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL ));
 
         long recordId = store.allocate();
 
-        store.write( new MyRecord( recordId, 1338) );
+        store.write( new TestRecord( recordId, 1338) );
 
         // When
-        MyRecord secondRecord = store.read( recordId );
+        TestRecord secondRecord = store.read( recordId );
 
         // Then
         assertThat(secondRecord.value, equalTo(1338l));
@@ -114,19 +108,19 @@ public class StandardStoreTest
         // And when I restart the store
         life.shutdown();
 
-        store = new StandardStore<>( new MyFormatWithHeader(14), new File("/store"),
+        store = new StandardStore<>( new TestFormatWithHeader(14), new File("/store"),
                 new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL );
         store.init();
         store.start();
 
-        assertThat( StoreMatchers.records( store ), equalTo( asList( new MyRecord( recordId, 1338 ) ) ) );
+        assertThat( StoreMatchers.records( store ), equalTo( asList( new TestRecord( recordId, 1338 ) ) ) );
     }
 
     @Test
     public void shouldAllowRunningCursorBackwards() throws Throwable
     {
         // Given
-        Store<MyRecord, MyCursor> store = life.add(new StandardStore<>( new MyHeaderlessStoreFormat(), new File("/store"),
+        Store<TestRecord, TestCursor> store = life.add(new StandardStore<>( new TestHeaderlessStoreFormat(), new File("/store"),
                 new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL ));
 
         long firstId  = store.allocate();
@@ -134,13 +128,13 @@ public class StandardStoreTest
         long thirdId  = store.allocate(); // One id that we'll leave unused
         long fourthId = store.allocate();
 
-        store.write( new MyRecord( firstId, 1337) );
-        store.write( new MyRecord( secondId, 1338) );
+        store.write( new TestRecord( firstId, 1337) );
+        store.write( new TestRecord( secondId, 1338) );
         // thirdId missing here on purpose, to include a gap in the store, to make sure we don't see that record
-        store.write( new MyRecord( fourthId, 1338) );
+        store.write( new TestRecord( fourthId, 1338) );
 
         // When
-        MyCursor cursor = store.cursor(Store.SF_REVERSE_CURSOR);
+        TestCursor cursor = store.cursor(Store.SF_REVERSE_CURSOR);
 
         // Then
         assertTrue(cursor.next());
@@ -157,190 +151,6 @@ public class StandardStoreTest
     {
         fail("Figure out what we need to do with id generators.");
     }
-
-    @Test
-    public void shouldPassOnNoStatsFlagToPageCache() throws Exception
-    {
-        fail("Implement this");
-    }
 }
 
 
-class MyCursor extends BaseRecordCursor<MyRecord, RecordFormat<MyRecord>>
-{
-    MyCursor( PagedFile file, StoreToolkit toolkit, MyRecordFormat format, int flags )
-    {
-        super(file, toolkit, format, flags);
-    }
-}
-
-class MyRecordFormat implements RecordFormat<MyRecord>
-{
-    @Override
-    public String recordName()
-    {
-        return "MyRecord";
-    }
-
-    @Override
-    public long id( MyRecord myRecord )
-    {
-        return myRecord.id;
-    }
-
-    @Override
-    public void serialize( PageCursor cursor, int offset, MyRecord myRecord )
-    {
-        cursor.putLong(offset, myRecord.value);
-    }
-
-    @Override
-    public MyRecord deserialize( PageCursor cursor, int offset, long id )
-    {
-        return new MyRecord( id, cursor.getLong(offset) );
-    }
-
-    @Override
-    public boolean inUse( PageCursor pageCursor, int offset )
-    {
-        return pageCursor.getLong(offset) != 0;
-    }
-}
-
-class MyHeaderlessStoreFormat extends FixedSizeRecordStoreFormat<MyRecord, MyCursor>
-{
-    private final MyRecordFormat recordFormat;
-
-    public MyHeaderlessStoreFormat()
-    {
-        super( 8, "HeaderlessFormat", "v0.1.0" );
-        this.recordFormat = new MyRecordFormat();
-    }
-
-    @Override
-    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit, int flags )
-    {
-        return new MyCursor( file, toolkit, recordFormat, flags );
-    }
-
-    @Override
-    public RecordFormat<MyRecord> recordFormat()
-    {
-        return recordFormat;
-    }
-}
-
-class MyFormatWithHeader implements StoreFormat<MyRecord, MyCursor>
-{
-    private final int configuredRecordSize;
-    private final MyRecordFormat recordFormat;
-
-    MyFormatWithHeader( int configuredRecordSize )
-    {
-        this.configuredRecordSize = configuredRecordSize;
-        this.recordFormat = new MyRecordFormat();
-    }
-
-    @Override
-    public MyCursor createCursor( PagedFile file, StoreToolkit toolkit, int flags )
-    {
-        return new MyCursor( file, toolkit, recordFormat, flags );
-    }
-
-    @Override
-    public RecordFormat<MyRecord> recordFormat()
-    {
-        return recordFormat;
-    }
-
-    @Override
-    public int recordSize( StoreChannel channel ) throws IOException
-    {
-        ByteBuffer buf = ByteBuffer.allocate( 4 );
-        channel.read( buf, 0 );
-        buf.flip();
-        return buf.getInt();
-    }
-
-    @Override
-    public void createStore( StoreChannel channel ) throws IOException
-    {
-        ByteBuffer buf = ByteBuffer.allocate( 4 );
-        buf.putInt( configuredRecordSize );
-        buf.flip();
-        channel.write( buf, 0 );
-    }
-
-    @Override
-    public int headerSize()
-    {
-        return 4;
-    }
-
-    @Override
-    public String version()
-    {
-        return "v0.1.0";
-    }
-
-    @Override
-    public String type()
-    {
-        return "MyFormatWithHeader";
-    }
-}
-
-class MyRecord
-{
-    long id;
-    long value;
-
-    public MyRecord(long id, long value)
-    {
-        this.id = id;
-        this.value = value;
-    }
-
-    @Override
-    public boolean equals( Object o )
-    {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-
-        MyRecord myRecord = (MyRecord) o;
-
-        if ( id != myRecord.id )
-        {
-            return false;
-        }
-        if ( value != myRecord.value )
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        int result = (int) (id ^ (id >>> 32));
-        result = 31 * result + (int) (value ^ (value >>> 32));
-        return result;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "MyRecord{" +
-                "id=" + id +
-                ", value=" + value +
-                '}';
-    }
-}

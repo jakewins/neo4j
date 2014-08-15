@@ -48,6 +48,7 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     private final FileSystemAbstraction fs;
     private final File dbFileName;
     private final StoreOpenCloseCycle openCloseLogic;
+    private final IdGeneratorRebuilder.Factory idGeneratorRebuilding;
 
     private StoreToolkit toolkit;
     private PagedFile file;
@@ -56,19 +57,27 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
      * This MUST NOT be accessed while the store is in STARTED state, all interaction with the file while the store is
      * open must be done via {@link #file}.
      */
-    private StoreChannel rawChannel;
+    private StoreChannel channel;
 
-    public StandardStore(StoreFormat<RECORD, CURSOR> format, File baseFileName, StoreIdGenerator idGenerator,
+    public StandardStore(StoreFormat<RECORD, CURSOR> format, File dbFileName, StoreIdGenerator idGenerator,
                          PageCache pageCache, FileSystemAbstraction fs, StringLogger log )
+    {
+        this(format, dbFileName, idGenerator, pageCache, fs,
+                new IdGeneratorRebuilder.FindHighestInUseRebuilderFactory(), new StoreOpenCloseCycle( log, dbFileName, format, fs ));
+    }
+
+    public StandardStore( StoreFormat<RECORD, CURSOR> format, File dbFileName, StoreIdGenerator idGenerator,
+                          PageCache pageCache, FileSystemAbstraction fs,
+                          IdGeneratorRebuilder.Factory idGeneratorRebuilding, StoreOpenCloseCycle openCloseCycle )
     {
         this.storeFormat = format;
         this.recordFormat = format.recordFormat();
-        this.dbFileName = new File(baseFileName.getAbsolutePath() + ".db");
+        this.dbFileName = dbFileName;
         this.idGenerator = idGenerator;
         this.pageCache = pageCache;
         this.fs = fs;
-        this.openCloseLogic = new StoreOpenCloseCycle( log, dbFileName, storeFormat, fs,
-                new IdGeneratorRebuilder.FindHighestInUseRebuilder() );
+        this.idGeneratorRebuilding = idGeneratorRebuilding;
+        this.openCloseLogic = openCloseCycle;
     }
 
     @Override
@@ -142,7 +151,7 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
     }
 
     @Override
-    public void init() throws Throwable
+    public void start() throws Throwable
     {
         if(!fs.fileExists( dbFileName ))
         {
@@ -150,16 +159,8 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
         }
         else
         {
-            rawChannel = fs.open(dbFileName, "rw");
-            openCloseLogic.openStore(rawChannel);
-            initializeToolkit();
+            openExistingStore();
         }
-    }
-
-    @Override
-    public void start() throws Throwable
-    {
-        file = pageCache.map( dbFileName, toolkit.pageSize() );
     }
 
     @Override
@@ -170,28 +171,32 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
             file = null;
             pageCache.unmap( dbFileName );
         }
+        if( channel != null)
+        {
+            openCloseLogic.closeStore( channel, idGenerator.highestIdInUse() );
+            channel.close();
+            channel = null;
+        }
     }
 
-    @Override
-    public void shutdown() throws Throwable
+    private void openExistingStore() throws IOException
     {
-        if(rawChannel != null)
-        {
-            openCloseLogic.closeStore( rawChannel, idGenerator.highestIdInUse() );
-            rawChannel.close();
-            rawChannel = null;
-        }
+        channel = fs.open(dbFileName, "rw");
+        initializeToolkit();
+        file = pageCache.map( dbFileName, toolkit.pageSize() );
+        openCloseLogic.openStore( channel, idGeneratorRebuilding.newIdGeneratorRebuilder( this, toolkit, idGenerator ));
     }
 
     private void createNewStore() throws IOException
     {
         fs.mkdirs( dbFileName.getParentFile() );
         fs.create( dbFileName );
-        rawChannel = fs.open( dbFileName, "rw" );
+        channel = fs.open( dbFileName, "rw" );
 
-        storeFormat.createStore( rawChannel );
+        storeFormat.createStore( channel );
 
         initializeToolkit();
+        file = pageCache.map( dbFileName, toolkit.pageSize() );
 
         // If this is the first time the store is started, and the store has a header, we need to reserve enough
         // initial records to make space for that header.
@@ -206,7 +211,7 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
 
     private void initializeToolkit() throws IOException
     {
-        int recordSize = storeFormat.recordSize( rawChannel );
+        int recordSize = storeFormat.recordSize( channel );
         int headerSize = storeFormat.headerSize();
         int firstRecordId = headerSize == 0 ? 0 : (int) Math.ceil( headerSize / (1.0 * recordSize) );
 
@@ -216,6 +221,6 @@ public class StandardStore<RECORD, CURSOR extends Store.RecordCursor> extends Li
         // the page size used in-memory by the pageCache.
         int pageSize = pageCache.pageSize() - pageCache.pageSize() % recordSize;
 
-        toolkit = new StoreToolkit( recordSize, pageSize, firstRecordId, idGenerator );
+        toolkit = new StoreToolkit( recordSize, pageSize, firstRecordId, channel, idGenerator );
     }
 }

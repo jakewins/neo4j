@@ -17,43 +17,40 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.impl;
+package org.neo4j.kernel.impl.store.format;
 
-import java.util.concurrent.atomic.AtomicLong;
+import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.kernel.impl.store.standard.StoreFormat;
 
-import org.neo4j.kernel.impl.store.standard.StoreIdGenerator;
-
-public class TestStoreIdGenerator implements StoreIdGenerator
+public class TestRecordFormat implements StoreFormat.RecordFormat<TestRecord>
 {
-    private final AtomicLong next = new AtomicLong(0);
-
     @Override
-    public long allocate()
+    public String recordName()
     {
-        return next.getAndIncrement();
+        return "MyRecord";
     }
 
     @Override
-    public void free( long id )
+    public long id( TestRecord myRecord )
     {
-
+        return myRecord.id;
     }
 
     @Override
-    public long highestIdInUse()
+    public void serialize( PageCursor cursor, int offset, TestRecord myRecord )
     {
-        return next.get();
+        cursor.putLong(offset, myRecord.value);
     }
 
     @Override
-    public void setHighestIdInUse( long highId )
+    public TestRecord deserialize( PageCursor cursor, int offset, long id )
     {
-        next.set( highId );
+        return new TestRecord( id, cursor.getLong(offset) );
     }
 
     @Override
-    public void rebuild( long highestIdInUse )
+    public boolean inUse( PageCursor pageCursor, int offset )
     {
-        next.set( highestIdInUse );
+        return pageCursor.getLong(offset) != 0;
     }
 }

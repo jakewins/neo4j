@@ -17,43 +17,31 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.impl;
+package org.neo4j.kernel.impl.store.format;
 
-import java.util.concurrent.atomic.AtomicLong;
+import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.kernel.impl.store.standard.FixedSizeRecordStoreFormat;
+import org.neo4j.kernel.impl.store.standard.StoreToolkit;
 
-import org.neo4j.kernel.impl.store.standard.StoreIdGenerator;
-
-public class TestStoreIdGenerator implements StoreIdGenerator
+public class TestHeaderlessStoreFormat extends FixedSizeRecordStoreFormat<TestRecord, TestCursor>
 {
-    private final AtomicLong next = new AtomicLong(0);
+    private final TestRecordFormat recordFormat;
 
-    @Override
-    public long allocate()
+    public TestHeaderlessStoreFormat()
     {
-        return next.getAndIncrement();
+        super( 8, "HeaderlessFormat", "v0.1.0" );
+        this.recordFormat = new TestRecordFormat();
     }
 
     @Override
-    public void free( long id )
+    public TestCursor createCursor( PagedFile file, StoreToolkit toolkit, int flags )
     {
-
+        return new TestCursor( file, toolkit, recordFormat, flags );
     }
 
     @Override
-    public long highestIdInUse()
+    public RecordFormat<TestRecord> recordFormat()
     {
-        return next.get();
-    }
-
-    @Override
-    public void setHighestIdInUse( long highId )
-    {
-        next.set( highId );
-    }
-
-    @Override
-    public void rebuild( long highestIdInUse )
-    {
-        next.set( highestIdInUse );
+        return recordFormat;
     }
 }

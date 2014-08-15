@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.store.impl;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,6 +28,7 @@ import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileLock;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.impl.store.format.TestHeaderlessStoreFormat;
 import org.neo4j.kernel.impl.store.standard.IdGeneratorRebuilder;
 import org.neo4j.kernel.impl.store.standard.StoreFormat;
 import org.neo4j.kernel.impl.store.standard.StoreOpenCloseCycle;
@@ -44,8 +46,6 @@ public class StoreOpenCloseCycleTest
     public void shouldLockAndUnlock() throws Exception
     {
         // Given
-        IdGeneratorRebuilder idGenRebuilder = mock(IdGeneratorRebuilder.class);
-
         StoreFormat<?,?> format = mock(StoreFormat.class);
         when(format.version()).thenReturn( "v1.0.0" );
         when(format.type()).thenReturn( "SomeFormat" );
@@ -59,10 +59,10 @@ public class StoreOpenCloseCycleTest
         when(fs.tryLock( dbFileName, channel )).thenReturn( lock );
 
         StoreOpenCloseCycle logic = new StoreOpenCloseCycle( StringLogger.DEV_NULL,
-                dbFileName, format, fs, idGenRebuilder );
+                dbFileName, format, fs );
 
         // When
-        logic.openStore(channel);
+        logic.openStore(channel, mock(IdGeneratorRebuilder.class));
 
         // Then
         verify( fs ).tryLock(dbFileName, channel );
@@ -72,7 +72,6 @@ public class StoreOpenCloseCycleTest
 
         // Then
         verify( lock ).release();
-        verifyNoMoreInteractions( idGenRebuilder, fs, format );
     }
 
     @Test
@@ -82,20 +81,54 @@ public class StoreOpenCloseCycleTest
         File storeFile = new File( "store" );
         IdGeneratorRebuilder idGenRebuilder = mock(IdGeneratorRebuilder.class);
         EphemeralFileSystemAbstraction fs = fsRule.get();
-        MyHeaderlessStoreFormat format = new MyHeaderlessStoreFormat();
+        TestHeaderlessStoreFormat format = new TestHeaderlessStoreFormat();
 
         StoreOpenCloseCycle cycle = new StoreOpenCloseCycle( StringLogger.DEV_NULL,
-                storeFile, format, fs, idGenRebuilder );
+                storeFile, format, fs );
 
         // And given the file exists (but contains no headers, and should thus be considered unclean)
         fs.create( storeFile );
         StoreChannel channel = fs.open( storeFile, "rw" );
 
         // When
-        cycle.openStore( channel );
+        cycle.openStore( channel, idGenRebuilder);
 
         // Then
-        verify( idGenRebuilder ).rebuildIdGeneratorFor( channel, format );
+        verify( idGenRebuilder ).rebuildIdGenerator();
         verifyNoMoreInteractions( idGenRebuilder );
+    }
+
+    @Test
+    public void cleanlyShutdownStoreShouldNotHaveIdGeneratorRebuilt() throws Exception
+    {
+        // Given
+        File storeFile = new File( "store" );
+        EphemeralFileSystemAbstraction fs = fsRule.get();
+
+        StoreChannel channel = newCleanStore( storeFile );
+
+        IdGeneratorRebuilder idGenRebuilder = mock( IdGeneratorRebuilder.class );
+        StoreOpenCloseCycle cycle = new StoreOpenCloseCycle( StringLogger.DEV_NULL,
+                storeFile, new TestHeaderlessStoreFormat(), fs );
+
+        // When
+        cycle.openStore( channel, mock(IdGeneratorRebuilder.class));
+
+        // Then
+        verifyNoMoreInteractions( idGenRebuilder );
+    }
+
+    private StoreChannel newCleanStore( File storeFile ) throws IOException
+    {
+        EphemeralFileSystemAbstraction fs = fsRule.get();
+        StoreOpenCloseCycle cycle = new StoreOpenCloseCycle( StringLogger.DEV_NULL,
+                storeFile, new TestHeaderlessStoreFormat(), fs);
+
+        // And given a cleanly shut down store
+        fs.create( storeFile );
+        StoreChannel channel = fs.open( storeFile, "rw" );
+        cycle.openStore( channel, mock(IdGeneratorRebuilder.class));
+        cycle.closeStore( channel, 1 );
+        return channel;
     }
 }

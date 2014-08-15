@@ -19,19 +19,25 @@
  */
 package org.neo4j.kernel.impl.store.standard;
 
-/** Utility methods used by a store and its store format. */
+import java.io.IOException;
+
+import org.neo4j.io.fs.StoreChannel;
+
+/** Store metadata and tools used by a store and its associated components. */
 public class StoreToolkit
 {
     private final int recordSize;
     private final int pageSize;
     private final long firstRecordId;
+    private final StoreChannel channel;
     private final StoreIdGenerator idGenerator;
 
-    public StoreToolkit( int recordSize, int pageSize, long firstRecordId, StoreIdGenerator idGenerator )
+    public StoreToolkit( int recordSize, int pageSize, long firstRecordId, StoreChannel channel, StoreIdGenerator idGenerator )
     {
         this.recordSize = recordSize;
         this.pageSize = pageSize;
         this.firstRecordId = firstRecordId;
+        this.channel = channel;
         this.idGenerator = idGenerator;
     }
 
@@ -64,5 +70,14 @@ public class StoreToolkit
     public long firstRecordId()
     {
         return firstRecordId;
+    }
+
+    /**
+     * Get the current file size on disk. This may not represent the "real" size of the file, as much of it may be
+     * unflushed pages in the page cache.
+     */
+    public long fileSize() throws IOException
+    {
+        return channel.size();
     }
 }

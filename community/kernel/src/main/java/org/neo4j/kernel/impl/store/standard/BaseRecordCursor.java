@@ -26,8 +26,11 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.nioneo.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.store.Store;
 
+import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_LOCK;
+import static org.neo4j.io.pagecache.PagedFile.PF_TRANSIENT;
 import static org.neo4j.kernel.impl.store.Store.SF_REVERSE_CURSOR;
+import static org.neo4j.kernel.impl.store.Store.SF_SCAN;
 import static org.neo4j.kernel.impl.store.standard.StoreFormat.RecordFormat;
 
 /**
@@ -48,6 +51,7 @@ public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> imple
 
     protected final StoreToolkit toolkit;
     protected final FORMAT format;
+    private final int pageCacheFlags;
 
     protected PageCursor pageCursor;
     protected long currentRecordId = -1;
@@ -58,6 +62,7 @@ public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> imple
         this.file = file;
         this.toolkit = toolkit;
         this.format = format;
+        this.pageCacheFlags = pageCursorFlags( flags );
         if((flags & SF_REVERSE_CURSOR) == 0)
         {
             this.currentRecordId = toolkit.firstRecordId() - 1;
@@ -82,7 +87,8 @@ public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> imple
         return currentRecordId;
     }
 
-    public boolean inUse()
+    @Override
+    public boolean currentInUse()
     {
         return format.inUse( pageCursor, currentRecordOffset );
     }
@@ -104,7 +110,7 @@ public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> imple
             // This may be the first next() call, so we may need to initialize a PageCursor
             if ( pageCursor == null )
             {
-                pageCursor = file.io( pageId, PF_SHARED_LOCK );
+                pageCursor = file.io( pageId, pageCacheFlags );
                 return pageCursor.next( pageId );
             }
             // Either we're on the right page, or we move to it
@@ -121,7 +127,7 @@ public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> imple
     {
         while(next(currentRecordId + stepSize))
         {
-            if(inUse())
+            if( currentInUse())
             {
                 return true;
             }
@@ -132,6 +138,26 @@ public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> imple
     @Override
     public void close()
     {
-        pageCursor.close();
+        if ( pageCursor != null )
+        {
+            pageCursor.close();
+        }
+    }
+
+    /** Given our input flags, figure out what kind of page cursor setup we'll need */
+    private int pageCursorFlags( int storeCursorFlags )
+    {
+        int flags = PF_SHARED_LOCK;
+        if((storeCursorFlags & SF_SCAN) != 0)
+        {
+            flags |= PF_TRANSIENT;
+            if( (storeCursorFlags & SF_REVERSE_CURSOR) == 0 )
+            {
+                // Note: We only use read-ahead if we are scanning forward. For OLAP type use cases, however, scanning
+                // in either direction is not uncommon, so we should expand the page cursor to support backwards scans.
+                flags |= PF_READ_AHEAD;
+            }
+        }
+        return flags;
     }
 }

@@ -28,8 +28,11 @@ public interface Store<RECORD, CURSOR extends Store.RecordCursor> extends Lifecy
     /** No flags */
     static int SF_NO_FLAGS = 0;
 
+    /** Hint that the cursor will be used to perform a sequential scan. */
+    static int SF_SCAN = 1;
+
     /** Instead of a cursor starting at the beginning of the store, have a cursor start at the end and move backwards */
-    static int SF_REVERSE_CURSOR = 1;
+    static int SF_REVERSE_CURSOR = 1 << 1;
 
     /**
      * Gives you a cursor for efficiently reading the store. The cursor you get back will always at least implement
@@ -49,10 +52,13 @@ public interface Store<RECORD, CURSOR extends Store.RecordCursor> extends Lifecy
     /** Signal that a record id is no longer used, freeing it up for others. */
     void free(long id);
 
-    interface RecordCursor<RECORD>
+    interface RecordCursor<RECORD> extends AutoCloseable
     {
         /** Read a full record from the current position. */
         RECORD currentRecord();
+
+        /** Is the record at the current position in use? */
+        boolean currentInUse();
 
         /** The id of the current record. */
         long currentId();
@@ -63,6 +69,7 @@ public interface Store<RECORD, CURSOR extends Store.RecordCursor> extends Lifecy
         /** Moves to the next in-use record, or returns false if there are no more records in the store. */
         boolean next();
 
+        @Override
         void close();
     }
 }

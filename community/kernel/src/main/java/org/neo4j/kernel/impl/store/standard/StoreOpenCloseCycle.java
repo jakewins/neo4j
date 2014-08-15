@@ -52,9 +52,9 @@ import static org.neo4j.io.fs.FileUtils.windowsSafeIOOperation;
  *
  * The various states and how to read them looks like:
  *
- *                   Correct type | Wrong Type
- * Correct version      CLEAN     |  UNCLEAN
- *   Wrong version  WRONG_VERSION |  UNCLEAN
+ *                   Correct type | Wrong/missing Type
+ * Correct version      CLEAN     |      UNCLEAN
+ *   Wrong version  WRONG_VERSION |      UNCLEAN
  *
  */
 public class StoreOpenCloseCycle
@@ -111,21 +111,19 @@ public class StoreOpenCloseCycle
     private final File dbFileName;
     private final StoreFormat<?, ?> format;
     private final FileSystemAbstraction fs;
-    private final IdGeneratorRebuilder idGenRebuilder;
 
     private FileLock fileLock;
 
-    public StoreOpenCloseCycle( StringLogger log, File dbFileName, StoreFormat<?, ?> format, FileSystemAbstraction fs,
-                                IdGeneratorRebuilder idGenRebuilder )
+    public StoreOpenCloseCycle( StringLogger log, File dbFileName, StoreFormat<?, ?> format, FileSystemAbstraction fs )
     {
         this.log = log;
         this.dbFileName = dbFileName;
         this.format = format;
         this.fs = fs;
-        this.idGenRebuilder = idGenRebuilder;
     }
 
-    public void openStore(StoreChannel channel) throws IOException
+    /** Opens the store, potentially rebuilding the id generator if the store was not cleanly closed. */
+    public void openStore(StoreChannel channel, IdGeneratorRebuilder idGenRebuilder ) throws IOException
     {
         lock(channel);
         StateDescription result = determineState( channel );
@@ -138,28 +136,10 @@ public class StoreOpenCloseCycle
             case UNCLEAN:
                 // Store was not closed properly, indicating a crash or some other event causing the process
                 // to exit without running shut down procedures. We need to rebuild our id generator at this point.
-                idGenRebuilder.rebuildIdGeneratorFor( channel, format );
+                idGenRebuilder.rebuildIdGenerator();
                 break;
             case WRONG_VERSION:
                 throw new NotCurrentStoreVersionException( result.expectedFooter(), result.foundFooter(), "", false );
-        }
-    }
-
-    private void lock( StoreChannel channel )
-    {
-        try
-        {
-            this.fileLock = fs.tryLock( dbFileName, channel );
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( "Unable to lock store[" + dbFileName + "]", e );
-        }
-        catch ( OverlappingFileLockException e )
-        {
-            throw new IllegalStateException( "Unable to lock store [" + dbFileName +
-                    "], this is usually caused by another Neo4j kernel already running in " +
-                    "this JVM for this particular store" );
         }
     }
 
@@ -184,6 +164,24 @@ public class StoreOpenCloseCycle
                 }
             }
         } );
+    }
+
+    private void lock( StoreChannel channel )
+    {
+        try
+        {
+            this.fileLock = fs.tryLock( dbFileName, channel );
+        }
+        catch ( IOException e )
+        {
+            throw new UnderlyingStorageException( "Unable to lock store[" + dbFileName + "]", e );
+        }
+        catch ( OverlappingFileLockException e )
+        {
+            throw new IllegalStateException( "Unable to lock store [" + dbFileName +
+                    "], this is usually caused by another Neo4j kernel already running in " +
+                    "this JVM for this particular store" );
+        }
     }
 
     private StateDescription determineState( StoreChannel channel ) throws IOException

@@ -17,21 +17,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.standard;
+package org.neo4j.kernel.impl.store.format;
 
-/**
- * This is a wrapper around {@link org.neo4j.kernel.impl.nioneo.store.IdGenerator}, containing only those
- * components used by the stores. This is used while rebuilding the store layer, and may or may not remain once that
- * rebuild is complete.
- */
-public interface StoreIdGenerator
+import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.kernel.impl.store.standard.BaseRecordCursor;
+import org.neo4j.kernel.impl.store.standard.StoreFormat;
+import org.neo4j.kernel.impl.store.standard.StoreToolkit;
+
+public class TestCursor extends BaseRecordCursor<TestRecord, StoreFormat.RecordFormat<TestRecord>>
 {
-    public long allocate();
-    public void free( long id );
-
-    long highestIdInUse();
-    void setHighestIdInUse( long highId );
-
-    /** Clear all internal state of this id generator, and mark all ids as in use up to and including the id here. */
-    void rebuild( long highestIdInUse );
+    TestCursor( PagedFile file, StoreToolkit toolkit, TestRecordFormat format, int flags )
+    {
+        super(file, toolkit, format, flags);
+    }
 }

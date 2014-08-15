@@ -19,19 +19,31 @@
  */
 package org.neo4j.kernel.impl.store.standard;
 
+import java.io.IOException;
+
+import org.neo4j.io.fs.StoreChannel;
+
 /**
- * This is a wrapper around {@link org.neo4j.kernel.impl.nioneo.store.IdGenerator}, containing only those
- * components used by the stores. This is used while rebuilding the store layer, and may or may not remain once that
- * rebuild is complete.
+ * A temporary wrapper that disables the open/close logic for a store. This is a shim to allow the new stores to
+ * work with the old stores during a transitioning period. The old stores remain responsble for recovery and startup/
+ * shutdown logic, the new stores are available for reading and writing in a way that can be mixed with the old stores.
  */
-public interface StoreIdGenerator
+public class NoOpStoreOpenCloseCycle extends StoreOpenCloseCycle
 {
-    public long allocate();
-    public void free( long id );
+    public NoOpStoreOpenCloseCycle()
+    {
+        super( null, null, null, null );
+    }
 
-    long highestIdInUse();
-    void setHighestIdInUse( long highId );
+    @Override
+    public void closeStore( StoreChannel channel, long highestIdInUse ) throws IOException
+    {
 
-    /** Clear all internal state of this id generator, and mark all ids as in use up to and including the id here. */
-    void rebuild( long highestIdInUse );
+    }
+
+    @Override
+    public void openStore( StoreChannel channel, IdGeneratorRebuilder idGenRebuilder ) throws IOException
+    {
+
+    }
 }

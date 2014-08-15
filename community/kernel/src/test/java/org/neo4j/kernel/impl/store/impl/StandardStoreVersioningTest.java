@@ -64,13 +64,13 @@ public class StandardStoreVersioningTest
                 new File("/store"), new TestStoreIdGenerator(), pageCache, fsRule.get(), StringLogger.DEV_NULL );
 
         // A store with an older version
-        onePointOhStore.init();
-        onePointOhStore.shutdown();
+        onePointOhStore.start();
+        onePointOhStore.stop();
 
         // When
         try
         {
-            twoPointOhStore.init();
+            twoPointOhStore.start();
             fail("Should not have opened this store.");
         } catch( NotCurrentStoreVersionException e )
         {

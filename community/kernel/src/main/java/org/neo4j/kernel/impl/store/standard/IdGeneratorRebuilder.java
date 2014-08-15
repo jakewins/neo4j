@@ -19,7 +19,12 @@
  */
 package org.neo4j.kernel.impl.store.standard;
 
-import org.neo4j.io.fs.StoreChannel;
+import java.io.IOException;
+
+import org.neo4j.kernel.impl.store.Store;
+
+import static org.neo4j.kernel.impl.store.Store.SF_REVERSE_CURSOR;
+import static org.neo4j.kernel.impl.store.Store.SF_SCAN;
 
 /**
  * Given that a store has not shut down properly, this component is responsible for inspecting the store and rebuilding
@@ -30,25 +35,44 @@ import org.neo4j.io.fs.StoreChannel;
  * So, for illustration, a valid rebuilder could look at the file size and calculate the max possible id in use, and
  * simply start allocating ids past that. This guarantees we'd never allocate an id of a record that is in use,
  * although it would cause a lot of fragmentation.
+ *
+ * These rebuilders are ran with the guarantee that no other reading or writing will be concurrently going on against
+ * the store or id generator.
  */
 public interface IdGeneratorRebuilder
 {
+    interface Factory
+    {
+        IdGeneratorRebuilder newIdGeneratorRebuilder( Store<?,?> store, StoreToolkit toolkit, StoreIdGenerator idGenerator );
+    }
+
     /**
-     * Called with a channel that is guaranteed to be record-aligned, such that one could start from the beginning
-     * or end of the file, and expect to read records at record-size offsets.
+     * Trigger this rebuilder to rebuild the id generator it wraps.
      */
-    void rebuildIdGeneratorFor( StoreChannel channel, StoreFormat<?,?> format );
+    void rebuildIdGenerator() throws IOException;
 
     /**
      * A fast strategy that scans the store from the end, backwards, until it finds a record in use, and just marks
      * that as the highest one in use. This gives very fast startup times at the expense of lost disk space.
      */
-    public static class FindHighestInUseRebuilder implements IdGeneratorRebuilder
+    public static class FindHighestInUseRebuilderFactory implements IdGeneratorRebuilder.Factory
     {
         @Override
-        public void rebuildIdGeneratorFor( StoreChannel channel, StoreFormat<?,?> format )
+        public IdGeneratorRebuilder newIdGeneratorRebuilder( final Store<?,?> store, final StoreToolkit toolkit, final StoreIdGenerator idGenerator )
         {
-
+            return new IdGeneratorRebuilder()
+            {
+                @Override
+                public void rebuildIdGenerator() throws IOException
+                {
+                    try(Store.RecordCursor<?> cursor = store.cursor( SF_REVERSE_CURSOR | SF_SCAN ))
+                    {
+                        cursor.next( (toolkit.fileSize() / toolkit.recordSize()) + 1 );
+                        cursor.next(); // Moves to the next (backwards!) record in use
+                        idGenerator.rebuild( Math.max(cursor.currentId(), toolkit.firstRecordId()) );
+                    }
+                }
+            };
         }
     }
 
@@ -56,12 +80,38 @@ public interface IdGeneratorRebuilder
      * A strategy that scans the whole store, finding every single unused record. This leaves the id generator ready
      * to fully defragment the store at the expense of startup time after a crash.
      */
-    public static class FullDefragmentationRebuilder implements IdGeneratorRebuilder
+    public static class FullDefragmentationRebuilderFactory implements IdGeneratorRebuilder.Factory
     {
         @Override
-        public void rebuildIdGeneratorFor( StoreChannel channel, StoreFormat<?,?> format )
+        public IdGeneratorRebuilder newIdGeneratorRebuilder( final Store<?,?> store, final StoreToolkit toolkit, final StoreIdGenerator idGenerator )
         {
+            return new IdGeneratorRebuilder()
+            {
+                @Override
+                public void rebuildIdGenerator() throws IOException
+                {
+                    // First, find the highest in use, scanning from the back:
+                    new FindHighestInUseRebuilderFactory()
+                            .newIdGeneratorRebuilder( store, toolkit, idGenerator ).rebuildIdGenerator();
 
+                    long highId = idGenerator.highestIdInUse();
+
+                    // Then, scan the full store from the beginning and find each unused record
+                    try(Store.RecordCursor<?> cursor = store.cursor( SF_SCAN ))
+                    {
+                        long currentId = toolkit.firstRecordId();
+
+                        // Scan store
+                        while(currentId < highId && cursor.next(currentId++))
+                        {
+                            if(!cursor.currentInUse())
+                            {
+                                idGenerator.free( cursor.currentId() );
+                            }
+                        }
+                    }
+                }
+            };
         }
     }
 }
