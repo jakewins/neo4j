@@ -39,6 +39,11 @@ import static org.neo4j.kernel.impl.store.standard.StoreFormat.RecordFormat;
  * pointing to. The recommended mechanism here is to use this as a base, and lean on it's ability to correctly position
  * the cursor and handle interaction with the page cache cursor, and then simply access the {@link #pageCursor} in here,
  * along with the {@link #currentRecordOffset}. See the protected fields in this class for more useful components.
+ *
+ * If you choose to extend this cursor to add your own "read this field at the current record" type methods, the
+ * preferred approach for this is to keep the logic for actually reading fields in your
+ * {@link org.neo4j.kernel.impl.store.standard.StoreFormat.RecordFormat}, which is accessible to subclasses of this
+ * class via the {@link #format} field.
  */
 public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> implements Store.RecordCursor<RECORD>
 {
