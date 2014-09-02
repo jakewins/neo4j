@@ -54,6 +54,8 @@ public interface Store<RECORD, CURSOR extends Store.RecordCursor> extends Lifecy
 
     interface RecordCursor<RECORD> extends AutoCloseable
     {
+        // TODO: Note that we need some way to force the page-cache retry operation upstream here
+
         /** Read a full record from the current position. */
         RECORD currentRecord();
 

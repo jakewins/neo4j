@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format;
+package org.neo4j.kernel.impl.store.format.v2_2;
 
 import java.io.File;
 
@@ -31,6 +31,7 @@ import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipStore;
 import org.neo4j.kernel.impl.nioneo.store.StoreFactory;
+import org.neo4j.kernel.impl.store.format.v2_2.RelationshipStoreFormat_v2_2;
 import org.neo4j.kernel.impl.store.impl.TestStoreIdGenerator;
 import org.neo4j.kernel.impl.store.standard.StandardStore;
 import org.neo4j.kernel.impl.util.StringLogger;
@@ -73,8 +74,8 @@ public class RelationshipFormatComplianceTest
         neoStore.close();
 
         // When
-        StandardStore<RelationshipRecord, RelationshipStoreFormat.RelationshipRecordCursor> store = new
-                StandardStore<>( new RelationshipStoreFormat(), new File( "/neostore.relationshipstore.db" ),
+        StandardStore<RelationshipRecord, RelationshipStoreFormat_v2_2.RelationshipRecordCursor> store = new
+                StandardStore<>( new RelationshipStoreFormat_v2_2(), new File( "/neostore.relationshipstore.db" ),
                 new TestStoreIdGenerator(), new StandardPageCache( fsRule.get(), 1024, 1024 ), fsRule.get(),
                 StringLogger.DEV_NULL );
         store.init();
@@ -90,8 +91,8 @@ public class RelationshipFormatComplianceTest
         // Given
         storeFactory.createNeoStore().close(); // NodeStore wont start unless it's child stores exist, so create those
 
-        StandardStore<RelationshipRecord, RelationshipStoreFormat.RelationshipRecordCursor> store = new
-                StandardStore<>( new RelationshipStoreFormat(), new File( "/neostore.relationshipstore.db" ),
+        StandardStore<RelationshipRecord, RelationshipStoreFormat_v2_2.RelationshipRecordCursor> store = new
+                StandardStore<>( new RelationshipStoreFormat_v2_2(), new File( "/neostore.relationshipstore.db" ),
                 new TestStoreIdGenerator(), new StandardPageCache( fsRule.get(), 1024, 1024 ), fsRule.get(),
                 StringLogger.DEV_NULL );
         store.init();

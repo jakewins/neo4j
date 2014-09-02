@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format;
+package org.neo4j.kernel.impl.store.format.v2_2;
 
 import java.util.Collections;
 
@@ -37,18 +37,18 @@ import static org.neo4j.kernel.impl.store.format.NeoStoreFormatUtils.longFromInt
 /**
  * This defines the full format of the NodeStore, and contains an inner class that defines the record format.
  */
-public class NodeStoreFormat extends FixedSizeRecordStoreFormat<NodeRecord, NodeStoreFormat.NodeRecordCursor>
+public class NodeStoreFormat_v2_2 extends FixedSizeRecordStoreFormat<NodeRecord, NodeStoreFormat_v2_2.NodeRecordCursor>
 {
     private final NodeRecordFormat recordFormat;
 
-    public NodeStoreFormat()
+    public NodeStoreFormat_v2_2()
     {
         super( NodeRecordFormat.RECORD_SIZE, "NodeStore", CommonAbstractStore.ALL_STORES_VERSION );
         this.recordFormat = new NodeRecordFormat();
     }
 
     @Override
-    public NodeStoreFormat.NodeRecordCursor createCursor( PagedFile file, StoreToolkit toolkit, int flags )
+    public NodeStoreFormat_v2_2.NodeRecordCursor createCursor( PagedFile file, StoreToolkit toolkit, int flags )
     {
         return new NodeRecordCursor( file, toolkit, recordFormat, flags );
     }

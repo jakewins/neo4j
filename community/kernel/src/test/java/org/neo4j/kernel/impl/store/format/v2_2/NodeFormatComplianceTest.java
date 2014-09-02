@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format;
+package org.neo4j.kernel.impl.store.format.v2_2;
 
 import java.io.File;
 
@@ -41,7 +41,7 @@ import org.neo4j.test.EphemeralFileSystemRule;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
-import static org.neo4j.kernel.impl.store.format.NodeStoreFormat.NodeRecordCursor;
+import static org.neo4j.kernel.impl.store.format.v2_2.NodeStoreFormat_v2_2.NodeRecordCursor;
 import static org.neo4j.kernel.impl.store.impl.StoreMatchers.records;
 
 /**
@@ -76,7 +76,7 @@ public class NodeFormatComplianceTest
 
         // When
         StandardStore<NodeRecord, NodeRecordCursor> store = new
-                StandardStore<>( new NodeStoreFormat(), new File( "/neostore.nodestore.db" ),
+                StandardStore<>( new NodeStoreFormat_v2_2(), new File( "/neostore.nodestore.db" ),
                 new TestStoreIdGenerator(), new StandardPageCache( fsRule.get(), 1024, 1024 ), fsRule.get(),
                 StringLogger.DEV_NULL );
         store.init();
@@ -93,7 +93,7 @@ public class NodeFormatComplianceTest
         storeFactory.createNeoStore().close(); // NodeStore wont start unless it's child stores exist, so creat those
 
         StandardStore<NodeRecord, NodeRecordCursor> store = new
-                StandardStore<>( new NodeStoreFormat(), new File( "/neostore.nodestore.db" ),
+                StandardStore<>( new NodeStoreFormat_v2_2(), new File( "/neostore.nodestore.db" ),
                 new TestStoreIdGenerator(), new StandardPageCache( fsRule.get(), 1024, 1024 ), fsRule.get(),
                 StringLogger.DEV_NULL );
         store.init();
@@ -117,7 +117,7 @@ public class NodeFormatComplianceTest
     public void customCursorShouldReadNextRel() throws Throwable
     {
         // Given
-        StandardStore<NodeRecord, NodeRecordCursor> store = new StandardStore<>( new NodeStoreFormat(),
+        StandardStore<NodeRecord, NodeRecordCursor> store = new StandardStore<>( new NodeStoreFormat_v2_2(),
                 new File( "/neostore.nodestore.db" ),
                 new TestStoreIdGenerator(), new StandardPageCache( fsRule.get(), 1024, 1024 ), fsRule.get(),
                 StringLogger.DEV_NULL );

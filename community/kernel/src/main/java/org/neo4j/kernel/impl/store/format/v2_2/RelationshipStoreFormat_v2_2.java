@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format;
+package org.neo4j.kernel.impl.store.format.v2_2;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
@@ -31,11 +31,11 @@ import org.neo4j.kernel.impl.store.standard.StoreToolkit;
 
 import static org.neo4j.kernel.impl.store.format.NeoStoreFormatUtils.longFromIntAndMod;
 
-public class RelationshipStoreFormat extends FixedSizeRecordStoreFormat<RelationshipRecord, RelationshipStoreFormat.RelationshipRecordCursor>
+public class RelationshipStoreFormat_v2_2 extends FixedSizeRecordStoreFormat<RelationshipRecord, RelationshipStoreFormat_v2_2.RelationshipRecordCursor>
 {
     private final RelationshipRecordFormat recordFormat;
 
-    public RelationshipStoreFormat()
+    public RelationshipStoreFormat_v2_2()
     {
         super( RelationshipRecordFormat.RECORD_SIZE, "RelationshipStore", CommonAbstractStore.ALL_STORES_VERSION );
         this.recordFormat = new RelationshipRecordFormat();
