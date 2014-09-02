@@ -81,25 +81,25 @@ public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> imple
     }
 
     @Override
-    public RECORD currentRecord()
+    public RECORD record()
     {
         return format.deserialize( pageCursor, currentRecordOffset, currentRecordId );
     }
 
     @Override
-    public long currentId()
+    public long recordId()
     {
         return currentRecordId;
     }
 
     @Override
-    public boolean currentInUse()
+    public boolean inUse()
     {
         return format.inUse( pageCursor, currentRecordOffset );
     }
 
     @Override
-    public boolean next( long id )
+    public boolean position( long id )
     {
         try
         {
@@ -130,14 +130,20 @@ public class BaseRecordCursor<RECORD, FORMAT extends RecordFormat<RECORD>> imple
     @Override
     public boolean next()
     {
-        while(next(currentRecordId + stepSize))
+        while(position( currentRecordId + stepSize ))
         {
-            if( currentInUse())
+            if( inUse())
             {
                 return true;
             }
         }
         return false;
+    }
+
+    @Override
+    public boolean retry()
+    {
+        return pageCursor.retry();
     }
 
     @Override

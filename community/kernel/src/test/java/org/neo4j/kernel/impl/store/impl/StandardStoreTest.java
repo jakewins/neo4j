@@ -138,11 +138,11 @@ public class StandardStoreTest
 
         // Then
         assertTrue(cursor.next());
-        assertEquals(fourthId, cursor.currentId());
+        assertEquals(fourthId, cursor.recordId());
         assertTrue(cursor.next());
-        assertEquals(secondId, cursor.currentId());
+        assertEquals(secondId, cursor.recordId());
         assertTrue(cursor.next());
-        assertEquals(firstId, cursor.currentId());
+        assertEquals(firstId, cursor.recordId());
         assertFalse(cursor.next());
     }
 

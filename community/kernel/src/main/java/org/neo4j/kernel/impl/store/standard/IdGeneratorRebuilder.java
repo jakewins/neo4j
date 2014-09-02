@@ -67,9 +67,9 @@ public interface IdGeneratorRebuilder
                 {
                     try(Store.RecordCursor<?> cursor = store.cursor( SF_REVERSE_CURSOR | SF_SCAN ))
                     {
-                        cursor.next( (toolkit.fileSize() / toolkit.recordSize()) + 1 );
+                        cursor.position( (toolkit.fileSize() / toolkit.recordSize()) + 1 );
                         cursor.next(); // Moves to the next (backwards!) record in use
-                        idGenerator.rebuild( Math.max(cursor.currentId(), toolkit.firstRecordId()) );
+                        idGenerator.rebuild( Math.max(cursor.recordId(), toolkit.firstRecordId()) );
                     }
                 }
             };
@@ -102,11 +102,11 @@ public interface IdGeneratorRebuilder
                         long currentId = toolkit.firstRecordId();
 
                         // Scan store
-                        while(currentId < highId && cursor.next(currentId++))
+                        while(currentId < highId && cursor.position( currentId++ ))
                         {
-                            if(!cursor.currentInUse())
+                            if(!cursor.inUse())
                             {
-                                idGenerator.free( cursor.currentId() );
+                                idGenerator.free( cursor.recordId() );
                             }
                         }
                     }

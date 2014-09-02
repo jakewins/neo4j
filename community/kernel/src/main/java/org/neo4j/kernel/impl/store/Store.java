@@ -52,24 +52,41 @@ public interface Store<RECORD, CURSOR extends Store.RecordCursor> extends Lifecy
     /** Signal that a record id is no longer used, freeing it up for others. */
     void free(long id);
 
+    /**
+     * A cursor to navigate around records in a store. Note that you MUST use a retry pattern when reading from the
+     * cursor. You may group a set of reads within one "retry block", but this block may not span reading multiple
+     * records. The usage pattern should look like:
+     *
+     * do
+     * {
+     *     inUse = cursor.inUse();
+     *     record = cursor.record();
+     * } while(cursor.retry());
+     *
+     * This makes things somewhat cumbersome and verbose, but it is a requirement because the underlying paging system
+     * can use optimistic locking, which means we always stand the risk of a retry requirement when doing reads.
+     */
     interface RecordCursor<RECORD> extends AutoCloseable
     {
         // TODO: Note that we need some way to force the page-cache retry operation upstream here
 
         /** Read a full record from the current position. */
-        RECORD currentRecord();
+        RECORD record();
 
         /** Is the record at the current position in use? */
-        boolean currentInUse();
+        boolean inUse();
 
         /** The id of the current record. */
-        long currentId();
+        long recordId();
 
         /** Moves to an explicit record position, independent of if that position is in use or not. */
-        boolean next( long id );
+        boolean position( long id );
 
         /** Moves to the next in-use record, or returns false if there are no more records in the store. */
         boolean next();
+
+        /** Indicates that a read needs to be retried, this MUST be used when reading with the cursor. */
+        boolean retry();
 
         @Override
         void close();

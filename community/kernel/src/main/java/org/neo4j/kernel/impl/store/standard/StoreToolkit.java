@@ -41,15 +41,15 @@ public class StoreToolkit
         this.idGenerator = idGenerator;
     }
 
-    long pageId( long id )
+    public long pageId( long recordId )
     {
-        return id * recordSize / pageSize;
+        return recordId * recordSize / pageSize;
     }
 
     /** Offset inside a page that a given record can be found at. */
-    int recordOffset( long id )
+    public int recordOffset( long recordId )
     {
-        return (int) (id * recordSize % pageSize);
+        return (int) (recordId * recordSize % pageSize);
     }
 
     /** The store page size. NOTE that this may be different from the system-wide page size reported by the PageCache */

@@ -132,7 +132,7 @@ public class NodeFormatComplianceTest
 
         // Given I have a cursor positioned at the record I want
         NodeRecordCursor cursor = store.cursor( Store.SF_NO_FLAGS );
-        cursor.next(record.getId());
+        cursor.position( record.getId() );
 
         // When
         long l = cursor.firstRelationship();

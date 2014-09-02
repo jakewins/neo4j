@@ -45,9 +45,16 @@ public class NodeRecord extends PrimitiveRecord
 
     public NodeRecord( long id, boolean dense, long nextRel, long nextProp )
     {
+        this( id, false, dense, nextProp, nextRel, 0 );
+    }
+
+    public NodeRecord( long id, boolean inUse, boolean dense, long nextRel, long nextProp, long labels )
+    {
         super( id, nextProp );
         this.nextRel = nextRel;
         this.dense = dense;
+        this.labels = labels;
+        setInUse( inUse );
     }
 
     public long getNextRel()
