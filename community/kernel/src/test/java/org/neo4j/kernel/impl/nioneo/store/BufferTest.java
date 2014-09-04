@@ -22,8 +22,15 @@ package org.neo4j.kernel.impl.nioneo.store;
 import java.nio.ByteBuffer;
 
 import org.junit.Test;
+import sun.misc.Cleaner;
+import sun.nio.ch.DirectBuffer;
+
+import org.neo4j.test.ReflectionUtil;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class BufferTest
 {
@@ -48,4 +55,18 @@ public class BufferTest
         }
     }
 
+    @Test
+    public void shouldCallCleanWhenOnClose() throws Exception
+    {
+        // Given
+        final ByteBuffer directBuffer = ByteBuffer.allocateDirect( 10 );
+        final Cleaner cleaner = spy( ((DirectBuffer) directBuffer).cleaner() );
+        ReflectionUtil.setPrivateField( directBuffer, "cleaner", Cleaner.class, cleaner );
+
+        // When
+        new Buffer( null, directBuffer ).close();
+
+        // Then
+        verify( cleaner, times( 1 ) ).clean();
+    }
 }

@@ -54,6 +54,21 @@ public class ReflectionUtil
                     "" + fieldType );
         }
         field.setAccessible( true );
+        field.set( target, null );
+        return fieldType.cast( field.get( target ) );
+    }
+
+    public static <T> T setPrivateField( Object target, String fieldName, Class<T> fieldType, T value ) throws Exception
+    {
+        Class<?> type = target.getClass();
+        Field field = getField( fieldName, type );
+        if ( !fieldType.isAssignableFrom( field.getType() ) )
+        {
+            throw new IllegalArgumentException( "Field type does not match " + field.getType() + " is no subclass of " +
+                    "" + fieldType );
+        }
+        field.setAccessible( true );
+        field.set( target, value );
         return fieldType.cast( field.get( target ) );
     }
 
