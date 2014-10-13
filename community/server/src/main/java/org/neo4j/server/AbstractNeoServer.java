@@ -433,15 +433,16 @@ public abstract class AbstractNeoServer implements NeoServer
 
     private int getMaxThreads()
     {
+        // TODO remove this method as we no longer need getInt check when we use Setting class
         return configurator.configuration()
                 .containsKey( Configurator.WEBSERVER_MAX_THREADS_PROPERTY_KEY ) ? configurator.configuration()
                 .getInt( Configurator.WEBSERVER_MAX_THREADS_PROPERTY_KEY ) : defaultMaxWebServerThreads();
     }
 
-    private int defaultMaxWebServerThreads()
+    private static int defaultMaxWebServerThreads()
     {
-        return Math.min(Runtime.getRuntime()
-                .availableProcessors(),500);
+        return Math.min( 10 * Runtime.getRuntime()
+                .availableProcessors(), 500 );
     }
 
     private void startWebServer()

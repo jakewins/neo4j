@@ -60,6 +60,7 @@ public class StatisticModule implements ServerModule
 
     private boolean isStatisticsEnabled()
     {
+        //TODO might remove this method or modify it as we already give it default value?
         return config.getBoolean(WEBSERVER_ENABLE_STATISTICS_COLLECTION, false);
     }
 }
