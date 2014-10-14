@@ -46,7 +46,6 @@ import org.neo4j.server.webadmin.rest.MasterInfoService;
 import static java.util.Arrays.asList;
 
 import static org.neo4j.helpers.collection.Iterables.mix;
-import static org.neo4j.server.configuration.Configurator.DB_MODE_KEY;
 import static org.neo4j.server.database.LifecycleManagingDatabase.EMBEDDED;
 import static org.neo4j.server.database.LifecycleManagingDatabase.lifecycleManagingDatabase;
 
@@ -77,7 +76,7 @@ public class EnterpriseNeoServer extends AdvancedNeoServer
 
     protected static Database.Factory createDbFactory( Configuration config )
     {
-        String mode = config.getString( DB_MODE_KEY, SINGLE ).toUpperCase();
+        String mode = config.getString( Configurator.db_mode.name(), SINGLE ).toUpperCase();
         return mode.equals(HA) ?
             lifecycleManagingDatabase( HA_FACTORY ) :
             lifecycleManagingDatabase( EMBEDDED );
@@ -115,9 +114,9 @@ public class EnterpriseNeoServer extends AdvancedNeoServer
         // If we are in HA mode, database startup can take a very long time, so
         // we default to disabling the startup timeout here, unless explicitly overridden
         // by configuration.
-        if(getConfiguration().getString( DB_MODE_KEY, "single" ).equalsIgnoreCase("ha"))
+        if(getConfiguration().getString( Configurator.db_mode.name(), "single" ).equalsIgnoreCase("ha"))
         {
-            long startupTimeout = getConfiguration().getInt(Configurator.STARTUP_TIMEOUT, 0) * 1000;
+            long startupTimeout = getConfiguration().getLong(Configurator.startup_timeout.name(), 0);
             InterruptThreadTimer stopStartupTimer;
             if(startupTimeout > 0)
             {

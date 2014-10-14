@@ -27,6 +27,7 @@ import javax.ws.rs.core.Response.Status;
 import org.junit.Rule;
 import org.junit.Test;
 
+import org.neo4j.helpers.TimeUtil;
 import org.neo4j.kernel.GraphDatabaseDependencies;
 import org.neo4j.kernel.logging.DevNullLoggingService;
 import org.neo4j.server.WrappingNeoServer;
@@ -93,8 +94,9 @@ public class TestJetty9WebServer
         };
 
         ServerConfigurator config = new ServerConfigurator( db );
-        config.configuration().setProperty( Configurator.WEBSERVER_PORT_PROPERTY_KEY, 7476 );
-        config.configuration().setProperty( Configurator.WEBSERVER_LIMIT_EXECUTION_TIME_PROPERTY_KEY, 1000 );
+        config.configuration().setProperty( Configurator.webserver_port.name(), 7476 );
+        config.configuration().setProperty( Configurator.webserver_limit_execution_time.name(),
+                TimeUtil.parseTimeMillis.apply( "1000" ) );
         WrappingNeoServerBootstrapper testBootstrapper = new WrappingNeoServerBootstrapper( db, config );
 
         // When

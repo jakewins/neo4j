@@ -173,8 +173,8 @@ public class TestPerformUpgradeIfNecessary
         databaseProperties.store( new FileWriter( NEO4J_PROPERTIES.getAbsolutePath() ), null );
 
         Configuration serverProperties = new MapBasedConfiguration();
-        serverProperties.setProperty( Configurator.DATABASE_LOCATION_PROPERTY_KEY, STORE_DIRECTORY.getPath() );
-        serverProperties.setProperty( Configurator.DB_TUNING_PROPERTY_FILE_KEY, NEO4J_PROPERTIES.getAbsolutePath() );
+        serverProperties.setProperty( Configurator.db_location.name(), STORE_DIRECTORY.getPath() );
+        serverProperties.setProperty( Configurator.db_tuning_property_file.name(), NEO4J_PROPERTIES.getAbsolutePath() );
 
         return serverProperties;
     }

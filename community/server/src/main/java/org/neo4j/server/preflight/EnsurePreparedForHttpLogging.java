@@ -44,14 +44,15 @@ public class EnsurePreparedForHttpLogging implements PreflightTask
     @Override
     public boolean run()
     {
-        boolean enabled = config.getBoolean( Configurator.HTTP_LOGGING, Configurator.DEFAULT_HTTP_LOGGING );
+        boolean enabled = config.getBoolean( Configurator.http_logging.name(), 
+                Boolean.valueOf( Configurator.http_logging.getDefaultValue() ) );
 
         if ( !enabled )
         {
             return true;
         }
 
-        File logLocation = extractLogLocationFromConfig(config.getString( Configurator.HTTP_LOG_CONFIG_LOCATION ) );
+        File logLocation = extractLogLocationFromConfig(config.getString( Configurator.http_log_config_location.name() ) );
 
 
         if ( logLocation != null )

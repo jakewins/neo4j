@@ -64,7 +64,7 @@ public class PerformUpgradeIfNecessary implements PreflightTask
     {
         try
         {
-            String dbLocation = new File( config.getString( Configurator.DATABASE_LOCATION_PROPERTY_KEY ) )
+            String dbLocation = new File( config.getString( Configurator.db_location.name() ) )
                     .getAbsolutePath();
 
             if ( new CurrentDatabase(new StoreVersionCheck( new DefaultFileSystemAbstraction() ) ).storeFilesAtCurrentVersion( new File( dbLocation ) ) )

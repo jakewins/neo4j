@@ -48,7 +48,7 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.REST_API_PATH_PROPERTY_KEY, "http://localhost:7474/db/data" );
+        config.addProperty( Configurator.rest_api_path.name(), "http://localhost:7474/db/data" );
         rule.validate( config );
         assertFalse( theValidatorHasPassed );
     }
@@ -58,7 +58,7 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.MANAGEMENT_PATH_PROPERTY_KEY, "http://localhost:7474/db/manage" );
+        config.addProperty( Configurator.management_api_path.name(), "http://localhost:7474/db/manage" );
         rule.validate( config );
         assertFalse( theValidatorHasPassed );
     }
@@ -68,8 +68,8 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.REST_API_PATH_PROPERTY_KEY, "http://localhost:7474/db/data" );
-        config.addProperty( Configurator.MANAGEMENT_PATH_PROPERTY_KEY, "http://localhost:7474/db/manage" );
+        config.addProperty( Configurator.rest_api_path.name(), "http://localhost:7474/db/data" );
+        config.addProperty( Configurator.management_api_path.name(), "http://localhost:7474/db/manage" );
         rule.validate( config );
         assertTrue( theValidatorHasPassed );
     }
@@ -79,8 +79,8 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.REST_API_PATH_PROPERTY_KEY, "/db/data" );
-        config.addProperty( Configurator.MANAGEMENT_PATH_PROPERTY_KEY, "/db/manage" );
+        config.addProperty( Configurator.rest_api_path.name(), "/db/data" );
+        config.addProperty( Configurator.management_api_path.name(), "/db/manage" );
         rule.validate( config );
         assertTrue( theValidatorHasPassed );
     }
@@ -90,18 +90,18 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.REST_API_PATH_PROPERTY_KEY, "http://localhost:7474///db///data///" );
-        config.addProperty( Configurator.MANAGEMENT_PATH_PROPERTY_KEY, "http://localhost:7474////db///manage" );
+        config.addProperty( Configurator.rest_api_path.name(), "http://localhost:7474///db///data///" );
+        config.addProperty( Configurator.management_api_path.name(), "http://localhost:7474////db///manage" );
         rule.validate( config );
 
-        assertThat( (String) config.getProperty( Configurator.MANAGEMENT_PATH_PROPERTY_KEY ),
+        assertThat( (String) config.getProperty( Configurator.management_api_path.name() ),
                 not( containsString( "///" ) ) );
-        assertFalse( ( (String) config.getProperty( Configurator.MANAGEMENT_PATH_PROPERTY_KEY ) ).endsWith( "//" ) );
-        assertFalse( ( (String) config.getProperty( Configurator.MANAGEMENT_PATH_PROPERTY_KEY ) ).endsWith( "/" ) );
+        assertFalse( ( (String) config.getProperty( Configurator.management_api_path.name() ) ).endsWith( "//" ) );
+        assertFalse( ( (String) config.getProperty( Configurator.management_api_path.name() ) ).endsWith( "/" ) );
 
-        assertThat( (String) config.getProperty( Configurator.REST_API_PATH_PROPERTY_KEY ),
+        assertThat( (String) config.getProperty( Configurator.rest_api_path.name() ),
                 not( containsString( "///" ) ) );
-        assertFalse( ( (String) config.getProperty( Configurator.REST_API_PATH_PROPERTY_KEY ) ).endsWith( "//" ) );
-        assertFalse( ( (String) config.getProperty( Configurator.REST_API_PATH_PROPERTY_KEY ) ).endsWith( "/" ) );
+        assertFalse( ( (String) config.getProperty( Configurator.rest_api_path.name() ) ).endsWith( "//" ) );
+        assertFalse( ( (String) config.getProperty( Configurator.rest_api_path.name() ) ).endsWith( "/" ) );
     }
 }

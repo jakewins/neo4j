@@ -90,7 +90,7 @@ public class ServerConfigDocIT extends ExclusiveServerTestBase
     @Test
     public void shouldGenerateWADLWhenExplicitlyEnabledInConfig() throws IOException
     {
-        server = server().withProperty( Configurator.WADL_ENABLED, "true" )
+        server = server().withProperty( Configurator.wadl_enabled.name(), "true" )
                 .usingDatabaseDir( folder.cleanDirectory( name.getMethodName() ).getAbsolutePath() )
                 .build();
         server.start();
@@ -119,7 +119,7 @@ public class ServerConfigDocIT extends ExclusiveServerTestBase
     @Test
     public void shouldNotGenerateWADLWhenExplicitlyDisabledInConfig() throws IOException
     {
-        server = server().withProperty( Configurator.WADL_ENABLED, "false" )
+        server = server().withProperty( Configurator.wadl_enabled.name(), "false" )
                 .usingDatabaseDir( folder.cleanDirectory( name.getMethodName() ).getAbsolutePath() )
                 .build();
         server.start();
@@ -179,7 +179,7 @@ public class ServerConfigDocIT extends ExclusiveServerTestBase
         // and all other tests depend on it being sandboxed.
         GlobalJavascriptInitializer.initialize( GlobalJavascriptInitializer.Mode.SANDBOXED );
 
-        server = server().withProperty( Configurator.SCRIPT_SANDBOXING_ENABLED_KEY, "false" )
+        server = server().withProperty( Configurator.script_sandboxing_enabled.name(), "false" )
                 .usingDatabaseDir( folder.cleanDirectory( name.getMethodName() ).getAbsolutePath() )
                 .build();
 

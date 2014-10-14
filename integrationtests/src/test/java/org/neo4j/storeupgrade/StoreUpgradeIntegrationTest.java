@@ -112,14 +112,14 @@ public class StoreUpgradeIntegrationTest
 
             File configFile = new File( dir, "neo4j.properties" );
             Properties props = new Properties();
-            props.setProperty( Configurator.DATABASE_LOCATION_PROPERTY_KEY, dir.getAbsolutePath() );
-            props.setProperty( Configurator.DB_TUNING_PROPERTY_FILE_KEY, configFile.getAbsolutePath() );
+            props.setProperty( Configurator.db_location.name(), dir.getAbsolutePath() );
+            props.setProperty( Configurator.db_tuning_property_file.name(), configFile.getAbsolutePath() );
             props.setProperty( GraphDatabaseSettings.allow_store_upgrade.name(), "true" );
             props.store( new FileWriter( configFile ), "" );
 
             try
             {
-                System.setProperty( Configurator.NEO_SERVER_CONFIG_FILE_KEY, configFile.getAbsolutePath() );
+                System.setProperty( Configurator.neo_server_config_file.name(), configFile.getAbsolutePath() );
 
                 Bootstrapper bootstrapper = Bootstrapper.loadMostDerivedBootstrapper();
                 bootstrapper.start();
@@ -136,7 +136,7 @@ public class StoreUpgradeIntegrationTest
             }
             finally
             {
-                System.clearProperty( Configurator.NEO_SERVER_CONFIG_FILE_KEY );
+                System.clearProperty( Configurator.neo_server_config_file.name() );
             }
 
             assertConsistentStore( dir );

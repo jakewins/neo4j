@@ -80,7 +80,7 @@ public class RrdFactoryTest
     public void shouldTakeDirectoryLocationFromConfig() throws Exception
     {
         String expected = testDirectory.directory().getAbsolutePath();
-        config.addProperty( Configurator.RRDB_LOCATION_PROPERTY_KEY, expected );
+        config.addProperty( Configurator.rrdb_location.name(), expected );
         TestableRrdFactory factory = createRrdFactory();
 
         factory.createRrdDbAndSampler( db, new NullJobScheduler() );
@@ -93,7 +93,7 @@ public class RrdFactoryTest
     {
         String expected = testDirectory.directory().getAbsolutePath();
 
-        config.addProperty( Configurator.RRDB_LOCATION_PROPERTY_KEY, expected );
+        config.addProperty( Configurator.rrdb_location.name(), expected );
         TestableRrdFactory factory = createRrdFactory();
 
         factory.createRrdDbAndSampler( db, new NullJobScheduler() );
@@ -106,7 +106,7 @@ public class RrdFactoryTest
     {
         //Given
         String expected = new File( testDirectory.directory(), "rrd-test").getAbsolutePath();
-        config.addProperty( Configurator.RRDB_LOCATION_PROPERTY_KEY, expected );
+        config.addProperty( Configurator.rrdb_location.name(), expected );
 
         TestableRrdFactory factory = createRrdFactory();
         createInvalidRrdFile( expected );

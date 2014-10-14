@@ -42,7 +42,6 @@ import org.neo4j.server.rest.web.TransactionalService;
 import org.neo4j.server.web.WebServer;
 
 import static org.neo4j.server.JAXRSHelper.listFrom;
-import static org.neo4j.server.configuration.Configurator.WEBSERVER_LIMIT_EXECUTION_TIME_PROPERTY_KEY;
 
 public class RESTApiModule implements ServerModule
 {
@@ -119,7 +118,7 @@ public class RESTApiModule implements ServerModule
     }
 
     private void setupRequestTimeLimit() {
-        Integer limit = config.getInteger( WEBSERVER_LIMIT_EXECUTION_TIME_PROPERTY_KEY, null );
+        Integer limit = config.getInteger( Configurator.webserver_limit_execution_time.name(), null );
         if ( limit != null )
         {
             try
@@ -138,7 +137,7 @@ public class RESTApiModule implements ServerModule
 
     private URI restApiUri() throws URISyntaxException
     {
-        return new URI( config.getString( Configurator.REST_API_PATH_PROPERTY_KEY, Configurator.DEFAULT_DATA_API_PATH ) );
+        return new URI( config.getString( Configurator.rest_api_path.name(), Configurator.rest_api_path.getDefaultValue() ) );
     }
 
     private void loadPlugins()

@@ -77,7 +77,7 @@ public class SecurityRulesModule implements ServerModule
     {
         ArrayList<SecurityRule> rules = new ArrayList<SecurityRule>();
 
-        for ( String classname : config.getStringArray( Configurator.SECURITY_RULES_KEY ) )
+        for ( String classname : config.getStringArray( Configurator.security_rules.name() ) )
         {
             try
             {

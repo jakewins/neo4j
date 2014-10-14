@@ -45,7 +45,7 @@ public class HTTPLoggingPreparednessRuleTest
     {
         // given
     	Configuration config = new MapBasedConfiguration();
-        config.setProperty( Configurator.HTTP_LOGGING, "false" );
+        config.setProperty( Configurator.http_logging.name(), "false" );
         EnsurePreparedForHttpLogging rule = new EnsurePreparedForHttpLogging(config);
 
         // when
@@ -79,8 +79,8 @@ public class HTTPLoggingPreparednessRuleTest
         final File confDir = TargetDirectory.forTest( this.getClass() ).cleanDirectory( "confDir" );
 
         Configuration config = new MapBasedConfiguration();
-        config.setProperty( Configurator.HTTP_LOGGING, "true" );
-        config.setProperty( Configurator.HTTP_LOG_CONFIG_LOCATION,
+        config.setProperty( Configurator.http_logging.name(), "true" );
+        config.setProperty( Configurator.http_log_config_location.name(),
                 createConfigFile( createLogbackConfigXml( logDir ), confDir ).getAbsolutePath() );
         EnsurePreparedForHttpLogging rule = new EnsurePreparedForHttpLogging(config);
 
@@ -99,9 +99,9 @@ public class HTTPLoggingPreparednessRuleTest
         final File confDir = TargetDirectory.forTest( this.getClass() ).cleanDirectory( "confDir" );
 
         Configuration config = new MapBasedConfiguration();
-        config.setProperty( Configurator.HTTP_LOGGING, "true" );
+        config.setProperty( Configurator.http_logging.name(), "true" );
         final File unwritableDirectory = createUnwritableDirectory();
-        config.setProperty( Configurator.HTTP_LOG_CONFIG_LOCATION,
+        config.setProperty( Configurator.http_log_config_location.name(),
             createConfigFile( createLogbackConfigXml( unwritableDirectory ), confDir ).getAbsolutePath() );
         EnsurePreparedForHttpLogging rule = new EnsurePreparedForHttpLogging(config);
 

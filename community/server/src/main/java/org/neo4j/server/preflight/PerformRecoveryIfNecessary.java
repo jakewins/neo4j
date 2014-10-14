@@ -55,7 +55,7 @@ public class PerformRecoveryIfNecessary implements PreflightTask
     {
         try
         {
-            File dbLocation = new File( config.getString( Configurator.DATABASE_LOCATION_PROPERTY_KEY ) );
+            File dbLocation = new File( config.getString( Configurator.db_location.name() ) );
             if ( dbLocation.exists() )
             {
                 StoreRecoverer recoverer = new StoreRecoverer();

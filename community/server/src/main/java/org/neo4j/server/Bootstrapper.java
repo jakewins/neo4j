@@ -117,7 +117,8 @@ public abstract class Bootstrapper
         catch ( TransactionFailureException tfe )
         {
             log.error( format( "Failed to start Neo Server on port [%d], because ",
-            		configurator.configuration().getInt( Configurator.WEBSERVER_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_PORT ) )
+            		configurator.configuration().getInt( Configurator.webserver_port.name(), 
+            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) ) )
                        + tfe + ". Another process may be using database location " + server.getDatabase()
                        .getLocation(), tfe );
             return GRAPH_DATABASE_STARTUP_ERROR_CODE;
@@ -125,13 +126,17 @@ public abstract class Bootstrapper
         catch ( IllegalArgumentException e )
         {
             log.error( format( "Failed to start Neo Server on port [%s]",
-            		configurator.configuration().getInt( Configurator.WEBSERVER_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_PORT ) ), e );
+            		configurator.configuration().getInt( Configurator.webserver_port.name(), 
+            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) ) ), 
+            		        e );
             return WEB_SERVER_STARTUP_ERROR_CODE;
         }
         catch ( Exception e )
         {
             log.error( format( "Failed to start Neo Server on port [%s]",
-            		configurator.configuration().getInt( Configurator.WEBSERVER_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_PORT ) ), e );
+            		configurator.configuration().getInt( Configurator.webserver_port.name(), 
+            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) ) ),
+            		        e );
             return WEB_SERVER_STARTUP_ERROR_CODE;
         }
     }
@@ -165,7 +170,8 @@ public abstract class Bootstrapper
                 server.stop();
             }
             log.log( "Successfully shutdown Neo Server on port [%d], database [%s]",
-            		configurator.configuration().getInt(Configurator.WEBSERVER_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_PORT),
+            		configurator.configuration().getInt(Configurator.webserver_port.name(), 
+            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() )),
                     location );
 
             removeShutdownHook();
@@ -177,7 +183,9 @@ public abstract class Bootstrapper
         catch ( Exception e )
         {
             log.error( "Failed to cleanly shutdown Neo Server on port [%d], database [%s]. Reason [%s] ",
-            		configurator.configuration().getInt(Configurator.WEBSERVER_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_PORT), location, e.getMessage(), e );
+            		configurator.configuration().getInt(Configurator.webserver_port.name(), 
+            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) ),
+            		location, e.getMessage(), e );
             return 1;
         }
     }
@@ -218,8 +226,8 @@ public abstract class Bootstrapper
 
     protected Configurator createConfigurator( ConsoleLogger log )
     {
-        File configFile = new File( System.getProperty( Configurator.NEO_SERVER_CONFIG_FILE_KEY,
-                Configurator.DEFAULT_CONFIG_DIR ) );
+        File configFile = new File( System.getProperty( Configurator.neo_server_config_file.name(),
+                Configurator.neo_server_config_file.getDefaultValue() ) );
         return new PropertyFileConfigurator( new Validator( new DatabaseLocationMustBeSpecifiedRule() ),
                 configFile, log );
     }

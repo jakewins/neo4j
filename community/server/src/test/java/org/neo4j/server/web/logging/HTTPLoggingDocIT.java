@@ -69,8 +69,8 @@ public class HTTPLoggingDocIT extends ExclusiveServerTestBase
                 HTTPLoggingPreparednessRuleTest.createLogbackConfigXml( logDirectory ), confDir );
 
         NeoServer server = CommunityServerBuilder.server().withDefaultDatabaseTuning()
-                .withProperty( Configurator.HTTP_LOGGING, "false" )
-                .withProperty( Configurator.HTTP_LOG_CONFIG_LOCATION, configFile.getPath() )
+                .withProperty( Configurator.http_logging.name(), "false" )
+                .withProperty( Configurator.http_log_config_location.name(), configFile.getPath() )
                 .usingDatabaseDir( TargetDirectory.forTest( this.getClass() ).cleanDirectory(
                         "givenExplicitlyDisabledServerLoggingConfigurationShouldNotLogAccesses-dbdir"
                 ).getAbsolutePath() )
@@ -112,8 +112,8 @@ public class HTTPLoggingDocIT extends ExclusiveServerTestBase
         final String query = "?explicitlyEnabled=" + UUID.randomUUID().toString();
 
         NeoServer server = CommunityServerBuilder.server().withDefaultDatabaseTuning()
-                .withProperty( Configurator.HTTP_LOGGING, "true" )
-                .withProperty( Configurator.HTTP_LOG_CONFIG_LOCATION, configFile.getPath() )
+                .withProperty( Configurator.http_logging.name(), "true" )
+                .withProperty( Configurator.http_log_config_location.name(), configFile.getPath() )
                 .usingDatabaseDir( TargetDirectory.forTest( this.getClass() ).cleanDirectory(
                         "givenExplicitlyEnabledServerLoggingConfigurationShouldLogAccess-dbdir"
                 ).getAbsolutePath() )
@@ -155,13 +155,13 @@ public class HTTPLoggingDocIT extends ExclusiveServerTestBase
                 HTTPLoggingPreparednessRuleTest.createLogbackConfigXml( unwritableLogDir ), confDir );
 
         Configuration config = new MapBasedConfiguration();
-        config.setProperty( Configurator.HTTP_LOGGING, "true" );
-        config.setProperty( Configurator.HTTP_LOG_CONFIG_LOCATION, configFile.getPath() );
+        config.setProperty( Configurator.http_logging.name(), "true" );
+        config.setProperty( Configurator.http_log_config_location.name(), configFile.getPath() );
 
         NeoServer server = CommunityServerBuilder.server().withDefaultDatabaseTuning()
                 .withPreflightTasks( new EnsurePreparedForHttpLogging( config ) )
-                .withProperty( Configurator.HTTP_LOGGING, "true" )
-                .withProperty( Configurator.HTTP_LOG_CONFIG_LOCATION, configFile.getPath() )
+                .withProperty( Configurator.http_logging.name(), "true" )
+                .withProperty( Configurator.http_log_config_location.name(), configFile.getPath() )
                 .usingDatabaseDir( confDir.getAbsolutePath() )
                 .build();
 

@@ -40,7 +40,6 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
-import static org.neo4j.server.configuration.Configurator.DEFAULT_WEBSERVER_PORT;
 
 public class EnterpriseServerIT
 {
@@ -57,8 +56,8 @@ public class EnterpriseServerIT
 
         NeoServer server = EnterpriseServerBuilder.server()
                 .usingDatabaseDir( folder.getRoot().getAbsolutePath() )
-                .withProperty( Configurator.DB_MODE_KEY, "HA" )
-                .withProperty( Configurator.DB_TUNING_PROPERTY_FILE_KEY, tuningFile.getAbsolutePath() )
+                .withProperty( Configurator.db_mode.name(), "HA" )
+                .withProperty( Configurator.db_tuning_property_file.name(), tuningFile.getAbsolutePath() )
                 .persistent()
                 .build();
 
@@ -70,7 +69,7 @@ public class EnterpriseServerIT
             assertThat( server.getDatabase().getGraph(), is( HighlyAvailableGraphDatabase.class ) );
 
             Client client = Client.create();
-            ClientResponse r = client.resource( "http://localhost:" + DEFAULT_WEBSERVER_PORT +
+            ClientResponse r = client.resource( "http://localhost:" + Configurator.webserver_port.getDefaultValue() +
                     "/db/manage/server/ha" ).accept( APPLICATION_JSON ).get( ClientResponse.class );
             assertEquals( 200, r.getStatus() );
             assertThat( r.getEntity( String.class ), containsString( "master" ) );

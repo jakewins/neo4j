@@ -76,7 +76,7 @@ public class ManagementApiModule implements ServerModule
 
     private URI managementApiUri( )
     {
-        return URI.create( config.getString( Configurator.MANAGEMENT_PATH_PROPERTY_KEY,
-                Configurator.DEFAULT_MANAGEMENT_API_PATH ) );
+        return URI.create( config.getString( Configurator.management_api_path.name(),
+                Configurator.management_api_path.getDefaultValue() ) );
     }
 }

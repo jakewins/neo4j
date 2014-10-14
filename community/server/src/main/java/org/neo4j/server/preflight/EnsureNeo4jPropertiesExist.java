@@ -44,11 +44,13 @@ public class EnsureNeo4jPropertiesExist implements PreflightTask
     {
         ran = true;
 
-        String configFilename = config.getString( Configurator.NEO_SERVER_CONFIG_FILE_KEY );
+        String configFilename = config.getString( Configurator.neo_server_config_file.name() );
 
         if(configFilename == null)
         {
-        	failureMessage = String.format( "No server configuration file set, unable to load configuration. Expected system property '%s' to point to config file.", Configurator.NEO_SERVER_CONFIG_FILE_KEY );
+        	failureMessage = String.format( 
+        	        "No server configuration file set, unable to load configuration. Expected system property '%s' to point to config file.", 
+        	        Configurator.neo_server_config_file.name() );
             return false;
         }
         

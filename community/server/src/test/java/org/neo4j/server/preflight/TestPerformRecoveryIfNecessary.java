@@ -139,8 +139,8 @@ public class TestPerformRecoveryIfNecessary {
         databaseProperties.store( new FileWriter( databasePropertiesFileName ), null );
 
         Configuration serverProperties = new MapBasedConfiguration();
-        serverProperties.setProperty( Configurator.DATABASE_LOCATION_PROPERTY_KEY, storeDirectory );
-        serverProperties.setProperty( Configurator.DB_TUNING_PROPERTY_FILE_KEY, databasePropertiesFileName );
+        serverProperties.setProperty( Configurator.db_location.name(), storeDirectory );
+        serverProperties.setProperty( Configurator.db_tuning_property_file.name(), databasePropertiesFileName );
 
         return serverProperties;
     }

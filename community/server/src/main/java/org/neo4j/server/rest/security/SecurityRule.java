@@ -25,7 +25,7 @@ import org.neo4j.server.configuration.Configurator;
 
 public interface SecurityRule
 {
-    String DEFAULT_DATABASE_PATH = Configurator.DEFAULT_DATA_API_PATH;
+    String DEFAULT_DATABASE_PATH = Configurator.rest_api_path.getDefaultValue();
 
     /**
      * @param request The HTTP request currently under consideration.

@@ -105,7 +105,7 @@ public class WrappingNeoServerBootstrapperDocIT extends ExclusiveServerTestBase
         config = new ServerConfigurator( graphdb );
         // let the server endpoint be on a custom port
         config.configuration().setProperty(
-                Configurator.WEBSERVER_PORT_PROPERTY_KEY, 7575 );
+                Configurator.webserver_port.name(), 7575 );
 
         WrappingNeoServerBootstrapper srv;
         srv = new WrappingNeoServerBootstrapper( graphdb, config );
@@ -141,9 +141,9 @@ public class WrappingNeoServerBootstrapperDocIT extends ExclusiveServerTestBase
         ServerConfigurator config = new ServerConfigurator( myDb );
         String hostAddress = InetAddress.getLocalHost().getHostAddress();
         config.configuration().setProperty(
-                Configurator.WEBSERVER_ADDRESS_PROPERTY_KEY, hostAddress.toString() );
+                Configurator.webserver_address.name(), hostAddress.toString() );
         config.configuration().setProperty(
-                Configurator.WEBSERVER_PORT_PROPERTY_KEY, "8484" );
+                Configurator.webserver_port.name(), "8484" );
 
 
         WrappingNeoServerBootstrapper srv = new WrappingNeoServerBootstrapper( myDb, config );

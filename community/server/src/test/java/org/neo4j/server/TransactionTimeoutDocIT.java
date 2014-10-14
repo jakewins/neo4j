@@ -24,15 +24,19 @@ import java.util.Map;
 
 import org.junit.After;
 import org.junit.Test;
+
+import org.neo4j.helpers.TimeUtil;
+import org.neo4j.server.configuration.Configurator;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 import org.neo4j.test.server.HTTP;
 
 import static java.util.Arrays.asList;
+
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.UnknownId;
-import static org.neo4j.server.configuration.Configurator.TRANSACTION_TIMEOUT;
 import static org.neo4j.server.helpers.CommunityServerBuilder.server;
 
 public class TransactionTimeoutDocIT extends ExclusiveServerTestBase
@@ -49,7 +53,8 @@ public class TransactionTimeoutDocIT extends ExclusiveServerTestBase
     public void shouldHonorReallyLowSessionTimeout() throws Exception
     {
         // Given
-        server = server().withProperty( TRANSACTION_TIMEOUT, "1" ).build();
+        server = server().withProperty( Configurator.transaction_timeout.name(), 
+                String.valueOf( TimeUtil.parseTimeMillis.apply( "1" ) ) ).build();
         server.start();
 
         String tx = HTTP.POST( txURI(), asList( map( "statement", "CREATE (n)" ) ) ).location();

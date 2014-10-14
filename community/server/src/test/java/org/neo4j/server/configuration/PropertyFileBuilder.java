@@ -62,14 +62,14 @@ public class PropertyFileBuilder
     {
         File file = new File( directory, "config" );
         Map<String, String> properties = MapUtil.stringMap(
-                Configurator.DATABASE_LOCATION_PROPERTY_KEY, directory.getAbsolutePath(),
-                Configurator.RRDB_LOCATION_PROPERTY_KEY, directory.getAbsolutePath(),
-                Configurator.MANAGEMENT_PATH_PROPERTY_KEY, webAdminUri,
-                Configurator.REST_API_PATH_PROPERTY_KEY, webAdminDataUri );
+                Configurator.db_location.name(), directory.getAbsolutePath(),
+                Configurator.rrdb_location.name(), directory.getAbsolutePath(),
+                Configurator.management_api_path.name(), webAdminUri,
+                Configurator.rest_api_path.name(), webAdminDataUri );
         if ( portNo != null )
-            properties.put( Configurator.WEBSERVER_PORT_PROPERTY_KEY, portNo );
+            properties.put( Configurator.webserver_port.name(), portNo );
         if ( dbTuningPropertyFile != null )
-            properties.put( Configurator.DB_TUNING_PROPERTY_FILE_KEY, dbTuningPropertyFile );
+            properties.put( Configurator.db_tuning_property_file.name(), dbTuningPropertyFile );
         for ( Tuple t : nameValuePairs )
             properties.put( t.name, t.value );
         ServerTestUtils.writePropertiesToFile( properties, file );

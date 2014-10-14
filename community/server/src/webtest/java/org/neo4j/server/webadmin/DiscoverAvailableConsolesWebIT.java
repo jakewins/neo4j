@@ -59,7 +59,7 @@ public class DiscoverAvailableConsolesWebIT extends AbstractExclusiveServerWebad
     @Test
     public void shouldNotShowGremlinIfNotAvailable() throws Exception
     {
-        NeoServer server = server().withProperty( Configurator.MANAGEMENT_CONSOLE_ENGINES, "shell" ).build();
+        NeoServer server = server().withProperty( Configurator.management_console_engines.name(), "shell" ).build();
         try
         {
             server.start();
@@ -83,7 +83,7 @@ public class DiscoverAvailableConsolesWebIT extends AbstractExclusiveServerWebad
     @Test
     public void shouldNotShowEitherShellIfBothAreDisabled() throws Exception
     {
-        NeoServer server = server().withProperty( Configurator.MANAGEMENT_CONSOLE_ENGINES, "" ).build();
+        NeoServer server = server().withProperty( Configurator.management_console_engines.name(), "" ).build();
         try
         {
             server.start();

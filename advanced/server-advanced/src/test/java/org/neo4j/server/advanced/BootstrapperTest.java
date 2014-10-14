@@ -68,7 +68,7 @@ public class BootstrapperTest
         String dbDir2 = target.cleanDirectory( "db2" ).getAbsolutePath();
 
         Configuration conf = config.configuration();
-        conf.setProperty( Configurator.DATABASE_LOCATION_PROPERTY_KEY, dbDir2 );
+        conf.setProperty( Configurator.db_location.name(), dbDir2 );
 
         ServerManagement bean = new ServerManagement( server );
         bean.restartServer();

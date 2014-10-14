@@ -48,10 +48,10 @@ public class DiscoveryServiceTest
         Configuration mockConfig = mock( Configuration.class );
         String managementUri = "/management";
         when(
-                mockConfig.getString( Configurator.MANAGEMENT_PATH_PROPERTY_KEY,
-                        Configurator.DEFAULT_MANAGEMENT_API_PATH ) ).thenReturn( managementUri );
+                mockConfig.getString( Configurator.management_api_path.name(),
+                        Configurator.management_api_path.getDefaultValue() ) ).thenReturn( managementUri );
         String dataUri = "/data";
-        when( mockConfig.getString( Configurator.REST_API_PATH_PROPERTY_KEY, Configurator.DEFAULT_DATA_API_PATH ) ).thenReturn(
+        when( mockConfig.getString( Configurator.rest_api_path.name(), Configurator.rest_api_path.getDefaultValue() ) ).thenReturn(
                 dataUri );
 
         String baseUri = "http://www.example.com";
@@ -78,10 +78,10 @@ public class DiscoveryServiceTest
         Configuration mockConfig = mock( Configuration.class );
         String managementUri = "http://absolutedomain/management";
         when(
-                mockConfig.getString( Configurator.MANAGEMENT_PATH_PROPERTY_KEY,
-                        Configurator.DEFAULT_MANAGEMENT_API_PATH ) ).thenReturn( managementUri );
+                mockConfig.getString( Configurator.management_api_path.name(),
+                        Configurator.management_api_path.getDefaultValue() ) ).thenReturn( managementUri );
         String dataUri = "http://absolutedomain/management";
-        when( mockConfig.getString( Configurator.REST_API_PATH_PROPERTY_KEY, Configurator.DEFAULT_DATA_API_PATH ) ).thenReturn(
+        when( mockConfig.getString( Configurator.rest_api_path.name(), Configurator.rest_api_path.getDefaultValue() ) ).thenReturn(
                 dataUri );
 
         String baseUri = "http://www.example.com";

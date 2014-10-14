@@ -58,7 +58,7 @@ public class PropertyFileConfigurator extends Configurator.Adapter
     {
         if ( propertiesFile == null )
         {
-            propertiesFile = new File( System.getProperty( Configurator.NEO_SERVER_CONFIG_FILE_KEY ) );
+            propertiesFile = new File( System.getProperty( Configurator.neo_server_config_file.name() ) );
         }
 
         try
@@ -89,7 +89,7 @@ public class PropertyFileConfigurator extends Configurator.Adapter
 
     private void loadDatabaseTuningProperties( File configFile, ConsoleLogger log ) throws ConfigurationException
     {
-        String databaseTuningPropertyFileLocation = serverConfiguration.getString( DB_TUNING_PROPERTY_FILE_KEY );
+        String databaseTuningPropertyFileLocation = serverConfiguration.getString( Configurator.db_tuning_property_file.name() );
 
         // Try and find the file automatically
         if ( databaseTuningPropertyFileLocation == null )
@@ -139,7 +139,7 @@ public class PropertyFileConfigurator extends Configurator.Adapter
 
         // Always override the store dir property
         databaseTuningProperties.put( GraphDatabaseSettings.store_dir.name(),
-                serverConfiguration.getString( Configurator.DATABASE_LOCATION_PROPERTY_KEY ) );
+                serverConfiguration.getString( Configurator.db_location.name() ) );
     }
 
     private void loadPropertiesConfig( File configFile, ConsoleLogger log ) throws ConfigurationException
@@ -162,7 +162,8 @@ public class PropertyFileConfigurator extends Configurator.Adapter
     {
         try
         {
-            for ( String key : new String[] { MANAGEMENT_PATH_PROPERTY_KEY, REST_API_PATH_PROPERTY_KEY } )
+            for ( String key : new String[] { Configurator.management_api_path.name(),
+                    Configurator.rest_api_path.name() } )
             {
                 if ( configuration().containsKey( key ) )
                 {
@@ -184,7 +185,8 @@ public class PropertyFileConfigurator extends Configurator.Adapter
     {
         try
         {
-            for ( String key : new String[] { MANAGEMENT_PATH_PROPERTY_KEY, REST_API_PATH_PROPERTY_KEY } )
+            for ( String key : new String[] { Configurator.management_api_path.name(),
+                    Configurator.rest_api_path.name() } )
             {
                 if ( configuration().containsKey( key ) )
                 {
@@ -232,15 +234,16 @@ public class PropertyFileConfigurator extends Configurator.Adapter
     public List<ThirdPartyJaxRsPackage> getThirdpartyJaxRsPackages()
     {
         List<ThirdPartyJaxRsPackage> thirdPartyPackages = new ArrayList<ThirdPartyJaxRsPackage>();
-        List<String> packagesAndMountpoints = (List)this.configuration().getList( THIRD_PARTY_PACKAGES_KEY );
+        List<String> packagesAndMountpoints = (List)this.configuration().getList( 
+                Configurator.third_party_packages.name() );
 
         for ( String packageAndMoutpoint : packagesAndMountpoints )
         {
             String[] parts = packageAndMoutpoint.split( "=" );
             if ( parts.length != 2 )
             {
-                throw new IllegalArgumentException( "config for " + THIRD_PARTY_PACKAGES_KEY + " is wrong: " +
-                        packageAndMoutpoint );
+                throw new IllegalArgumentException( "config for " + Configurator.third_party_packages.name()
+                        + " is wrong: " + packageAndMoutpoint );
             }
             String pkg = parts[0];
             String mountPoint = parts[1];

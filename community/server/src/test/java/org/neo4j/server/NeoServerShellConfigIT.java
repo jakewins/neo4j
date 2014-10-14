@@ -54,7 +54,7 @@ public class NeoServerShellConfigIT extends ExclusiveServerTestBase
             public Configuration configuration()
             {
                 return new MapConfiguration( stringMap(
-                        Configurator.DATABASE_LOCATION_PROPERTY_KEY, testDir.absolutePath() ) );
+                        Configurator.db_location.name(), testDir.absolutePath() ) );
             }
 
             @Override
@@ -88,7 +88,7 @@ public class NeoServerShellConfigIT extends ExclusiveServerTestBase
             public Configuration configuration()
             {
                 return new MapConfiguration( stringMap(
-                        Configurator.DATABASE_LOCATION_PROPERTY_KEY, testDir.absolutePath() ) );
+                        Configurator.db_location.name(), testDir.absolutePath() ) );
             }
 
             @Override

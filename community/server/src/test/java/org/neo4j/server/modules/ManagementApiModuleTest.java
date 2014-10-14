@@ -51,7 +51,7 @@ public class ManagementApiModuleTest
 
         Configuration config = new PropertiesConfiguration();
         String managementPath = "/db/manage";
-        config.addProperty( Configurator.MANAGEMENT_PATH_PROPERTY_KEY, managementPath );
+        config.addProperty( Configurator.management_api_path.name(), managementPath );
 
         when( neoServer.getConfiguration() ).thenReturn( config );
 

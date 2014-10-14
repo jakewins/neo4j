@@ -56,7 +56,7 @@ public class Neo4jHAPropertiesMustExistRuleTest
     public void shouldFailIfInvalidModeSpecified() throws Exception
     {
         File serverPropertyFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
-        ServerTestUtils.writePropertyToFile( Configurator.DB_MODE_KEY, "faulty", serverPropertyFile );
+        ServerTestUtils.writePropertyToFile( Configurator.db_mode.name(), "faulty", serverPropertyFile );
         assertRuleFail( serverPropertyFile );
     }
 
@@ -65,9 +65,9 @@ public class Neo4jHAPropertiesMustExistRuleTest
     {
         File serverPropertyFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
         File dbTuningFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
-        ServerTestUtils.writePropertyToFile( Configurator.DB_TUNING_PROPERTY_FILE_KEY,
+        ServerTestUtils.writePropertyToFile( Configurator.db_tuning_property_file.name(),
                 dbTuningFile.getAbsolutePath(), serverPropertyFile );
-        ServerTestUtils.writePropertyToFile( Configurator.DB_MODE_KEY, "ha", serverPropertyFile );
+        ServerTestUtils.writePropertyToFile( Configurator.db_mode.name(), "ha", serverPropertyFile );
         ServerTestUtils.writePropertyToFile( ClusterSettings.server_id.name(), "1", dbTuningFile );
 
         assertRulePass( serverPropertyFile );
@@ -81,9 +81,9 @@ public class Neo4jHAPropertiesMustExistRuleTest
     {
         File serverPropertyFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
         File dbTuningFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
-        ServerTestUtils.writePropertyToFile( Configurator.DB_TUNING_PROPERTY_FILE_KEY,
+        ServerTestUtils.writePropertyToFile( Configurator.db_tuning_property_file.name(),
                 dbTuningFile.getAbsolutePath(), serverPropertyFile );
-        ServerTestUtils.writePropertyToFile( Configurator.DB_MODE_KEY, "ha", serverPropertyFile );
+        ServerTestUtils.writePropertyToFile( Configurator.db_mode.name(), "ha", serverPropertyFile );
         ServerTestUtils.writePropertyToFile( CONFIG_KEY_OLD_SERVER_ID, "1", dbTuningFile );
 
         assertRulePass( serverPropertyFile );
@@ -98,9 +98,9 @@ public class Neo4jHAPropertiesMustExistRuleTest
     {
         File serverPropertyFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
         File dbTuningFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
-        ServerTestUtils.writePropertyToFile( Configurator.DB_TUNING_PROPERTY_FILE_KEY,
+        ServerTestUtils.writePropertyToFile( Configurator.db_tuning_property_file.name(),
                 dbTuningFile.getAbsolutePath(), serverPropertyFile );
-        ServerTestUtils.writePropertyToFile( Configurator.DB_MODE_KEY, "ha", serverPropertyFile );
+        ServerTestUtils.writePropertyToFile( Configurator.db_mode.name(), "ha", serverPropertyFile );
         ServerTestUtils.writePropertyToFile( CONFIG_KEY_OLD_SERVER_ID, "1", dbTuningFile );
         ServerTestUtils.writePropertyToFile( ClusterSettings.server_id.name(), "1", dbTuningFile );
 
@@ -115,9 +115,9 @@ public class Neo4jHAPropertiesMustExistRuleTest
     {
         File serverPropertyFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
         File dbTuningFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
-        ServerTestUtils.writePropertyToFile( Configurator.DB_TUNING_PROPERTY_FILE_KEY,
+        ServerTestUtils.writePropertyToFile( Configurator.db_tuning_property_file.name(),
                 dbTuningFile.getAbsolutePath(), serverPropertyFile );
-        ServerTestUtils.writePropertyToFile( Configurator.DB_MODE_KEY, "ha", serverPropertyFile );
+        ServerTestUtils.writePropertyToFile( Configurator.db_mode.name(), "ha", serverPropertyFile );
 
         assertRuleFail( serverPropertyFile );
 
@@ -129,7 +129,7 @@ public class Neo4jHAPropertiesMustExistRuleTest
     public void shouldFailIfHAModeIsSetAndTheDbTuningFileHasNotBeenSpecified() throws IOException
     {
         File serverPropertyFile = ServerTestUtils.createTempPropertyFile(folder.getRoot());
-        ServerTestUtils.writePropertyToFile( Configurator.DB_MODE_KEY, "ha", serverPropertyFile );
+        ServerTestUtils.writePropertyToFile( Configurator.db_mode.name(), "ha", serverPropertyFile );
 
         assertRuleFail( serverPropertyFile );
 
@@ -159,7 +159,7 @@ public class Neo4jHAPropertiesMustExistRuleTest
     private Configuration propertiesWithConfigFileLocation( File propertyFile )
     {
         PropertyFileConfigurator config = new PropertyFileConfigurator( NO_VALIDATION, propertyFile, DEV_NULL );
-        config.configuration().setProperty( Configurator.NEO_SERVER_CONFIG_FILE_KEY, propertyFile.getAbsolutePath() );
+        config.configuration().setProperty( Configurator.neo_server_config_file.name(), propertyFile.getAbsolutePath() );
         return config.configuration();
     }
 }

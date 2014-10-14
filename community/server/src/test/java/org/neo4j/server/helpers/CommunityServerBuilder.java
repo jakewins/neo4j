@@ -161,29 +161,29 @@ public class CommunityServerBuilder
     private void createPropertiesFile( File temporaryConfigFile )
     {
         Map<String, String> properties = MapUtil.stringMap(
-                Configurator.MANAGEMENT_PATH_PROPERTY_KEY, webAdminUri,
-                Configurator.REST_API_PATH_PROPERTY_KEY, webAdminDataUri );
+                Configurator.management_api_path.name(), webAdminUri,
+                Configurator.rest_api_path.name(), webAdminDataUri );
         if ( dbDir != null )
         {
-            properties.put( Configurator.DATABASE_LOCATION_PROPERTY_KEY, dbDir );
+            properties.put( Configurator.db_location.name(), dbDir );
         }
 
         if ( portNo != null )
         {
-            properties.put( Configurator.WEBSERVER_PORT_PROPERTY_KEY, portNo );
+            properties.put( Configurator.webserver_port.name(), portNo );
         }
         if ( host != null )
         {
-            properties.put( Configurator.WEBSERVER_ADDRESS_PROPERTY_KEY, host );
+            properties.put( Configurator.webserver_address.name(), host );
         }
         if ( maxThreads != null )
         {
-            properties.put( Configurator.WEBSERVER_MAX_THREADS_PROPERTY_KEY, maxThreads );
+            properties.put( Configurator.webserver_max_threads.name(), maxThreads );
         }
 
         if ( thirdPartyPackages.keySet().size() > 0 )
         {
-            properties.put( Configurator.THIRD_PARTY_PACKAGES_KEY, asOneLine( thirdPartyPackages ) );
+            properties.put( Configurator.third_party_packages.name(), asOneLine( thirdPartyPackages ) );
         }
 
         if ( autoIndexedNodeKeys != null && autoIndexedNodeKeys.length > 0 )
@@ -203,18 +203,18 @@ public class CommunityServerBuilder
         if ( securityRuleClassNames != null && securityRuleClassNames.length > 0 )
         {
             String propertyKeys = org.apache.commons.lang.StringUtils.join( securityRuleClassNames, "," );
-            properties.put( Configurator.SECURITY_RULES_KEY, propertyKeys );
+            properties.put( Configurator.security_rules.name(), propertyKeys );
         }
 
         if ( httpsEnabled != null )
         {
             if ( httpsEnabled )
             {
-                properties.put( Configurator.WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY, "true" );
+                properties.put( Configurator.webserver_https_enabled.name(), "true" );
             }
             else
             {
-                properties.put( Configurator.WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY, "false" );
+                properties.put( Configurator.webserver_https_enabled.name(), "false" );
             }
         }
 
@@ -238,18 +238,18 @@ public class CommunityServerBuilder
                     "neostore.propertystore.db.strings.mapped_memory", "130M",
                     "neostore.propertystore.db.arrays.mapped_memory", "130M" );
             writePropertiesToFile( properties, databaseTuningPropertyFile );
-            writePropertyToFile( Configurator.DB_TUNING_PROPERTY_FILE_KEY,
+            writePropertyToFile( Configurator.db_tuning_property_file.name(),
                     databaseTuningPropertyFile.getAbsolutePath(), temporaryConfigFile );
         }
         else if ( action == WhatToDo.CREATE_DANGLING_TUNING_FILE_PROPERTY )
         {
-            writePropertyToFile( Configurator.DB_TUNING_PROPERTY_FILE_KEY, createTempPropertyFile().getAbsolutePath(),
+            writePropertyToFile( Configurator.db_tuning_property_file.name(), createTempPropertyFile().getAbsolutePath(),
                     temporaryConfigFile );
         }
         else if ( action == WhatToDo.CREATE_CORRUPT_TUNING_FILE )
         {
             File corruptTuningFile = trashFile();
-            writePropertyToFile( Configurator.DB_TUNING_PROPERTY_FILE_KEY, corruptTuningFile.getAbsolutePath(),
+            writePropertyToFile( Configurator.db_tuning_property_file.name(), corruptTuningFile.getAbsolutePath(),
                     temporaryConfigFile );
         }
     }
@@ -461,8 +461,8 @@ public class CommunityServerBuilder
         return new DatabaseActions(
                 new LeaseManager( clockToUse ),
                 configurator.configuration().getBoolean(
-                        Configurator.SCRIPT_SANDBOXING_ENABLED_KEY,
-                        Configurator.DEFAULT_SCRIPT_SANDBOXING_ENABLED ), database.getGraph() );
+                        Configurator.script_sandboxing_enabled.name(),
+                        Boolean.valueOf( Configurator.script_sandboxing_enabled.getDefaultValue() ) ), database.getGraph() );
     }
 
     protected File buildBefore() throws IOException
