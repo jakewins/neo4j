@@ -24,7 +24,7 @@ import java.io.File;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.Description;
 import org.neo4j.kernel.configuration.Title;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 import static org.neo4j.helpers.Settings.PATH;
 import static org.neo4j.helpers.Settings.STRING;
@@ -42,24 +42,24 @@ public class NeoServerSettings
     @Title("Legacy database mode")
     @Description("Defines the operation mode of the 'db' database - single or HA. This is not the recommended way of " +
             "controlling this anymore. Instead, specify a provider (single or ha) when creating databases.")
-    public static final Setting<String> legacy_db_mode = setting( Configurator.db_mode.name(), STRING, "SINGLE");
+    public static final Setting<String> legacy_db_mode = setting( ServerConfigurationSettings.db_mode.name(), STRING, "SINGLE");
 
-    public static final Setting<File> server_config_file = setting( Configurator.neo_server_config_file.name(), PATH, "config/neo4j-server.properties" );
+    public static final Setting<File> server_config_file = setting( ServerConfigurationSettings.neo_server_config_file.name(), PATH, "config/neo4j-server.properties" );
 
     @Deprecated
     @Title( "Legacy database location" )
     @Description( "Defines the location of the 'db' database. This is not the recommended way of controlling this " +
                   "anymore. Instead, specify a location, or rely on the default, when creating databases." )
-    public static final Setting<File> legacy_db_location = setting( Configurator.db_location.name(), PATH, Configurator.db_location.getDefaultValue() );
+    public static final Setting<File> legacy_db_location = setting( ServerConfigurationSettings.db_location.name(), PATH, ServerConfigurationSettings.db_location.getDefaultValue() );
 
 
     @Deprecated
     @Title( "Legacy database configuration" )
     @Description( "Location of the 'db' database configuration file. This is not the recommended way of controlling " +
                   "this anymore. Instead, specify configuration for this database via the hosting API." )
-    public static final Setting<File> legacy_db_config = setting( Configurator.db_tuning_property_file.name(), PATH,
-            new File( new File( System.getProperty( Configurator.neo_server_config_file.name(), 
-                    Configurator.neo_server_config_file.getDefaultValue() ) ).
+    public static final Setting<File> legacy_db_config = setting( ServerConfigurationSettings.db_tuning_property_file.name(), PATH,
+            new File( new File( System.getProperty( ServerConfigurationSettings.neo_server_config_file.name(), 
+                    ServerConfigurationSettings.neo_server_config_file.getDefaultValue() ) ).
                     getParentFile(), "neo4j.properties" ).getAbsolutePath());
 
 }

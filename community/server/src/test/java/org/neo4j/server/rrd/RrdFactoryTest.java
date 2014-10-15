@@ -38,7 +38,7 @@ import org.junit.Test;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.kernel.logging.DevNullLoggingService;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.database.RrdDbWrapper;
 import org.neo4j.server.database.WrappedDatabase;
@@ -80,7 +80,7 @@ public class RrdFactoryTest
     public void shouldTakeDirectoryLocationFromConfig() throws Exception
     {
         String expected = testDirectory.directory().getAbsolutePath();
-        config.addProperty( Configurator.rrdb_location.name(), expected );
+        config.addProperty( ServerConfigurationSettings.rrdb_location.name(), expected );
         TestableRrdFactory factory = createRrdFactory();
 
         factory.createRrdDbAndSampler( db, new NullJobScheduler() );
@@ -93,7 +93,7 @@ public class RrdFactoryTest
     {
         String expected = testDirectory.directory().getAbsolutePath();
 
-        config.addProperty( Configurator.rrdb_location.name(), expected );
+        config.addProperty( ServerConfigurationSettings.rrdb_location.name(), expected );
         TestableRrdFactory factory = createRrdFactory();
 
         factory.createRrdDbAndSampler( db, new NullJobScheduler() );
@@ -106,7 +106,7 @@ public class RrdFactoryTest
     {
         //Given
         String expected = new File( testDirectory.directory(), "rrd-test").getAbsolutePath();
-        config.addProperty( Configurator.rrdb_location.name(), expected );
+        config.addProperty( ServerConfigurationSettings.rrdb_location.name(), expected );
 
         TestableRrdFactory factory = createRrdFactory();
         createInvalidRrdFile( expected );

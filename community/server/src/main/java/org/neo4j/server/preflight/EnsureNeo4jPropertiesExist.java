@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.Properties;
 
 import org.apache.commons.configuration.Configuration;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 public class EnsureNeo4jPropertiesExist implements PreflightTask
 {
@@ -44,13 +44,13 @@ public class EnsureNeo4jPropertiesExist implements PreflightTask
     {
         ran = true;
 
-        String configFilename = config.getString( Configurator.neo_server_config_file.name() );
+        String configFilename = config.getString( ServerConfigurationSettings.neo_server_config_file.name() );
 
         if(configFilename == null)
         {
         	failureMessage = String.format( 
         	        "No server configuration file set, unable to load configuration. Expected system property '%s' to point to config file.", 
-        	        Configurator.neo_server_config_file.name() );
+        	        ServerConfigurationSettings.neo_server_config_file.name() );
             return false;
         }
         

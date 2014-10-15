@@ -35,7 +35,7 @@ import org.neo4j.kernel.impl.store.NeoStore;
 import org.neo4j.kernel.impl.transaction.state.NeoStoreProvider;
 import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.database.RrdDbWrapper;
 import org.neo4j.server.rrd.sampler.NodeIdsInUseSampleable;
@@ -85,7 +85,7 @@ public class RrdFactory
 
         Sampleable[] usage = {};
 
-        final String rrdPath = config.getString( Configurator.rrdb_location.name(),
+        final String rrdPath = config.getString( ServerConfigurationSettings.rrdb_location.name(),
                 getDefaultRrdFile( db.getGraph() ) );
         final RrdDbWrapper rrdb = createRrdb( rrdPath, isEphemereal( db.getGraph() ), join( primitives, usage ) );
 

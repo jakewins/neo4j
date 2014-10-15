@@ -32,7 +32,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.junit.After;
 import org.junit.Test;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.rest.JaxRsResponse;
 import org.neo4j.server.rest.RestRequest;
 import org.neo4j.server.scripting.javascript.GlobalJavascriptInitializer;
@@ -90,7 +90,7 @@ public class ServerConfigDocIT extends ExclusiveServerTestBase
     @Test
     public void shouldGenerateWADLWhenExplicitlyEnabledInConfig() throws IOException
     {
-        server = server().withProperty( Configurator.wadl_enabled.name(), "true" )
+        server = server().withProperty( ServerConfigurationSettings.wadl_enabled.name(), "true" )
                 .usingDatabaseDir( folder.cleanDirectory( name.getMethodName() ).getAbsolutePath() )
                 .build();
         server.start();
@@ -119,7 +119,7 @@ public class ServerConfigDocIT extends ExclusiveServerTestBase
     @Test
     public void shouldNotGenerateWADLWhenExplicitlyDisabledInConfig() throws IOException
     {
-        server = server().withProperty( Configurator.wadl_enabled.name(), "false" )
+        server = server().withProperty( ServerConfigurationSettings.wadl_enabled.name(), "false" )
                 .usingDatabaseDir( folder.cleanDirectory( name.getMethodName() ).getAbsolutePath() )
                 .build();
         server.start();
@@ -179,7 +179,7 @@ public class ServerConfigDocIT extends ExclusiveServerTestBase
         // and all other tests depend on it being sandboxed.
         GlobalJavascriptInitializer.initialize( GlobalJavascriptInitializer.Mode.SANDBOXED );
 
-        server = server().withProperty( Configurator.script_sandboxing_enabled.name(), "false" )
+        server = server().withProperty( ServerConfigurationSettings.script_sandboxing_enabled.name(), "false" )
                 .usingDatabaseDir( folder.cleanDirectory( name.getMethodName() ).getAbsolutePath() )
                 .build();
 

@@ -21,11 +21,11 @@ package org.neo4j.server.rest.security;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 public interface SecurityRule
 {
-    String DEFAULT_DATABASE_PATH = Configurator.rest_api_path.getDefaultValue();
+    String DEFAULT_DATABASE_PATH = ServerConfigurationSettings.rest_api_path.getDefaultValue();
 
     /**
      * @param request The HTTP request currently under consideration.

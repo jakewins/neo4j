@@ -35,6 +35,7 @@ import org.neo4j.kernel.GraphDatabaseDependencies;
 import org.neo4j.kernel.logging.DevNullLoggingService;
 import org.neo4j.server.ServerStartupException;
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.test.TargetDirectory;
@@ -62,7 +63,7 @@ public class StartupTimeoutFunctionalTest
     public void shouldTimeoutIfStartupTakesLongerThanTimeout() throws IOException
     {
         Configurator configurator = buildProperties();
-        configurator.configuration().setProperty( Configurator.startup_timeout.name(), TimeUtil.parseTimeMillis.apply( "1" ) );
+        configurator.configuration().setProperty( ServerConfigurationSettings.startup_timeout.name(), TimeUtil.parseTimeMillis.apply( "1" ) );
         server = createSlowServer( configurator );
 
         try
@@ -80,7 +81,7 @@ public class StartupTimeoutFunctionalTest
     public void shouldNotFailIfStartupTakesLessTimeThanTimeout() throws IOException
     {
         Configurator configurator = buildProperties();
-        configurator.configuration().setProperty( Configurator.startup_timeout.name(), TimeUtil.parseTimeMillis.apply( "20" ) );
+        configurator.configuration().setProperty( ServerConfigurationSettings.startup_timeout.name(), TimeUtil.parseTimeMillis.apply( "20" ) );
         server = new EnterpriseNeoServer( configurator, GraphDatabaseDependencies.newDependencies().logging(DevNullLoggingService.DEV_NULL ))
         {
             @Override
@@ -97,7 +98,7 @@ public class StartupTimeoutFunctionalTest
     public void shouldNotTimeOutIfTimeoutDisabled() throws IOException
     {
         Configurator configurator = buildProperties();
-        configurator.configuration().setProperty( Configurator.startup_timeout.name(), 0 );
+        configurator.configuration().setProperty( ServerConfigurationSettings.startup_timeout.name(), 0 );
         server = createSlowServer( configurator );
 
         server.start();
@@ -148,10 +149,10 @@ public class StartupTimeoutFunctionalTest
 
         Properties serverProperties = new Properties();
         String serverPropertiesFilename = new File( target.directory(), "conf/neo4j-server.properties" ).getAbsolutePath();
-        serverProperties.setProperty( Configurator.db_location.name(),
+        serverProperties.setProperty( ServerConfigurationSettings.db_location.name(),
                 new File( target.directory(), "data/graph.db" ).getAbsolutePath() );
-        serverProperties.setProperty( Configurator.db_tuning_property_file.name(), databasePropertiesFileName );
-        serverProperties.setProperty( Configurator.neo_server_config_file.name(), serverPropertiesFilename );
+        serverProperties.setProperty( ServerConfigurationSettings.db_tuning_property_file.name(), databasePropertiesFileName );
+        serverProperties.setProperty( ServerConfigurationSettings.neo_server_config_file.name(), serverPropertiesFilename );
         serverProperties.store( new FileWriter( serverPropertiesFilename ), null );
 
         return new PropertyFileConfigurator( new File( serverPropertiesFilename ) );

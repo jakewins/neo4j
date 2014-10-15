@@ -109,7 +109,7 @@ public class PropertyFileConfiguratorTest
     public void shouldRetainRegistrationOrderOfThirdPartyJaxRsPackages() throws IOException
     {
         File propertyFile = PropertyFileBuilder.builder( folder.getRoot() )
-                .withNameValue( Configurator.third_party_packages.name(),
+                .withNameValue( ServerConfigurationSettings.third_party_packages.name(),
                         "org.neo4j.extension.extension1=/extension1,org.neo4j.extension.extension2=/extension2," +
                                 "org.neo4j.extension.extension3=/extension3" )
                 .build();
@@ -129,7 +129,7 @@ public class PropertyFileConfiguratorTest
     {
         // Given
         String dbLocation = "/tmp/deosntmatter";
-        File propertyFile = PropertyFileBuilder.builder( folder.getRoot() ).withNameValue( Configurator.db_location.name(), dbLocation ).build();
+        File propertyFile = PropertyFileBuilder.builder( folder.getRoot() ).withNameValue( ServerConfigurationSettings.db_location.name(), dbLocation ).build();
         PropertyFileConfigurator serverConfig = new PropertyFileConfigurator( propertyFile );
 
         // When

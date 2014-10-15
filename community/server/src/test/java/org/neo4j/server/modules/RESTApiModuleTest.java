@@ -25,7 +25,7 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.junit.Test;
 
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.web.WebServer;
 
@@ -46,7 +46,7 @@ public class RESTApiModuleTest
 
         Configuration config = new PropertiesConfiguration();
         String path = "/db/data";
-        config.addProperty( Configurator.rest_api_path.name(), path );
+        config.addProperty( ServerConfigurationSettings.rest_api_path.name(), path );
 
         Database db = mock(Database.class);
 

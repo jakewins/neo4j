@@ -34,6 +34,8 @@ import org.neo4j.kernel.logging.DefaultLogging;
 import org.neo4j.kernel.logging.Logging;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerAndDatabasePropertyFileConfigurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.configuration.validation.DatabaseLocationMustBeSpecifiedRule;
 import org.neo4j.server.configuration.validation.Validator;
@@ -53,7 +55,8 @@ public abstract class Bootstrapper
 
     protected final LifeSupport life = new LifeSupport();
     protected NeoServer server;
-	protected Configurator configurator;
+	// protected Configurator configurator;
+    protected Config config; //TODO so we are adding the unique config both for server and db
     private Thread shutdownHook;
     protected GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies();
     private ConsoleLogger log;
@@ -98,8 +101,9 @@ public abstract class Bootstrapper
         {
             dependencies = dependencies.monitors(new Monitors());
             BufferingConsoleLogger consoleBuffer = new BufferingConsoleLogger();
-        	configurator = createConfigurator( consoleBuffer );
-        	dependencies = dependencies.logging(createLogging( configurator, dependencies.monitors()));
+        	//configurator = createConfigurator( consoleBuffer );
+        	config = createConfig( consoleBuffer );
+        	//dependencies = dependencies.logging( createLogging( config, dependencies.monitors() ) );
         	log = dependencies.logging().getConsoleLog( getClass() );
         	consoleBuffer.replayInto( log );
 
@@ -117,26 +121,22 @@ public abstract class Bootstrapper
         catch ( TransactionFailureException tfe )
         {
             log.error( format( "Failed to start Neo Server on port [%d], because ",
-            		configurator.configuration().getInt( Configurator.webserver_port.name(), 
-            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) ) )
-                       + tfe + ". Another process may be using database location " + server.getDatabase()
-                       .getLocation(), tfe );
+                            config.get( ServerConfigurationSettings.webserver_port ) )
+                            + tfe + ". Another process may be using database location "
+                            + server.getDatabase().getLocation(), // TODO why not also get it from config?
+                            tfe );
             return GRAPH_DATABASE_STARTUP_ERROR_CODE;
         }
         catch ( IllegalArgumentException e )
         {
             log.error( format( "Failed to start Neo Server on port [%s]",
-            		configurator.configuration().getInt( Configurator.webserver_port.name(), 
-            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) ) ), 
-            		        e );
+                            config.get( ServerConfigurationSettings.webserver_port ) ), e );
             return WEB_SERVER_STARTUP_ERROR_CODE;
         }
         catch ( Exception e )
         {
             log.error( format( "Failed to start Neo Server on port [%s]",
-            		configurator.configuration().getInt( Configurator.webserver_port.name(), 
-            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) ) ),
-            		        e );
+                            config.get( ServerConfigurationSettings.webserver_port ) ), e );
             return WEB_SERVER_STARTUP_ERROR_CODE;
         }
     }
@@ -170,9 +170,7 @@ public abstract class Bootstrapper
                 server.stop();
             }
             log.log( "Successfully shutdown Neo Server on port [%d], database [%s]",
-            		configurator.configuration().getInt(Configurator.webserver_port.name(), 
-            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() )),
-                    location );
+                    config.get( ServerConfigurationSettings.webserver_port ), location );
 
             removeShutdownHook();
 
@@ -183,9 +181,7 @@ public abstract class Bootstrapper
         catch ( Exception e )
         {
             log.error( "Failed to cleanly shutdown Neo Server on port [%d], database [%s]. Reason [%s] ",
-            		configurator.configuration().getInt(Configurator.webserver_port.name(), 
-            		        Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) ),
-            		location, e.getMessage(), e );
+                    config.get( ServerConfigurationSettings.webserver_port ), location, e.getMessage(), e );
             return 1;
         }
     }
@@ -223,13 +219,15 @@ public abstract class Bootstrapper
         Runtime.getRuntime()
                 .addShutdownHook( shutdownHook );
     }
-
-    protected Configurator createConfigurator( ConsoleLogger log )
+    
+    protected Config createConfig( ConsoleLogger log )
     {
-        File configFile = new File( System.getProperty( Configurator.neo_server_config_file.name(),
-                Configurator.neo_server_config_file.getDefaultValue() ) );
-        return new PropertyFileConfigurator( new Validator( new DatabaseLocationMustBeSpecifiedRule() ),
-                configFile, log );
+        // TODO load all configuration from a file, if no is specified then created default
+        File serverConfigFile = new File( System.getProperty( ServerConfigurationSettings.neo_server_config_file.name(),
+                ServerConfigurationSettings.neo_server_config_file.getDefaultValue() ) );
+        //return new PropertyFileConfigurator( new Validator( new DatabaseLocationMustBeSpecifiedRule() ),
+        //        serverConfigFile, log );
+        return new ServerAndDatabasePropertyFileConfigurator().createConfig( serverConfigFile, log );
     }
 
     protected boolean isMoreDerivedThan( Bootstrapper other )
@@ -237,5 +235,11 @@ public abstract class Bootstrapper
         // Default implementation just checks if this is a subclass of other
         return other.getClass()
                 .isAssignableFrom( getClass() );
+    }
+
+    protected Configurator createConfigurator( ConsoleLogger log )
+    {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

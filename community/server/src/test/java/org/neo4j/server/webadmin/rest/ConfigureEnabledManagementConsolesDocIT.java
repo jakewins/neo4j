@@ -26,7 +26,7 @@ import static org.neo4j.server.helpers.CommunityServerBuilder.server;
 import org.junit.After;
 import org.junit.Test;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.rest.JaxRsResponse;
 import org.neo4j.server.rest.RestRequest;
 import org.neo4j.test.server.ExclusiveServerTestBase;
@@ -45,7 +45,7 @@ public class ConfigureEnabledManagementConsolesDocIT extends ExclusiveServerTest
     @Test
     public void shouldBeAbleToExplicitlySetConsolesToEnabled() throws Exception
     {
-        server = server().withProperty( Configurator.management_console_engines.name(), "" )
+        server = server().withProperty( ServerConfigurationSettings.management_console_engines.name(), "" )
                 .usingDatabaseDir( folder.cleanDirectory( name.getMethodName() ).getAbsolutePath() )
                 .build();
         server.start();

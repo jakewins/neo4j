@@ -58,7 +58,7 @@ import static org.neo4j.server.database.LifecycleManagingDatabase.lifecycleManag
 @Deprecated
 public class CommunityNeoServer extends AbstractNeoServer
 {
-    public CommunityNeoServer( Configurator configurator, InternalAbstractGraphDatabase.Dependencies dependencies )
+    public CommunityNeoServer( Config configurator, InternalAbstractGraphDatabase.Dependencies dependencies )
     {
         this( configurator, lifecycleManagingDatabase( EMBEDDED ), dependencies );
     }

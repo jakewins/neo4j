@@ -26,7 +26,7 @@ import org.apache.commons.configuration.Configuration;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.rest.security.SecurityFilter;
 import org.neo4j.server.rest.security.SecurityRule;
 import org.neo4j.server.web.WebServer;
@@ -77,7 +77,7 @@ public class SecurityRulesModule implements ServerModule
     {
         ArrayList<SecurityRule> rules = new ArrayList<SecurityRule>();
 
-        for ( String classname : config.getStringArray( Configurator.security_rules.name() ) )
+        for ( String classname : config.getStringArray( ServerConfigurationSettings.security_rules.name() ) )
         {
             try
             {

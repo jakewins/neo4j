@@ -53,6 +53,7 @@ import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
 import org.neo4j.server.configuration.ConfigurationProvider;
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.database.CypherExecutor;
 import org.neo4j.server.database.CypherExecutorProvider;
 import org.neo4j.server.database.Database;
@@ -237,7 +238,7 @@ public abstract class AbstractNeoServer implements NeoServer
                 throw new ServerStartupException( //TODO
                         "Startup took longer than " + interruptStartupTimer.getTimeoutMillis() + "ms, " +
                                 "and was stopped. You can disable this behavior by setting '" + 
-                                Configurator.startup_timeout.name() + "' to 0.",
+                                ServerConfigurationSettings.startup_timeout.name() + "' to 0.",
                         1 );
             }
 
@@ -249,7 +250,7 @@ public abstract class AbstractNeoServer implements NeoServer
     {
         Map<String, String> result = new HashMap<>( configurator.getDatabaseTuningProperties() );
         result.put( GraphDatabaseSettings.store_dir.name(), configurator.configuration()
-                .getString( Configurator.db_location.name(), Configurator.db_location.getDefaultValue() ) );
+                .getString( ServerConfigurationSettings.db_location.name(), ServerConfigurationSettings.db_location.getDefaultValue() ) );
 
         putIfAbsent( result, ShellSettings.remote_shell_enabled.name(), Settings.TRUE );
 
@@ -274,8 +275,8 @@ public abstract class AbstractNeoServer implements NeoServer
         return new DatabaseActions(
                 new LeaseManager( SYSTEM_CLOCK ),
                 configurator.configuration().getBoolean(
-                        Configurator.script_sandboxing_enabled.name(),
-                        Boolean.valueOf( Configurator.script_sandboxing_enabled.getDefaultValue() ) ), database.getGraph() );
+                        ServerConfigurationSettings.script_sandboxing_enabled.name(),
+                        Boolean.valueOf( ServerConfigurationSettings.script_sandboxing_enabled.getDefaultValue() ) ), database.getGraph() );
     }
 
     private TransactionFacade createTransactionalActions()
@@ -314,19 +315,19 @@ public abstract class AbstractNeoServer implements NeoServer
      */
     private long getTransactionTimeoutMillis()
     {
-        final long timeout = configurator.configuration().getLong( Configurator.transaction_timeout.name(),
-                TimeUtil.parseTimeMillis.apply( Configurator.transaction_timeout.getDefaultValue() ) );
+        final long timeout = configurator.configuration().getLong( ServerConfigurationSettings.transaction_timeout.name(),
+                TimeUtil.parseTimeMillis.apply( ServerConfigurationSettings.transaction_timeout.getDefaultValue() ) );
         return Math.max( timeout, MINIMUM_TIMEOUT + ROUNDING_SECOND);
     }
 
     protected InterruptThreadTimer createInterruptStartupTimer()
     {
-        long startupTimeout = getConfiguration().getLong( Configurator.startup_timeout.name(),
-                TimeUtil.parseTimeMillis.apply( Configurator.startup_timeout.getDefaultValue() ) );
+        long startupTimeout = getConfiguration().getLong( ServerConfigurationSettings.startup_timeout.name(),
+                TimeUtil.parseTimeMillis.apply( ServerConfigurationSettings.startup_timeout.getDefaultValue() ) );
         InterruptThreadTimer stopStartupTimer;
         if ( startupTimeout > 0 )
         {
-            long baseTimeout = getConfiguration().getLong( Configurator.startup_timeout.name(), -1 ); //TODO
+            long baseTimeout = getConfiguration().getLong( ServerConfigurationSettings.startup_timeout.name(), -1 ); //TODO
             log.log( "Setting startup timeout to: " + startupTimeout + "ms based on " + baseTimeout );
             stopStartupTimer = InterruptThreadTimer.createTimer(
                     startupTimeout,
@@ -416,7 +417,7 @@ public abstract class AbstractNeoServer implements NeoServer
         webServer.setHttpsPort( sslPort );
 
         webServer.setWadlEnabled(
-                Boolean.valueOf( String.valueOf( getConfiguration().getProperty( Configurator.wadl_enabled.name() ) ) ) );
+                Boolean.valueOf( String.valueOf( getConfiguration().getProperty( ServerConfigurationSettings.wadl_enabled.name() ) ) ) );
         webServer.setDefaultInjectables( createDefaultInjectables() );
 
         if ( sslEnabled )
@@ -430,8 +431,8 @@ public abstract class AbstractNeoServer implements NeoServer
     {
         // TODO remove this method as we no longer need getInt check when we use Setting class
         return configurator.configuration()
-                .containsKey( Configurator.webserver_max_threads.name() ) ? configurator.configuration()
-                .getInt( Configurator.webserver_max_threads.name() ) : defaultMaxWebServerThreads();
+                .containsKey( ServerConfigurationSettings.webserver_max_threads.name() ) ? configurator.configuration()
+                .getInt( ServerConfigurationSettings.webserver_max_threads.name() ) : defaultMaxWebServerThreads();
     }
 
     private int defaultMaxWebServerThreads()
@@ -470,13 +471,13 @@ public abstract class AbstractNeoServer implements NeoServer
         {
             return;
         }
-        String logLocation = getConfiguration().getString( Configurator.http_log_config_location.name() );
+        String logLocation = getConfiguration().getString( ServerConfigurationSettings.http_log_config_location.name() );
         webServer.setHttpLoggingConfiguration( new File( logLocation ) );
     }
 
     private void setUpTimeoutFilter()
     {
-        if ( !getConfiguration().containsKey( Configurator.webserver_limit_execution_time.name() ) )
+        if ( !getConfiguration().containsKey( ServerConfigurationSettings.webserver_limit_execution_time.name() ) )
         {
             return;
         }
@@ -485,12 +486,12 @@ public abstract class AbstractNeoServer implements NeoServer
         if ( guard == null )
         {
             throw new RuntimeException( format("Inconsistent configuration. In order to use %s, you must set %s.",
-                    Configurator.webserver_limit_execution_time.name(),
+                    ServerConfigurationSettings.webserver_limit_execution_time.name(),
                     GraphDatabaseSettings.execution_guard_enabled.name()) );
         }
 
         Filter filter = new GuardingRequestFilter( guard,
-                getConfiguration().getLong( Configurator.webserver_limit_execution_time.name() ) );
+                getConfiguration().getLong( ServerConfigurationSettings.webserver_limit_execution_time.name() ) );
         webServer.addFilter( filter, "/*" );
     }
 
@@ -501,39 +502,39 @@ public abstract class AbstractNeoServer implements NeoServer
 
     private boolean configLocated()
     {
-        final Object property = getConfiguration().getProperty( Configurator.http_log_config_location.name() );
+        final Object property = getConfiguration().getProperty( ServerConfigurationSettings.http_log_config_location.name() );
         return property != null && new File( String.valueOf( property ) ).exists();
     }
 
     private boolean loggingEnabled()
     {
-        return "true".equals( String.valueOf( getConfiguration().getProperty( Configurator.http_logging.name() ) ) );
+        return "true".equals( String.valueOf( getConfiguration().getProperty( ServerConfigurationSettings.http_logging.name() ) ) );
     }
 
     protected int getWebServerPort()
     {
         return configurator.configuration()
-                .getInt( Configurator.webserver_port.name(), Integer.valueOf( Configurator.webserver_port.getDefaultValue() ) );
+                .getInt( ServerConfigurationSettings.webserver_port.name(), Integer.valueOf( ServerConfigurationSettings.webserver_port.getDefaultValue() ) );
     }
 
     protected boolean getHttpsEnabled()
     {
         return configurator.configuration()
-                .getBoolean( Configurator.webserver_https_enabled.name(),
-                        Boolean.valueOf( Configurator.webserver_https_enabled.getDefaultValue() ) );
+                .getBoolean( ServerConfigurationSettings.webserver_https_enabled.name(),
+                        Boolean.valueOf( ServerConfigurationSettings.webserver_https_enabled.getDefaultValue() ) );
     }
 
     protected int getHttpsPort()
     {
         return configurator.configuration()
-                .getInt( Configurator.webserver_https_port.name(), Integer.valueOf( Configurator.webserver_https_port.getDefaultValue() ) );
+                .getInt( ServerConfigurationSettings.webserver_https_port.name(), Integer.valueOf( ServerConfigurationSettings.webserver_https_port.getDefaultValue() ) );
     }
 
     protected String getWebServerAddress()
     {
         return configurator.configuration()
-                .getString( Configurator.webserver_address.name(),
-                        Configurator.webserver_address.getDefaultValue() );
+                .getString( ServerConfigurationSettings.webserver_address.name(),
+                        ServerConfigurationSettings.webserver_address.getDefaultValue() );
     }
 
     // TODO: This is jetty-specific, move to Jetty9WebServer
@@ -548,16 +549,16 @@ public abstract class AbstractNeoServer implements NeoServer
     protected KeyStoreInformation initHttpsKeyStore()
     {
         File keystorePath = new File( configurator.configuration().getString(
-                Configurator.webserver_keystore_path.name(),
-                Configurator.webserver_keystore_path.getDefaultValue() ) );
+                ServerConfigurationSettings.webserver_keystore_path.name(),
+                ServerConfigurationSettings.webserver_keystore_path.getDefaultValue() ) );
 
         File privateKeyPath = new File( configurator.configuration().getString(
-                Configurator.webserver_https_key_path.name(),
-                Configurator.webserver_https_key_path.getDefaultValue() ) );
+                ServerConfigurationSettings.webserver_https_key_path.name(),
+                ServerConfigurationSettings.webserver_https_key_path.getDefaultValue() ) );
 
         File certificatePath = new File( configurator.configuration().getString(
-                Configurator.webserver_https_cert_path.name(),
-                Configurator.webserver_https_cert_path.getDefaultValue() ) );
+                ServerConfigurationSettings.webserver_https_cert_path.name(),
+                ServerConfigurationSettings.webserver_https_cert_path.getDefaultValue() ) );
 
         if ( !certificatePath.exists() )
         {

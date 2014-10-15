@@ -33,7 +33,7 @@ import org.junit.rules.TemporaryFolder;
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -56,8 +56,8 @@ public class EnterpriseServerIT
 
         NeoServer server = EnterpriseServerBuilder.server()
                 .usingDatabaseDir( folder.getRoot().getAbsolutePath() )
-                .withProperty( Configurator.db_mode.name(), "HA" )
-                .withProperty( Configurator.db_tuning_property_file.name(), tuningFile.getAbsolutePath() )
+                .withProperty( ServerConfigurationSettings.db_mode.name(), "HA" )
+                .withProperty( ServerConfigurationSettings.db_tuning_property_file.name(), tuningFile.getAbsolutePath() )
                 .persistent()
                 .build();
 
@@ -69,7 +69,7 @@ public class EnterpriseServerIT
             assertThat( server.getDatabase().getGraph(), is( HighlyAvailableGraphDatabase.class ) );
 
             Client client = Client.create();
-            ClientResponse r = client.resource( "http://localhost:" + Configurator.webserver_port.getDefaultValue() +
+            ClientResponse r = client.resource( "http://localhost:" + ServerConfigurationSettings.webserver_port.getDefaultValue() +
                     "/db/manage/server/ha" ).accept( APPLICATION_JSON ).get( ClientResponse.class );
             assertEquals( 200, r.getStatus() );
             assertThat( r.getEntity( String.class ), containsString( "master" ) );

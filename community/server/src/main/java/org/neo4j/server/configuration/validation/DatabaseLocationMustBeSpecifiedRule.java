@@ -21,17 +21,17 @@ package org.neo4j.server.configuration.validation;
 
 import org.apache.commons.configuration.Configuration;
 
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 public class DatabaseLocationMustBeSpecifiedRule implements ValidationRule
 {
     public void validate( Configuration configuration ) throws RuleFailedException
     {
-        String dbLocation = configuration.getString( Configurator.db_location.name() );
+        String dbLocation = configuration.getString( ServerConfigurationSettings.db_location.name() );
         if ( dbLocation == null || dbLocation.length() < 1 )
         {
             throw new RuleFailedException( "The key [%s] is missing from the Neo Server configuration.",
-                    Configurator.db_location.name() );
+                    ServerConfigurationSettings.db_location.name() );
         }
     }
 }

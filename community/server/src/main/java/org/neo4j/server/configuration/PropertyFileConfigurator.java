@@ -58,7 +58,7 @@ public class PropertyFileConfigurator extends Configurator.Adapter
     {
         if ( propertiesFile == null )
         {
-            propertiesFile = new File( System.getProperty( Configurator.neo_server_config_file.name() ) );
+            propertiesFile = new File( System.getProperty( ServerConfigurationSettings.neo_server_config_file.name() ) );
         }
 
         try
@@ -89,7 +89,7 @@ public class PropertyFileConfigurator extends Configurator.Adapter
 
     private void loadDatabaseTuningProperties( File configFile, ConsoleLogger log ) throws ConfigurationException
     {
-        String databaseTuningPropertyFileLocation = serverConfiguration.getString( Configurator.db_tuning_property_file.name() );
+        String databaseTuningPropertyFileLocation = serverConfiguration.getString( ServerConfigurationSettings.db_tuning_property_file.name() );
 
         // Try and find the file automatically
         if ( databaseTuningPropertyFileLocation == null )
@@ -139,7 +139,7 @@ public class PropertyFileConfigurator extends Configurator.Adapter
 
         // Always override the store dir property
         databaseTuningProperties.put( GraphDatabaseSettings.store_dir.name(),
-                serverConfiguration.getString( Configurator.db_location.name() ) );
+                serverConfiguration.getString( ServerConfigurationSettings.db_location.name() ) );
     }
 
     private void loadPropertiesConfig( File configFile, ConsoleLogger log ) throws ConfigurationException
@@ -162,8 +162,8 @@ public class PropertyFileConfigurator extends Configurator.Adapter
     {
         try
         {
-            for ( String key : new String[] { Configurator.management_api_path.name(),
-                    Configurator.rest_api_path.name() } )
+            for ( String key : new String[] { ServerConfigurationSettings.management_api_path.name(),
+                    ServerConfigurationSettings.rest_api_path.name() } )
             {
                 if ( configuration().containsKey( key ) )
                 {
@@ -185,8 +185,8 @@ public class PropertyFileConfigurator extends Configurator.Adapter
     {
         try
         {
-            for ( String key : new String[] { Configurator.management_api_path.name(),
-                    Configurator.rest_api_path.name() } )
+            for ( String key : new String[] { ServerConfigurationSettings.management_api_path.name(),
+                    ServerConfigurationSettings.rest_api_path.name() } )
             {
                 if ( configuration().containsKey( key ) )
                 {
@@ -235,14 +235,14 @@ public class PropertyFileConfigurator extends Configurator.Adapter
     {
         List<ThirdPartyJaxRsPackage> thirdPartyPackages = new ArrayList<ThirdPartyJaxRsPackage>();
         List<String> packagesAndMountpoints = (List)this.configuration().getList( 
-                Configurator.third_party_packages.name() );
+                ServerConfigurationSettings.third_party_packages.name() );
 
         for ( String packageAndMoutpoint : packagesAndMountpoints )
         {
             String[] parts = packageAndMoutpoint.split( "=" );
             if ( parts.length != 2 )
             {
-                throw new IllegalArgumentException( "config for " + Configurator.third_party_packages.name()
+                throw new IllegalArgumentException( "config for " + ServerConfigurationSettings.third_party_packages.name()
                         + " is wrong: " + packageAndMoutpoint );
             }
             String pkg = parts[0];

@@ -26,7 +26,7 @@ import org.apache.commons.configuration.Configuration;
 
 import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.web.WebServer;
 import org.neo4j.server.webadmin.rest.JmxService;
 import org.neo4j.server.webadmin.rest.MonitorService;
@@ -76,7 +76,7 @@ public class ManagementApiModule implements ServerModule
 
     private URI managementApiUri( )
     {
-        return URI.create( config.getString( Configurator.management_api_path.name(),
-                Configurator.management_api_path.getDefaultValue() ) );
+        return URI.create( config.getString( ServerConfigurationSettings.management_api_path.name(),
+                ServerConfigurationSettings.management_api_path.getDefaultValue() ) );
     }
 }

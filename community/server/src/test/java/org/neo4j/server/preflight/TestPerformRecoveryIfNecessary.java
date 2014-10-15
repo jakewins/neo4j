@@ -38,7 +38,7 @@ import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.recovery.StoreRecoverer;
 import org.neo4j.kernel.impl.util.TestLogging;
 import org.neo4j.kernel.logging.DevNullLoggingService;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.MapBasedConfiguration;
 import org.neo4j.test.TargetDirectory;
 
@@ -139,8 +139,8 @@ public class TestPerformRecoveryIfNecessary {
         databaseProperties.store( new FileWriter( databasePropertiesFileName ), null );
 
         Configuration serverProperties = new MapBasedConfiguration();
-        serverProperties.setProperty( Configurator.db_location.name(), storeDirectory );
-        serverProperties.setProperty( Configurator.db_tuning_property_file.name(), databasePropertiesFileName );
+        serverProperties.setProperty( ServerConfigurationSettings.db_location.name(), storeDirectory );
+        serverProperties.setProperty( ServerConfigurationSettings.db_tuning_property_file.name(), databasePropertiesFileName );
 
         return serverProperties;
     }

@@ -27,7 +27,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.configuration.BaseConfiguration;
 import org.junit.Test;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 public class WebadminConfigurationRuleTest
 {
@@ -48,7 +48,7 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.rest_api_path.name(), "http://localhost:7474/db/data" );
+        config.addProperty( ServerConfigurationSettings.rest_api_path.name(), "http://localhost:7474/db/data" );
         rule.validate( config );
         assertFalse( theValidatorHasPassed );
     }
@@ -58,7 +58,7 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.management_api_path.name(), "http://localhost:7474/db/manage" );
+        config.addProperty( ServerConfigurationSettings.management_api_path.name(), "http://localhost:7474/db/manage" );
         rule.validate( config );
         assertFalse( theValidatorHasPassed );
     }
@@ -68,8 +68,8 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.rest_api_path.name(), "http://localhost:7474/db/data" );
-        config.addProperty( Configurator.management_api_path.name(), "http://localhost:7474/db/manage" );
+        config.addProperty( ServerConfigurationSettings.rest_api_path.name(), "http://localhost:7474/db/data" );
+        config.addProperty( ServerConfigurationSettings.management_api_path.name(), "http://localhost:7474/db/manage" );
         rule.validate( config );
         assertTrue( theValidatorHasPassed );
     }
@@ -79,8 +79,8 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.rest_api_path.name(), "/db/data" );
-        config.addProperty( Configurator.management_api_path.name(), "/db/manage" );
+        config.addProperty( ServerConfigurationSettings.rest_api_path.name(), "/db/data" );
+        config.addProperty( ServerConfigurationSettings.management_api_path.name(), "/db/manage" );
         rule.validate( config );
         assertTrue( theValidatorHasPassed );
     }
@@ -90,18 +90,18 @@ public class WebadminConfigurationRuleTest
     {
         WebadminConfigurationRule rule = new WebadminConfigurationRule();
         BaseConfiguration config = new BaseConfiguration();
-        config.addProperty( Configurator.rest_api_path.name(), "http://localhost:7474///db///data///" );
-        config.addProperty( Configurator.management_api_path.name(), "http://localhost:7474////db///manage" );
+        config.addProperty( ServerConfigurationSettings.rest_api_path.name(), "http://localhost:7474///db///data///" );
+        config.addProperty( ServerConfigurationSettings.management_api_path.name(), "http://localhost:7474////db///manage" );
         rule.validate( config );
 
-        assertThat( (String) config.getProperty( Configurator.management_api_path.name() ),
+        assertThat( (String) config.getProperty( ServerConfigurationSettings.management_api_path.name() ),
                 not( containsString( "///" ) ) );
-        assertFalse( ( (String) config.getProperty( Configurator.management_api_path.name() ) ).endsWith( "//" ) );
-        assertFalse( ( (String) config.getProperty( Configurator.management_api_path.name() ) ).endsWith( "/" ) );
+        assertFalse( ( (String) config.getProperty( ServerConfigurationSettings.management_api_path.name() ) ).endsWith( "//" ) );
+        assertFalse( ( (String) config.getProperty( ServerConfigurationSettings.management_api_path.name() ) ).endsWith( "/" ) );
 
-        assertThat( (String) config.getProperty( Configurator.rest_api_path.name() ),
+        assertThat( (String) config.getProperty( ServerConfigurationSettings.rest_api_path.name() ),
                 not( containsString( "///" ) ) );
-        assertFalse( ( (String) config.getProperty( Configurator.rest_api_path.name() ) ).endsWith( "//" ) );
-        assertFalse( ( (String) config.getProperty( Configurator.rest_api_path.name() ) ).endsWith( "/" ) );
+        assertFalse( ( (String) config.getProperty( ServerConfigurationSettings.rest_api_path.name() ) ).endsWith( "//" ) );
+        assertFalse( ( (String) config.getProperty( ServerConfigurationSettings.rest_api_path.name() ) ).endsWith( "/" ) );
     }
 }

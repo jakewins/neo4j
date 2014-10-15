@@ -43,6 +43,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.configuration.validation.DatabaseLocationMustBeSpecifiedRule;
 import org.neo4j.server.configuration.validation.Validator;
@@ -161,29 +162,29 @@ public class CommunityServerBuilder
     private void createPropertiesFile( File temporaryConfigFile )
     {
         Map<String, String> properties = MapUtil.stringMap(
-                Configurator.management_api_path.name(), webAdminUri,
-                Configurator.rest_api_path.name(), webAdminDataUri );
+                ServerConfigurationSettings.management_api_path.name(), webAdminUri,
+                ServerConfigurationSettings.rest_api_path.name(), webAdminDataUri );
         if ( dbDir != null )
         {
-            properties.put( Configurator.db_location.name(), dbDir );
+            properties.put( ServerConfigurationSettings.db_location.name(), dbDir );
         }
 
         if ( portNo != null )
         {
-            properties.put( Configurator.webserver_port.name(), portNo );
+            properties.put( ServerConfigurationSettings.webserver_port.name(), portNo );
         }
         if ( host != null )
         {
-            properties.put( Configurator.webserver_address.name(), host );
+            properties.put( ServerConfigurationSettings.webserver_address.name(), host );
         }
         if ( maxThreads != null )
         {
-            properties.put( Configurator.webserver_max_threads.name(), maxThreads );
+            properties.put( ServerConfigurationSettings.webserver_max_threads.name(), maxThreads );
         }
 
         if ( thirdPartyPackages.keySet().size() > 0 )
         {
-            properties.put( Configurator.third_party_packages.name(), asOneLine( thirdPartyPackages ) );
+            properties.put( ServerConfigurationSettings.third_party_packages.name(), asOneLine( thirdPartyPackages ) );
         }
 
         if ( autoIndexedNodeKeys != null && autoIndexedNodeKeys.length > 0 )
@@ -203,18 +204,18 @@ public class CommunityServerBuilder
         if ( securityRuleClassNames != null && securityRuleClassNames.length > 0 )
         {
             String propertyKeys = org.apache.commons.lang.StringUtils.join( securityRuleClassNames, "," );
-            properties.put( Configurator.security_rules.name(), propertyKeys );
+            properties.put( ServerConfigurationSettings.security_rules.name(), propertyKeys );
         }
 
         if ( httpsEnabled != null )
         {
             if ( httpsEnabled )
             {
-                properties.put( Configurator.webserver_https_enabled.name(), "true" );
+                properties.put( ServerConfigurationSettings.webserver_https_enabled.name(), "true" );
             }
             else
             {
-                properties.put( Configurator.webserver_https_enabled.name(), "false" );
+                properties.put( ServerConfigurationSettings.webserver_https_enabled.name(), "false" );
             }
         }
 
@@ -238,18 +239,18 @@ public class CommunityServerBuilder
                     "neostore.propertystore.db.strings.mapped_memory", "130M",
                     "neostore.propertystore.db.arrays.mapped_memory", "130M" );
             writePropertiesToFile( properties, databaseTuningPropertyFile );
-            writePropertyToFile( Configurator.db_tuning_property_file.name(),
+            writePropertyToFile( ServerConfigurationSettings.db_tuning_property_file.name(),
                     databaseTuningPropertyFile.getAbsolutePath(), temporaryConfigFile );
         }
         else if ( action == WhatToDo.CREATE_DANGLING_TUNING_FILE_PROPERTY )
         {
-            writePropertyToFile( Configurator.db_tuning_property_file.name(), createTempPropertyFile().getAbsolutePath(),
+            writePropertyToFile( ServerConfigurationSettings.db_tuning_property_file.name(), createTempPropertyFile().getAbsolutePath(),
                     temporaryConfigFile );
         }
         else if ( action == WhatToDo.CREATE_CORRUPT_TUNING_FILE )
         {
             File corruptTuningFile = trashFile();
-            writePropertyToFile( Configurator.db_tuning_property_file.name(), corruptTuningFile.getAbsolutePath(),
+            writePropertyToFile( ServerConfigurationSettings.db_tuning_property_file.name(), corruptTuningFile.getAbsolutePath(),
                     temporaryConfigFile );
         }
     }
@@ -461,8 +462,8 @@ public class CommunityServerBuilder
         return new DatabaseActions(
                 new LeaseManager( clockToUse ),
                 configurator.configuration().getBoolean(
-                        Configurator.script_sandboxing_enabled.name(),
-                        Boolean.valueOf( Configurator.script_sandboxing_enabled.getDefaultValue() ) ), database.getGraph() );
+                        ServerConfigurationSettings.script_sandboxing_enabled.name(),
+                        Boolean.valueOf( ServerConfigurationSettings.script_sandboxing_enabled.getDefaultValue() ) ), database.getGraph() );
     }
 
     protected File buildBefore() throws IOException

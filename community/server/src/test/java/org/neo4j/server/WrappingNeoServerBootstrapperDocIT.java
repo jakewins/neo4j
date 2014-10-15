@@ -34,7 +34,7 @@ import org.neo4j.helpers.Settings;
 import org.neo4j.jmx.Primitives;
 import org.neo4j.jmx.impl.JmxKernelExtension;
 import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.ServerConfigurator;
 import org.neo4j.server.helpers.FunctionalTestHelper;
 import org.neo4j.server.rest.JaxRsResponse;
@@ -105,7 +105,7 @@ public class WrappingNeoServerBootstrapperDocIT extends ExclusiveServerTestBase
         config = new ServerConfigurator( graphdb );
         // let the server endpoint be on a custom port
         config.configuration().setProperty(
-                Configurator.webserver_port.name(), 7575 );
+                ServerConfigurationSettings.webserver_port.name(), 7575 );
 
         WrappingNeoServerBootstrapper srv;
         srv = new WrappingNeoServerBootstrapper( graphdb, config );
@@ -141,9 +141,9 @@ public class WrappingNeoServerBootstrapperDocIT extends ExclusiveServerTestBase
         ServerConfigurator config = new ServerConfigurator( myDb );
         String hostAddress = InetAddress.getLocalHost().getHostAddress();
         config.configuration().setProperty(
-                Configurator.webserver_address.name(), hostAddress.toString() );
+                ServerConfigurationSettings.webserver_address.name(), hostAddress.toString() );
         config.configuration().setProperty(
-                Configurator.webserver_port.name(), "8484" );
+                ServerConfigurationSettings.webserver_port.name(), "8484" );
 
 
         WrappingNeoServerBootstrapper srv = new WrappingNeoServerBootstrapper( myDb, config );

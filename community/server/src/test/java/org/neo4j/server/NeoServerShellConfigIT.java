@@ -30,6 +30,7 @@ import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.GraphDatabaseDependencies;
 import org.neo4j.kernel.logging.DevNullLoggingService;
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.shell.ShellException;
 import org.neo4j.shell.ShellLobby;
 import org.neo4j.shell.ShellSettings;
@@ -54,7 +55,7 @@ public class NeoServerShellConfigIT extends ExclusiveServerTestBase
             public Configuration configuration()
             {
                 return new MapConfiguration( stringMap(
-                        Configurator.db_location.name(), testDir.absolutePath() ) );
+                        ServerConfigurationSettings.db_location.name(), testDir.absolutePath() ) );
             }
 
             @Override
@@ -88,7 +89,7 @@ public class NeoServerShellConfigIT extends ExclusiveServerTestBase
             public Configuration configuration()
             {
                 return new MapConfiguration( stringMap(
-                        Configurator.db_location.name(), testDir.absolutePath() ) );
+                        ServerConfigurationSettings.db_location.name(), testDir.absolutePath() ) );
             }
 
             @Override

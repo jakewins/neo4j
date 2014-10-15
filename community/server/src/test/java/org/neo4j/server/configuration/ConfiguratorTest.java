@@ -103,7 +103,7 @@ public class ConfiguratorTest
 
         FileWriter fstream = new FileWriter( file, true );
         BufferedWriter out = new BufferedWriter( fstream );
-        out.write( Configurator.third_party_packages.name() );
+        out.write( ServerConfigurationSettings.third_party_packages.name() );
         out.write( "=" );
         out.write( "com.foo.bar=\"mount/point/foo\"," );
         out.write( "com.foo.baz=\"/bar\"," );

@@ -47,7 +47,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.logging.DevNullLoggingService;
 import org.neo4j.kernel.logging.Logging;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.enterprise.functional.DumpPortListenerOnNettyBindFailure;
 import org.neo4j.test.InputStreamAwaiter;
 import org.neo4j.test.ProcessStreamHandler;
@@ -217,7 +217,7 @@ public class StandaloneClusterClientIT
         File dbConfigFile = new File( directory, "config-file" );
         store( config, dbConfigFile );
         File serverConfigFile = new File( directory, "server-file" );
-        store( stringMap( Configurator.db_tuning_property_file.name(), dbConfigFile.getAbsolutePath() ),
+        store( stringMap( ServerConfigurationSettings.db_tuning_property_file.name(), dbConfigFile.getAbsolutePath() ),
                 serverConfigFile );
         return serverConfigFile;
     }
@@ -297,7 +297,7 @@ public class StandaloneClusterClientIT
                 "-Dneo4j.home=" + directory.getAbsolutePath() ) );
         if ( configFile != null )
         {
-            args.add( "-D" + Configurator.neo_server_config_file.name() + "=" + configFile.getAbsolutePath() );
+            args.add( "-D" + ServerConfigurationSettings.neo_server_config_file.name() + "=" + configFile.getAbsolutePath() );
         }
         args.add( StandaloneClusterClientTestProxy.class.getName() );
 

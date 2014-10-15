@@ -45,7 +45,7 @@ import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader.UpgradingStoreVersionNotFoundException;
 import org.neo4j.server.Bootstrapper;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.database.Database;
 import org.neo4j.test.ha.ClusterManager;
 import org.neo4j.tooling.GlobalGraphOperations;
@@ -112,14 +112,14 @@ public class StoreUpgradeIntegrationTest
 
             File configFile = new File( dir, "neo4j.properties" );
             Properties props = new Properties();
-            props.setProperty( Configurator.db_location.name(), dir.getAbsolutePath() );
-            props.setProperty( Configurator.db_tuning_property_file.name(), configFile.getAbsolutePath() );
+            props.setProperty( ServerConfigurationSettings.db_location.name(), dir.getAbsolutePath() );
+            props.setProperty( ServerConfigurationSettings.db_tuning_property_file.name(), configFile.getAbsolutePath() );
             props.setProperty( GraphDatabaseSettings.allow_store_upgrade.name(), "true" );
             props.store( new FileWriter( configFile ), "" );
 
             try
             {
-                System.setProperty( Configurator.neo_server_config_file.name(), configFile.getAbsolutePath() );
+                System.setProperty( ServerConfigurationSettings.neo_server_config_file.name(), configFile.getAbsolutePath() );
 
                 Bootstrapper bootstrapper = Bootstrapper.loadMostDerivedBootstrapper();
                 bootstrapper.start();
@@ -136,7 +136,7 @@ public class StoreUpgradeIntegrationTest
             }
             finally
             {
-                System.clearProperty( Configurator.neo_server_config_file.name() );
+                System.clearProperty( ServerConfigurationSettings.neo_server_config_file.name() );
             }
 
             assertConsistentStore( dir );

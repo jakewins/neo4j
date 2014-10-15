@@ -32,7 +32,7 @@ import org.apache.commons.configuration.Configuration;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.rest.repr.DiscoveryRepresentation;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -58,10 +58,10 @@ public class DiscoveryService
     @Produces( MediaType.APPLICATION_JSON )
     public Response getDiscoveryDocument() throws URISyntaxException
     {
-        String webAdminManagementUri = configuration.getString( Configurator.management_api_path.name(),
-                Configurator.management_api_path.getDefaultValue() );
-        String dataUri = configuration.getString( Configurator.rest_api_path.name(),
-                Configurator.rest_api_path.getDefaultValue() );
+        String webAdminManagementUri = configuration.getString( ServerConfigurationSettings.management_api_path.name(),
+                ServerConfigurationSettings.management_api_path.getDefaultValue() );
+        String dataUri = configuration.getString( ServerConfigurationSettings.rest_api_path.name(),
+                ServerConfigurationSettings.rest_api_path.getDefaultValue() );
 
         DiscoveryRepresentation dr = new DiscoveryRepresentation( webAdminManagementUri, dataUri );
         return outputFormat.ok( dr );
@@ -73,7 +73,7 @@ public class DiscoveryService
     {
         try
         {
-            return outputFormat.seeOther( new URI( Configurator.browser_path.getDefaultValue() ) );
+            return outputFormat.seeOther( new URI( ServerConfigurationSettings.browser_path.getDefaultValue() ) );
         }
         catch ( URISyntaxException e )
         {

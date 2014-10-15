@@ -28,7 +28,7 @@ import org.apache.commons.configuration.Configuration;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.guard.GuardingRequestFilter;
 import org.neo4j.server.plugins.PluginManager;
@@ -118,7 +118,7 @@ public class RESTApiModule implements ServerModule
     }
 
     private void setupRequestTimeLimit() {
-        Integer limit = config.getInteger( Configurator.webserver_limit_execution_time.name(), null );
+        Integer limit = config.getInteger( ServerConfigurationSettings.webserver_limit_execution_time.name(), null );
         if ( limit != null )
         {
             try
@@ -137,7 +137,7 @@ public class RESTApiModule implements ServerModule
 
     private URI restApiUri() throws URISyntaxException
     {
-        return new URI( config.getString( Configurator.rest_api_path.name(), Configurator.rest_api_path.getDefaultValue() ) );
+        return new URI( config.getString( ServerConfigurationSettings.rest_api_path.name(), ServerConfigurationSettings.rest_api_path.getDefaultValue() ) );
     }
 
     private void loadPlugins()

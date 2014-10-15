@@ -36,7 +36,7 @@ import org.apache.commons.configuration.Configuration;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.test.server.EntityOutputFormat;
 
@@ -48,10 +48,10 @@ public class DiscoveryServiceTest
         Configuration mockConfig = mock( Configuration.class );
         String managementUri = "/management";
         when(
-                mockConfig.getString( Configurator.management_api_path.name(),
-                        Configurator.management_api_path.getDefaultValue() ) ).thenReturn( managementUri );
+                mockConfig.getString( ServerConfigurationSettings.management_api_path.name(),
+                        ServerConfigurationSettings.management_api_path.getDefaultValue() ) ).thenReturn( managementUri );
         String dataUri = "/data";
-        when( mockConfig.getString( Configurator.rest_api_path.name(), Configurator.rest_api_path.getDefaultValue() ) ).thenReturn(
+        when( mockConfig.getString( ServerConfigurationSettings.rest_api_path.name(), ServerConfigurationSettings.rest_api_path.getDefaultValue() ) ).thenReturn(
                 dataUri );
 
         String baseUri = "http://www.example.com";
@@ -78,10 +78,10 @@ public class DiscoveryServiceTest
         Configuration mockConfig = mock( Configuration.class );
         String managementUri = "http://absolutedomain/management";
         when(
-                mockConfig.getString( Configurator.management_api_path.name(),
-                        Configurator.management_api_path.getDefaultValue() ) ).thenReturn( managementUri );
+                mockConfig.getString( ServerConfigurationSettings.management_api_path.name(),
+                        ServerConfigurationSettings.management_api_path.getDefaultValue() ) ).thenReturn( managementUri );
         String dataUri = "http://absolutedomain/management";
-        when( mockConfig.getString( Configurator.rest_api_path.name(), Configurator.rest_api_path.getDefaultValue() ) ).thenReturn(
+        when( mockConfig.getString( ServerConfigurationSettings.rest_api_path.name(), ServerConfigurationSettings.rest_api_path.getDefaultValue() ) ).thenReturn(
                 dataUri );
 
         String baseUri = "http://www.example.com";

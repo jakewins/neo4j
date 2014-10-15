@@ -27,7 +27,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
@@ -44,15 +44,15 @@ public class EnsurePreparedForHttpLogging implements PreflightTask
     @Override
     public boolean run()
     {
-        boolean enabled = config.getBoolean( Configurator.http_logging.name(), 
-                Boolean.valueOf( Configurator.http_logging.getDefaultValue() ) );
+        boolean enabled = config.getBoolean( ServerConfigurationSettings.http_logging.name(), 
+                Boolean.valueOf( ServerConfigurationSettings.http_logging.getDefaultValue() ) );
 
         if ( !enabled )
         {
             return true;
         }
 
-        File logLocation = extractLogLocationFromConfig(config.getString( Configurator.http_log_config_location.name() ) );
+        File logLocation = extractLogLocationFromConfig(config.getString( ServerConfigurationSettings.http_log_config_location.name() ) );
 
 
         if ( logLocation != null )

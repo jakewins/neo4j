@@ -30,7 +30,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.helpers.TimeUtil;
 import org.neo4j.kernel.InternalAbstractGraphDatabase;
 import org.neo4j.server.WrappingNeoServerBootstrapper;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.ServerConfigurator;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
@@ -94,8 +94,8 @@ public class ExecutionTimeLimitTest
         };
 
         ServerConfigurator config = new ServerConfigurator( db );
-        config.configuration().setProperty( Configurator.webserver_port.name(), 7476 );
-        config.configuration().setProperty( Configurator.webserver_limit_execution_time.name(), 
+        config.configuration().setProperty( ServerConfigurationSettings.webserver_port.name(), 7476 );
+        config.configuration().setProperty( ServerConfigurationSettings.webserver_limit_execution_time.name(), 
                 TimeUtil.parseTimeMillis.apply( "1000" ) );
         testBootstrapper = new WrappingNeoServerBootstrapper( db, config );
         testBootstrapper.start();

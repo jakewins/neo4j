@@ -31,6 +31,7 @@ import org.neo4j.kernel.logging.SingleLoggingService;
 import org.neo4j.server.advanced.helpers.AdvancedServerBuilder;
 import org.neo4j.server.advanced.jmx.ServerManagement;
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.configuration.validation.Validator;
 import org.neo4j.test.TargetDirectory;
@@ -68,7 +69,7 @@ public class BootstrapperTest
         String dbDir2 = target.cleanDirectory( "db2" ).getAbsolutePath();
 
         Configuration conf = config.configuration();
-        conf.setProperty( Configurator.db_location.name(), dbDir2 );
+        conf.setProperty( ServerConfigurationSettings.db_location.name(), dbDir2 );
 
         ServerManagement bean = new ServerManagement( server );
         bean.restartServer();

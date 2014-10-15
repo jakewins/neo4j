@@ -39,8 +39,9 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.helpers.TimeUtil;
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.helpers.Transactor;
 import org.neo4j.server.helpers.UnitOfWork;
 import org.neo4j.server.modules.ServerModule;
@@ -78,7 +79,7 @@ public class StartupTimeoutDocIT
 	@Test
 	public void shouldNotFailIfStartupTakesLessTimeThanTimeout() throws IOException
 	{
-        Configurator configurator = buildProperties().withStartupTimeout( 100 ).atPort( 7480 ).build();
+	    Configurator configurator = buildProperties().withStartupTimeout( 100 ).atPort( 7480 ).build();
         server = new CommunityNeoServer( configurator, GraphDatabaseDependencies.newDependencies().logging(DevNullLoggingService.DEV_NULL) )
         {
             @Override
@@ -107,7 +108,7 @@ public class StartupTimeoutDocIT
 	@Test
 	public void shouldNotTimeOutIfTimeoutDisabled() throws IOException
 	{
-        Configurator configurator = buildProperties().withStartupTimeout( 0 ).atPort( 7480 ).build();
+	    Configurator configurator = buildProperties().withStartupTimeout( 0 ).atPort( 7480 ).build();
         server = createSlowServer( configurator, false );
 
         // When
@@ -226,11 +227,11 @@ public class StartupTimeoutDocIT
         Properties serverProperties = new Properties();
         String serverPropertiesFilename = test.directory().getAbsolutePath() + DIRSEP + "conf" + DIRSEP
                 + "neo4j-server.properties";
-        serverProperties.setProperty( Configurator.db_location.name(), test.directory().getAbsolutePath()
+        serverProperties.setProperty( ServerConfigurationSettings.db_location.name(), test.directory().getAbsolutePath()
                 + DIRSEP + "data" + DIRSEP + "graph.db" );
 
-        serverProperties.setProperty( Configurator.db_tuning_property_file.name(), databasePropertiesFileName );
-        serverProperties.setProperty( Configurator.neo_server_config_file.name(), serverPropertiesFilename );
+        serverProperties.setProperty( ServerConfigurationSettings.db_tuning_property_file.name(), databasePropertiesFileName );
+        serverProperties.setProperty( ServerConfigurationSettings.neo_server_config_file.name(), serverPropertiesFilename );
         serverProperties.store( new FileWriter( serverPropertiesFilename ), null );
 
         return new ConfiguratorBuilder( new PropertyFileConfigurator( new File( serverPropertiesFilename ) ) );
@@ -352,13 +353,13 @@ public class StartupTimeoutDocIT
 
         public ConfiguratorBuilder atPort( int port )
         {
-            configurator.configuration().setProperty( Configurator.webserver_port.name(), port );
+            configurator.configuration().setProperty( ServerConfigurationSettings.webserver_port.name(), port );
             return this;
         }
 
         public ConfiguratorBuilder withStartupTimeout( int seconds )
         {
-            configurator.configuration().setProperty( Configurator.startup_timeout.name(), 
+            configurator.configuration().setProperty( ServerConfigurationSettings.startup_timeout.name(), 
                     TimeUtil.parseTimeMillis.apply( String.valueOf( seconds ) ) );
             return this;
         }

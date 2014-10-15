@@ -26,7 +26,7 @@ import org.junit.After;
 import org.junit.Test;
 
 import org.neo4j.helpers.TimeUtil;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 import org.neo4j.test.server.HTTP;
 
@@ -53,7 +53,7 @@ public class TransactionTimeoutDocIT extends ExclusiveServerTestBase
     public void shouldHonorReallyLowSessionTimeout() throws Exception
     {
         // Given
-        server = server().withProperty( Configurator.transaction_timeout.name(), 
+        server = server().withProperty( ServerConfigurationSettings.transaction_timeout.name(), 
                 String.valueOf( TimeUtil.parseTimeMillis.apply( "1" ) ) ).build();
         server.start();
 

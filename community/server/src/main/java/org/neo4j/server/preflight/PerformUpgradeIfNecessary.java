@@ -36,7 +36,7 @@ import org.neo4j.kernel.impl.storemigration.UpgradableDatabase;
 import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
 import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 import static org.neo4j.kernel.impl.store.StoreFactory.configForStoreDir;
 
@@ -64,7 +64,7 @@ public class PerformUpgradeIfNecessary implements PreflightTask
     {
         try
         {
-            String dbLocation = new File( config.getString( Configurator.db_location.name() ) )
+            String dbLocation = new File( config.getString( ServerConfigurationSettings.db_location.name() ) )
                     .getAbsolutePath();
 
             if ( new CurrentDatabase(new StoreVersionCheck( new DefaultFileSystemAbstraction() ) ).storeFilesAtCurrentVersion( new File( dbLocation ) ) )

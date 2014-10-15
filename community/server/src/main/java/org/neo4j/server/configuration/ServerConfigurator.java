@@ -47,7 +47,7 @@ import static org.neo4j.helpers.collection.MapUtil.stringMap;
  * </pre>
  * <p/>
  * See the neo4j manual for information about what configuration directives the
- * server takes, or take a look at the static strings in {@link Configurator}.
+ * server takes, or take a look at the static strings in {@link ServerConfigurationSettings}.
  */
 public class ServerConfigurator extends Configurator.Adapter
 {
@@ -57,7 +57,7 @@ public class ServerConfigurator extends Configurator.Adapter
 
     public ServerConfigurator( GraphDatabaseAPI db )
     {
-        config.addProperty( Configurator.db_location.name(), db.getStoreDir() );
+        config.addProperty( ServerConfigurationSettings.db_location.name(), db.getStoreDir() );
     }
 
     @Override

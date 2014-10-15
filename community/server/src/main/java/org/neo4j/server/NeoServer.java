@@ -24,6 +24,7 @@ import java.net.URI;
 import org.apache.commons.configuration.Configuration;
 
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.plugins.PluginManager;
 import org.neo4j.server.rest.transactional.TransactionRegistry;

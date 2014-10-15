@@ -24,7 +24,7 @@ import org.junit.Test;
 import org.openqa.selenium.By;
 
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 import static org.neo4j.server.helpers.CommunityServerBuilder.server;
 
@@ -59,7 +59,7 @@ public class DiscoverAvailableConsolesWebIT extends AbstractExclusiveServerWebad
     @Test
     public void shouldNotShowGremlinIfNotAvailable() throws Exception
     {
-        NeoServer server = server().withProperty( Configurator.management_console_engines.name(), "shell" ).build();
+        NeoServer server = server().withProperty( ServerConfigurationSettings.management_console_engines.name(), "shell" ).build();
         try
         {
             server.start();
@@ -83,7 +83,7 @@ public class DiscoverAvailableConsolesWebIT extends AbstractExclusiveServerWebad
     @Test
     public void shouldNotShowEitherShellIfBothAreDisabled() throws Exception
     {
-        NeoServer server = server().withProperty( Configurator.management_console_engines.name(), "" ).build();
+        NeoServer server = server().withProperty( ServerConfigurationSettings.management_console_engines.name(), "" ).build();
         try
         {
             server.start();

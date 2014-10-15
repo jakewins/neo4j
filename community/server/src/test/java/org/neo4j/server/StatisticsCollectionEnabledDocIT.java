@@ -30,7 +30,7 @@ import com.sun.jersey.api.client.ClientResponse;
 import org.junit.After;
 import org.junit.Test;
 
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.statistic.StatisticRecord;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 
@@ -62,7 +62,7 @@ public class StatisticsCollectionEnabledDocIT extends ExclusiveServerTestBase
     @Test
     public void statisticsCouldBeEnabled() throws Exception
     {
-        server = server().withProperty( Configurator.webserver_enable_statistics_collection.name(), "true" )
+        server = server().withProperty( ServerConfigurationSettings.webserver_enable_statistics_collection.name(), "true" )
                 .usingDatabaseDir( folder.cleanDirectory( name.getMethodName() ).getAbsolutePath() )
                 .build();
         server.start();

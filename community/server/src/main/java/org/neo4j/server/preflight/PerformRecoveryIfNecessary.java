@@ -29,7 +29,7 @@ import org.apache.commons.configuration.Configuration;
 import org.neo4j.kernel.impl.recovery.StoreRecoverer;
 import org.neo4j.kernel.logging.ConsoleLogger;
 import org.neo4j.kernel.logging.Logging;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 public class PerformRecoveryIfNecessary implements PreflightTask
 {
@@ -55,7 +55,7 @@ public class PerformRecoveryIfNecessary implements PreflightTask
     {
         try
         {
-            File dbLocation = new File( config.getString( Configurator.db_location.name() ) );
+            File dbLocation = new File( config.getString( ServerConfigurationSettings.db_location.name() ) );
             if ( dbLocation.exists() )
             {
                 StoreRecoverer recoverer = new StoreRecoverer();

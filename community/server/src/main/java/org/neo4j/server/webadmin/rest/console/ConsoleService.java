@@ -36,7 +36,7 @@ import org.apache.commons.configuration.Configuration;
 import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.logging.Logging;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.database.CypherExecutor;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.rest.repr.BadInputException;
@@ -68,8 +68,8 @@ public class ConsoleService implements AdvertisableService
     public ConsoleService( @Context Configuration config, @Context Database database, @Context HttpServletRequest req,
                            @Context OutputFormat output, @Context CypherExecutor cypherExecutor )
     {
-        this( new SessionFactoryImpl(req.getSession(true ), (List) config.getList(Configurator.management_console_engines.name(),
-                Configurator.getDefaultManagementConsoleEngines() ), cypherExecutor),
+        this( new SessionFactoryImpl(req.getSession(true ), (List) config.getList(ServerConfigurationSettings.management_console_engines.name(),
+                ServerConfigurationSettings.getDefaultManagementConsoleEngines() ), cypherExecutor),
                 database, database.getLogging(), output  );
     }
 

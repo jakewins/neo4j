@@ -21,7 +21,7 @@ package org.neo4j.server.modules;
 
 import org.apache.commons.configuration.Configuration;
 
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.statistic.StatisticCollector;
 import org.neo4j.server.statistic.StatisticFilter;
 import org.neo4j.server.web.WebServer;
@@ -60,6 +60,6 @@ public class StatisticModule implements ServerModule
     private boolean isStatisticsEnabled()
     {
         //TODO might remove this method or modify it as we already give it default value?
-        return config.getBoolean(Configurator.webserver_enable_statistics_collection.name(), false);
+        return config.getBoolean(ServerConfigurationSettings.webserver_enable_statistics_collection.name(), false);
     }
 }

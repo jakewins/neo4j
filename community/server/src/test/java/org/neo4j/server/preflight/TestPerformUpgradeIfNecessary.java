@@ -37,7 +37,7 @@ import org.neo4j.kernel.impl.storemigration.StoreUpgrader.Monitor;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.impl.util.TestLogger;
 import org.neo4j.kernel.impl.util.TestLogging;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.configuration.MapBasedConfiguration;
 import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.Unzip;
@@ -173,8 +173,8 @@ public class TestPerformUpgradeIfNecessary
         databaseProperties.store( new FileWriter( NEO4J_PROPERTIES.getAbsolutePath() ), null );
 
         Configuration serverProperties = new MapBasedConfiguration();
-        serverProperties.setProperty( Configurator.db_location.name(), STORE_DIRECTORY.getPath() );
-        serverProperties.setProperty( Configurator.db_tuning_property_file.name(), NEO4J_PROPERTIES.getAbsolutePath() );
+        serverProperties.setProperty( ServerConfigurationSettings.db_location.name(), STORE_DIRECTORY.getPath() );
+        serverProperties.setProperty( ServerConfigurationSettings.db_tuning_property_file.name(), NEO4J_PROPERTIES.getAbsolutePath() );
 
         return serverProperties;
     }

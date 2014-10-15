@@ -23,7 +23,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.commons.configuration.Configuration;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 
 public class WebadminConfigurationRule implements ValidationRule
 {
@@ -31,19 +31,19 @@ public class WebadminConfigurationRule implements ValidationRule
     public void validate( Configuration configuration ) throws RuleFailedException
     {
         String managementApi = validateConfigurationContainsKey( configuration,
-                Configurator.management_api_path.name() );
-        String restApi = validateConfigurationContainsKey( configuration, Configurator.rest_api_path.name() );
+                ServerConfigurationSettings.management_api_path.name() );
+        String restApi = validateConfigurationContainsKey( configuration, ServerConfigurationSettings.rest_api_path.name() );
 
         // Check URIs are ok
-        URI managementUri = validateAndNormalizeUri( managementApi, Configurator.management_api_path.name() );
-        URI restUri = validateAndNormalizeUri( restApi, Configurator.rest_api_path.name() );
+        URI managementUri = validateAndNormalizeUri( managementApi, ServerConfigurationSettings.management_api_path.name() );
+        URI restUri = validateAndNormalizeUri( restApi, ServerConfigurationSettings.rest_api_path.name() );
 
         // Overwrite the properties with the new normalised URIs
-        configuration.clearProperty( Configurator.management_api_path.name() );
-        configuration.addProperty( Configurator.management_api_path.name(), managementUri.toString() );
+        configuration.clearProperty( ServerConfigurationSettings.management_api_path.name() );
+        configuration.addProperty( ServerConfigurationSettings.management_api_path.name(), managementUri.toString() );
 
-        configuration.clearProperty( Configurator.rest_api_path.name() );
-        configuration.addProperty( Configurator.rest_api_path.name(), restUri.toString() );
+        configuration.clearProperty( ServerConfigurationSettings.rest_api_path.name() );
+        configuration.addProperty( ServerConfigurationSettings.rest_api_path.name(), restUri.toString() );
     }
 
     private String trimTrailingSlash( String uri )

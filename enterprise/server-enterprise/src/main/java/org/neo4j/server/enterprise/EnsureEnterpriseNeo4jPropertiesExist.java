@@ -27,7 +27,7 @@ import java.util.Properties;
 
 import org.apache.commons.configuration.Configuration;
 import org.neo4j.cluster.ClusterSettings;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerConfigurationSettings;
 import org.neo4j.server.preflight.EnsureNeo4jPropertiesExist;
 
 public class EnsureEnterpriseNeo4jPropertiesExist extends EnsureNeo4jPropertiesExist
@@ -45,7 +45,7 @@ public class EnsureEnterpriseNeo4jPropertiesExist extends EnsureNeo4jPropertiesE
     @Override
     protected boolean validateProperties( Properties configProperties )
     {
-        String dbMode = configProperties.getProperty( Configurator.db_mode.name(),
+        String dbMode = configProperties.getProperty( ServerConfigurationSettings.db_mode.name(),
                 EnterpriseNeoServer.SINGLE );
         dbMode = dbMode.toUpperCase();
         if ( dbMode.equals( EnterpriseNeoServer.SINGLE ) )
@@ -54,16 +54,16 @@ public class EnsureEnterpriseNeo4jPropertiesExist extends EnsureNeo4jPropertiesE
         }
         if ( !dbMode.equals( EnterpriseNeoServer.HA ) )
         {
-            failureMessage = String.format( "Illegal value for %s \"%s\" in %s", Configurator.db_mode.name(), dbMode,
-                    Configurator.neo_server_config_file.name() );
+            failureMessage = String.format( "Illegal value for %s \"%s\" in %s", ServerConfigurationSettings.db_mode.name(), dbMode,
+                    ServerConfigurationSettings.neo_server_config_file.name() );
             return false;
         }
 
-        String dbTuningFilename = configProperties.getProperty( Configurator.db_tuning_property_file.name() );
+        String dbTuningFilename = configProperties.getProperty( ServerConfigurationSettings.db_tuning_property_file.name() );
         if ( dbTuningFilename == null )
         {
             failureMessage = String.format( "High-Availability mode requires %s to be set in %s",
-                    Configurator.db_tuning_property_file.name(), Configurator.neo_server_config_file.name() );
+                    ServerConfigurationSettings.db_tuning_property_file.name(), ServerConfigurationSettings.neo_server_config_file.name() );
             return false;
         }
         else
