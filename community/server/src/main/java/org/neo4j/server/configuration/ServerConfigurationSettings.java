@@ -19,21 +19,6 @@
  */
 package org.neo4j.server.configuration;
 
-import static org.neo4j.helpers.Settings.ANY;
-import static org.neo4j.helpers.Settings.INTEGER;
-import static org.neo4j.helpers.Settings.DURATION;
-import static org.neo4j.helpers.Settings.STRING;
-import static org.neo4j.helpers.Settings.BOOLEAN;
-import static org.neo4j.helpers.Settings.NO_DEFAULT;
-import static org.neo4j.helpers.Settings.FALSE;
-import static org.neo4j.helpers.Settings.TRUE;
-import static org.neo4j.helpers.Settings.PATH;
-import static org.neo4j.helpers.Settings.port;
-import static org.neo4j.helpers.Settings.min;
-import static org.neo4j.helpers.Settings.illegalValueMessage;
-import static org.neo4j.helpers.Settings.matches;
-import static org.neo4j.helpers.Settings.setting;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,91 +27,88 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.Description;
 import org.neo4j.server.webadmin.console.ShellSessionCreator;
 
+import static org.neo4j.helpers.Settings.ANY;
+import static org.neo4j.helpers.Settings.BOOLEAN;
+import static org.neo4j.helpers.Settings.DURATION;
+import static org.neo4j.helpers.Settings.FALSE;
+import static org.neo4j.helpers.Settings.INTEGER;
+import static org.neo4j.helpers.Settings.NO_DEFAULT;
+import static org.neo4j.helpers.Settings.PATH;
+import static org.neo4j.helpers.Settings.STRING;
+import static org.neo4j.helpers.Settings.TRUE;
+import static org.neo4j.helpers.Settings.illegalValueMessage;
+import static org.neo4j.helpers.Settings.matches;
+import static org.neo4j.helpers.Settings.min;
+import static org.neo4j.helpers.Settings.port;
+import static org.neo4j.helpers.Settings.setting;
+
 // TODO refine the descriptions of each setting
 // Warning: Without getting the values from a Config instance, the default values do not really take effect.
 @Description("Settings used by the server configuration")
 public abstract class ServerConfigurationSettings
 {   
     // database configuration
-    @Description( "Keeps record of what security rules are applied." )
+    @Description( "List of custom security rules for Neo4j to use." )
     public static final Setting<String> security_rules = setting( "org.neo4j.server.rest.security_rules", STRING,
             NO_DEFAULT );
     
-    @Description( "The path to where the database configuration setttings are stored. This file will be loaded when creating a new database." )//TODO well, what is this?
+    @Description( "Path to database tuning configuration file." )
     public static final Setting<File> db_tuning_property_file = setting( "org.neo4j.server.db.tuning.properties",
             PATH, NO_DEFAULT ); 
     // the interesting thing is why we do not have a default value for this path?
     // The default value is set in PropertyFileConfigurator.NEO4J_PROPERTIES_FILENAME?
-    
-    @Description( "The path to where the server configuration settings are stored." )
-    public static final Setting<File> neo_server_config_file = setting( "org.neo4j.server.propertie", PATH,
-            File.separator + "etc" + File.separator + "neo" );
-    // TODO rename this? e.g. server_property_file or rename db_tuning_property_file to db_tuning_config_file
-    
-    @Description( "The location where the 'db' database file is stored." )
+
+    @Description( "Path to the database directory." )
     public static final Setting<File> db_location = setting( "org.neo4j.server.database.location", PATH,
             "data/graph.db" );
     
-    @Description( "Defines the operation mode of the 'db' database - single or HA." )
+    @Description( "Database operation mode, SINGLE or HA." )
     public static final Setting<String> db_mode = setting( "org.neo4j.server.database.mode",
             STRING, "SINGLE" );
   
     // webserver configuration
-    @Description( "The port that the webserver is bound." )
+    @Description( "Http port for the Neo4j REST API." )
     public static final Setting<Integer> webserver_port = setting( "org.neo4j.server.webserver.port", INTEGER, "7474",
             port );
     
-    @Description( "The host that the webserver is bound." )
+    @Description( "Hostname for the Neo4j REST API" )
     public static final Setting<String> webserver_address = setting( "org.neo4j.server.webserver.address", STRING,
             "localhost", illegalValueMessage( "Must be a valid hostname", matches( ANY ) ) );
     
-    @Description( "Maximum count of threads that the webserver could create. By default the value is set based on the "
-            + "processor core count of the local machine." )    
+    @Description( "Number of Neo4j worker threads." )
     public static final Setting<Integer> webserver_max_threads = setting( "org.neo4j.server.webserver.maxthreads",
             INTEGER, NO_DEFAULT, min(1) );
     
-    @Description( "Time limitation for an execution to time out if no response is received within the specified time period." )
+    @Description( "If execution time limiting is enabled in the database, this configures the maximum request execution time." )
     public static final Setting<Long> webserver_limit_execution_time = setting(
             "org.neo4j.server.webserver.limit.executiontime", DURATION, NO_DEFAULT );
-    
-    @Description( "Whether to enable statistics mode or not." )
+
+    // TODO: This should not be public, meaning it should go in a separate Settings class that does not get documented, for instance "ServerInternalSettings"
     public static final Setting<Boolean> webserver_enable_statistics_collection = setting(
             "org.neo4j.server.webserver.statistics", BOOLEAN, FALSE );
 
     // paths 
-    // TODO might assign the default basepath check into the following paths. this might be done by Zhen latter
-    @Description( "The path to where the data are stored on the webserver." )
+    // TODO: This should not be public, meaning it should go in a separate Settings class that does not get documented, for instance "ServerInternalSettings"
     public static final Setting<File> rest_api_path = setting( "org.neo4j.server.webadmin.data.uri", PATH,
             "/db/data" /*, basePath(The base path is host:port)*/ );
-    
-    @Description("The path to where the management is stored on the webserver.")//TODO well, it is the database itself or??
+
+    // TODO: This should not be public, meaning it should go in a separate Settings class that does not get documented, for instance "ServerInternalSettings"
     public static final Setting<File> management_api_path = setting( "org.neo4j.server.webadmin.management.uri",
             PATH, "/db/manage" );
-    
-    @Description("The path where the browser is stored on the webserver.")
+
+    // TODO: This should not be public, meaning it should go in a separate Settings class that does not get documented, for instance "ServerInternalSettings"
     public static final Setting<File> browser_path = setting( "org.neo4j.server.webadmin.browser.uri",
             PATH, "/browser" );
     // TODO is it okay to assign key "org.neo4j.server.webadmin.browser.uri" to it? I created this key.
     
-    @Description("The path where the rrdb is stored on the webserver.")
-    // TODO what is a rrdb? The same with db_location?
+    @Description("Path to the statistics database file.")
     public static final Setting<File> rrdb_location = setting( "org.neo4j.server.webadmin.rrdb.location",
             PATH, NO_DEFAULT );
     
     // packages
-    // TODO The following string are never used by anyone, are they only constant values?
-//  String REST_API_PACKAGE = "org.neo4j.server.rest.web";
-//  String DISCOVERY_API_PACKAGE = "org.neo4j.server.rest.discovery";
-//  String MANAGEMENT_API_PACKAGE = "org.neo4j.server.webadmin.rest";
-    public static final Setting<String> rest_api_package = setting( "org.neo4j.server.rest.web",
-            STRING, NO_DEFAULT );  
-    public static final Setting<String> discovery_api_package = setting( "org.neo4j.server.rest.discovery",
-            STRING, NO_DEFAULT );
-    public static final Setting<String> management_api_package = setting( "org.neo4j.server.webadmin.rest",
-            STRING, NO_DEFAULT );
     
     // other settings
-    @Description( "The console engines that are used." )
+    @Description( "Console engines for the legacy webadmin administr" )
     public static final Setting<String> management_console_engines = setting( "org.neo4j.server.manage.console_engines",
             STRING, NO_DEFAULT );
     
@@ -142,50 +124,50 @@ public abstract class ServerConfigurationSettings
         };
     }
     
-    @Description( "The place to specify third party packages." )
+    @Description( "Comma-separated list of <classname>=<mount point> for unmanaged extensions." )
     public static final Setting<String> third_party_packages = setting( "org.neo4j.server.thirdparty_jaxrs_classes",
             STRING, NO_DEFAULT );
 
     // security configuration
-    @Description( "Whether script sandboxing is enabled or not." )
+    // TODO: This should not be public, meaning it should go in a separate Settings class that does not get documented, for instance "ServerInternalSettings"
     public static final Setting<Boolean> script_sandboxing_enabled = setting(
             "org.neo4j.server.script.sandboxing.enabled", BOOLEAN, TRUE );
-    
-    @Description( "Whether https is enabled or not." )
+
+    @Description( "Enable HTTPS for the REST API." )
     public static final Setting<Boolean> webserver_https_enabled = setting( "org.neo4j.server.webserver.https.enabled",
             BOOLEAN, FALSE );
-    
-    @Description( "The port that the https webserver is bound." )
+
+    @Description( "HTTPS port for the REST API." )
     public static final Setting<Integer> webserver_https_port = setting( "org.neo4j.server.webserver.https.port",
             INTEGER, "7473", port );
-    
-    @Description( "Specify where the keystore is saved on the webserver." )
+
+    @Description( "Path to the keystore used to store SSL certificates and keys while the server is running." )
     public static final Setting<File> webserver_keystore_path = setting(
             "org.neo4j.server.webserver.https.keystore.location", PATH, "neo4j-home/ssl/keystore" );
     
-    @Description( "Specify where the certificates used for https connections are saved on the webserver." )
+    @Description( "Path to the SSL certificate used for HTTPS connections." )
     public static final Setting<File> webserver_https_cert_path = setting(
             "org.neo4j.server.webserver.https.cert.location", PATH, "neo4j-home/ssl/snakeoil.cert" );
     
-    @Description( "Specify where the keys used for https connections are saved on the webserver." )
+    @Description( "Path to the SSL key used for HTTPS connections." )
     public static final Setting<File> webserver_https_key_path = setting(
             "org.neo4j.server.webserver.https.key.location", PATH, "neo4j-home/ssl/snakeoil.key" );
     
-    @Description( "Whether logging is enabled or not." )
+    @Description( "Enable HTTP request logging." )
     public static final Setting<Boolean> http_logging = setting( "org.neo4j.server.http.log.enabled", BOOLEAN, FALSE );
     
-    @Description( "Specify where log configuration is saved on the webserver." )
+    @Description( "Path to a logback configuration file for HTTP request logging." )
     public static final Setting<File> http_log_config_location = setting( "org.neo4j.server.http.log.config", PATH,
             NO_DEFAULT );
-    
-    @Description( "Whether WADL is enabled or not." )
+
+    // TODO: This should not be public, meaning it should go in a separate Settings class that does not get documented, for instance "ServerInternalSettings"
     public static final Setting<Boolean> wadl_enabled = setting( "unsupported_wadl_generation_enabled", BOOLEAN,
             NO_DEFAULT );
 
-    @Description( "Time limitation for server start up to time out if no response is received within the specified time period." )
+    // TODO: This should not be public, meaning it should go in a separate Settings class that does not get documented, for instance "ServerInternalSettings"
     public static final Setting<Long> startup_timeout = setting( "org.neo4j.server.startup_timeout", DURATION, "120s" );
     
-    @Description( "Time limitation for a transaction to time out if no response is received within the specified time period." )
+    @Description( "Timeout for idle transactions." )
     public static final Setting<Long> transaction_timeout = setting( "org.neo4j.server.transaction.timeout", DURATION,
             "60s" );
     
