@@ -27,15 +27,16 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.Description;
 import org.neo4j.helpers.Function;
 import org.neo4j.helpers.Settings;
+import org.neo4j.server.web.ServerInternalSettings;
 import org.neo4j.server.webadmin.console.ShellSessionCreator;
 
 import static org.neo4j.helpers.Settings.ANY;
 import static org.neo4j.helpers.Settings.BOOLEAN;
 import static org.neo4j.helpers.Settings.DURATION;
+import static org.neo4j.helpers.Settings.EMPTY;
 import static org.neo4j.helpers.Settings.FALSE;
 import static org.neo4j.helpers.Settings.INTEGER;
 import static org.neo4j.helpers.Settings.NO_DEFAULT;
-import static org.neo4j.helpers.Settings.EMPTY;
 import static org.neo4j.helpers.Settings.PATH;
 import static org.neo4j.helpers.Settings.STRING;
 import static org.neo4j.helpers.Settings.STRING_LIST;
@@ -52,6 +53,19 @@ public interface ServerSettings
     @Description( "Comma-seperated list of custom security rules for Neo4j to use." )
     public static final Setting<List<String>> security_rules = setting( "org.neo4j.server.rest.security_rules",
             STRING_LIST, EMPTY );
+
+    // database meta-config
+
+    @Description("Location of neo4j database files.")
+    public static final Setting<File> db_location = setting( "org.neo4j.server.database.location", PATH, "data/graph.db" );
+
+    @Description("Path to database tuning configuration.")
+    public static final Setting<File> db_config = setting( "org.neo4j.server.db.tuning.properties",
+            PATH, File.separator + "etc" + File.separator + "neo" + File.separator + ServerInternalSettings.DB_TUNING_CONFIG_FILE_NAME );
+
+    @Description("Defines the operation mode of the database - single or HA. High availability mode is only " +
+            "available in the enterprise edition of Neo4j.")
+    public static final Setting<String> db_mode = setting( "org.neo4j.server.database.mode", STRING, "SINGLE" );
 
     // webserver configuration
     @Description( "Http port for the Neo4j REST API." )

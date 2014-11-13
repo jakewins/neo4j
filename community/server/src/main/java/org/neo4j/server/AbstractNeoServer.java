@@ -259,7 +259,7 @@ public abstract class AbstractNeoServer implements NeoServer
     {
         Map<String, String> result = new HashMap<>( configurator.getDatabaseTuningProperties() );
         result.put( GraphDatabaseSettings.store_dir.name(), configurator.configuration()
-                .get( NeoServerSettings.legacy_db_location ).getAbsolutePath() );
+                .get( ServerSettings.db_location ).getAbsolutePath() );
 
         putIfAbsent( result, ShellSettings.remote_shell_enabled.name(), Settings.TRUE );
 

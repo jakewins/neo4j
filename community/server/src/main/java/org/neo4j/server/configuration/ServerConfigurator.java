@@ -25,7 +25,6 @@ import java.util.Map;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.server.NeoServerSettings;
 import org.neo4j.server.WrappingNeoServerBootstrapper;
 
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -50,12 +49,12 @@ import static org.neo4j.helpers.collection.MapUtil.stringMap;
  */
 public class ServerConfigurator implements ConfigurationBuilder
 {
-    private final Map<String, String> configParams = new HashMap();
     private final Config config;
 
     public ServerConfigurator( GraphDatabaseAPI db )
     {
-        configParams.put( NeoServerSettings.legacy_db_location.name(), db.getStoreDir() );
+        Map<String, String> configParams = new HashMap<>();
+        configParams.put( ServerSettings.db_location.name(), db.getStoreDir() );
         config = new Config( configParams );
         PropertyFileConfigurator.setServerSettingsClasses( config );
     }

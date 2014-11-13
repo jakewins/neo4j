@@ -27,13 +27,11 @@ import java.util.Map;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.MapConfiguration;
-
 import org.neo4j.helpers.TimeUtil;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.info.DiagnosticsExtractor;
 import org.neo4j.kernel.info.DiagnosticsPhase;
-import org.neo4j.server.NeoServerSettings;
 import org.neo4j.server.web.ServerInternalSettings;
 
 import static java.util.Collections.emptyList;
@@ -47,13 +45,13 @@ public interface Configurator
 {
     String SECURITY_RULES_KEY = ServerSettings.security_rules.name();
 
-    String DB_TUNING_PROPERTY_FILE_KEY = NeoServerSettings.legacy_db_config.name();
-    String DEFAULT_CONFIG_DIR = NeoServerSettings.legacy_db_config.getDefaultValue();
-    String DATABASE_LOCATION_PROPERTY_KEY = NeoServerSettings.legacy_db_location.name();
-    String DEFAULT_DATABASE_LOCATION_PROPERTY_KEY = NeoServerSettings.legacy_db_location.getDefaultValue();
+    String DB_TUNING_PROPERTY_FILE_KEY = ServerSettings.db_config.name();
+    String DEFAULT_CONFIG_DIR = ServerSettings.db_config.getDefaultValue();
+    String DATABASE_LOCATION_PROPERTY_KEY = ServerSettings.db_location.name();
+    String DEFAULT_DATABASE_LOCATION_PROPERTY_KEY = ServerSettings.db_location.getDefaultValue();
 
     String NEO_SERVER_CONFIG_FILE_KEY = ServerInternalSettings.SERVER_CONFIG_FILE_KEY;
-    String DB_MODE_KEY = NeoServerSettings.legacy_db_mode.name();
+    String DB_MODE_KEY = ServerSettings.db_mode.name();
 
     int DEFAULT_WEBSERVER_PORT = Integer.valueOf( ServerSettings.webserver_port.getDefaultValue() );
     String WEBSERVER_PORT_PROPERTY_KEY = ServerSettings.webserver_port.name();
