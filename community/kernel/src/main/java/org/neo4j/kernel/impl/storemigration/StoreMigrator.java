@@ -26,6 +26,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -69,6 +70,7 @@ import org.neo4j.kernel.impl.storemigration.legacystore.v19.Legacy19Store;
 import org.neo4j.kernel.impl.storemigration.legacystore.v20.Legacy20Store;
 import org.neo4j.kernel.impl.storemigration.legacystore.v21.Legacy21Store;
 import org.neo4j.kernel.impl.storemigration.legacystore.v21.propertydeduplication.PropertyDeduplicator;
+import org.neo4j.kernel.impl.storemigration.legacystore.v22.Legacy22Store;
 import org.neo4j.kernel.impl.storemigration.monitoring.MigrationProgressMonitor;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.logging.Logging;
@@ -196,6 +198,12 @@ public class StoreMigrator implements StoreMigrationParticipant
             {
                 life.shutdown();
             }
+        }
+        else if ( versionToUpgradeFrom( fileSystem, storeDir ).equals( Legacy22Store.LEGACY_VERSION ) )
+        {
+            // Temporary to test this out on big stores in QA
+            System.out.println("DELETING " +  new File(storeDir, "schema").getAbsolutePath());
+            FileUtils.deleteRecursively( new File(storeDir, "schema") );
         }
         else
         {
@@ -607,6 +615,10 @@ public class StoreMigrator implements StoreMigrationParticipant
                         StoreFile.PROPERTY_STORE,
                         StoreFile.PROPERTY_KEY_TOKEN_STORE,
                         StoreFile.PROPERTY_KEY_TOKEN_NAMES_STORE );
+                idFilesToDelete = new StoreFile[]{};
+                break;
+            case Legacy22Store.LEGACY_VERSION:
+                filesToMove = Collections.emptyList();
                 idFilesToDelete = new StoreFile[]{};
                 break;
             default:

@@ -56,7 +56,7 @@ the relevant Commercial Agreement.
     </dependency>
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-lucene-index</artifactId>
+      <artifactId>neo4j-lucene-4-index</artifactId>
       <version>${project.version}</version>
     </dependency>
   

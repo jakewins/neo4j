@@ -23,6 +23,7 @@ Integration layer between Neo4j and Lucene, providing one possible implementatio
     <license-text.header>GPL-3-header.txt</license-text.header>
     <docs-plugin.filter>true</docs-plugin.filter>
     <licensing.prepend.text>notice-gpl-prefix.txt</licensing.prepend.text>
+    <lucene.version>3.6.2</lucene.version>
   </properties>
 
   <packaging>jar</packaging>
@@ -74,6 +75,7 @@ the relevant Commercial Agreement.
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-core</artifactId>
+      <version>${lucene.version}</version>
     </dependency>
     <dependency>
       <groupId>org.neo4j</groupId>

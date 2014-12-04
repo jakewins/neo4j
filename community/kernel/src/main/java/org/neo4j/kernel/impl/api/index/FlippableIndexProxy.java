@@ -177,7 +177,7 @@ public class FlippableIndexProxy implements IndexProxy
     }
 
     @Override
-    public IndexReader newReader() throws IndexNotFoundKernelException
+    public IndexReader newReader() throws IndexNotFoundKernelException, IOException
     {
         lock.readLock().lock();
         try

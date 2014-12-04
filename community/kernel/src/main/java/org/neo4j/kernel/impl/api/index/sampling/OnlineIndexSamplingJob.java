@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.api.index.sampling;
 
+import java.io.IOException;
+
 import org.neo4j.helpers.logging.DurationLogger;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
@@ -93,6 +95,11 @@ class OnlineIndexSamplingJob implements IndexSamplingJob
             {
                 durationLogger.markAsAborted(
                         "Attempted to sample missing/already deleted index " + indexUserDescription );
+            }
+            catch ( IOException e )
+            {
+                durationLogger.markAsAborted(
+                        "IO problem while sampling index "  + indexUserDescription + ": " + e.getMessage());
             }
         }
     }

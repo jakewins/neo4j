@@ -28,7 +28,11 @@ Third-party licenses
 Apache Software License, Version 2.0
   ConcurrentLinkedHashMap
   Jackson
+  Lucene Common Analyzers
   Lucene Core
+  Lucene Queries
+  Lucene QueryParsers
+  Lucene Sandbox
   opencsv
   parboiled-core
   parboiled-scala

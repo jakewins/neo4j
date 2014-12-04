@@ -111,7 +111,7 @@ public class OnlineIndexProxy implements IndexProxy
     }
 
     @Override
-    public IndexReader newReader()
+    public IndexReader newReader() throws IOException
     {
         return accessor.newReader();
     }

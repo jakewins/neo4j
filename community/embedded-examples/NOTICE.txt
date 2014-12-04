@@ -28,7 +28,11 @@ Third-party licenses
 Apache Software License, Version 2.0
   Apache ServiceMix Bundles: jline-0.9.94
   ConcurrentLinkedHashMap
+  Lucene Common Analyzers
   Lucene Core
+  Lucene Queries
+  Lucene QueryParsers
+  Lucene Sandbox
   opencsv
   parboiled-core
   parboiled-scala

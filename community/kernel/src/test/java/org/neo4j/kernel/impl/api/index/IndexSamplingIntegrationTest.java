@@ -22,6 +22,8 @@ package org.neo4j.kernel.impl.api.index;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.IOException;
+
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -61,7 +63,7 @@ public class IndexSamplingIntegrationTest
             return new IndexAccessor.Delegator( super.getOnlineAccessor( indexId, indexConfig, samplingConfig ) )
             {
                 @Override
-                public IndexReader newReader()
+                public IndexReader newReader() throws IOException
                 {
                     return new IndexReader.Delegator( super.newReader() )
                     {

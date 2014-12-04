@@ -88,7 +88,7 @@ public abstract class AbstractDelegatingIndexProxy implements IndexProxy
     }
 
     @Override
-    public IndexReader newReader() throws IndexNotFoundKernelException
+    public IndexReader newReader() throws IndexNotFoundKernelException, IOException
     {
         return getDelegate().newReader();
     }

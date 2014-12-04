@@ -90,7 +90,7 @@ public interface IndexProxy
     /**
      * @throws IndexNotFoundKernelException if the index isn't online yet.
      */
-    IndexReader newReader() throws IndexNotFoundKernelException;
+    IndexReader newReader() throws IndexNotFoundKernelException, IOException;
 
     /**
      * @return {@code true} if the call waited, {@code false} if the condition was already reached.

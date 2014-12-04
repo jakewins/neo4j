@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api.store;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -293,7 +294,14 @@ public class DiskLayer implements StoreReadLayer
     @Override
     public PrimitiveLongIterator nodesGetForLabel( KernelStatement state, int labelId )
     {
-        return state.getLabelScanReader().nodesWithLabel( labelId );
+        try
+        {
+            return state.getLabelScanReader().nodesWithLabel( labelId );
+        }
+        catch ( IOException e )
+        {
+            throw new UnderlyingStorageException( e );
+        }
     }
 
     @Override
@@ -593,15 +601,29 @@ public class DiskLayer implements StoreReadLayer
          * close the IndexReader when done iterating over the lookup result. This is because we get
          * a fresh reader that isn't associated with the current transaction and hence will not be
          * automatically closed. */
-        IndexReader reader = state.getFreshIndexReader( indexId );
-        return resourceIterator( reader.lookup( value ), reader );
+        try
+        {
+            IndexReader reader = state.getFreshIndexReader( indexId );
+            return resourceIterator( reader.lookup( value ), reader );
+        }
+        catch ( IOException e )
+        {
+            throw new UnderlyingStorageException( "IO problem while reading index: " + e.getMessage(), e );
+        }
     }
 
     public PrimitiveLongResourceIterator nodesGetFromIndexLookup( KernelStatement state, long index, Object value )
             throws IndexNotFoundKernelException
     {
-        IndexReader reader = state.getIndexReader( index );
-        return resourceIterator( reader.lookup( value ), reader );
+        try
+        {
+            IndexReader reader = state.getIndexReader( index );
+            return resourceIterator( reader.lookup( value ), reader );
+        }
+        catch ( IOException e )
+        {
+            throw new UnderlyingStorageException( "IO problem while reading index: " + e.getMessage(), e );
+        }
     }
 
     private Iterator<DefinedProperty> loadAllPropertiesOf( PrimitiveRecord primitiveRecord )

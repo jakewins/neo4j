@@ -75,7 +75,7 @@ public interface IndexAccessor extends Closeable
      * @return a new {@link IndexReader} responsible for looking up results in the index. The returned
      * reader must honor repeatable reads.
      */
-    IndexReader newReader();
+    IndexReader newReader() throws IOException;
 
     BoundedIterable<Long> newAllEntriesReader();
 
@@ -178,7 +178,7 @@ public interface IndexAccessor extends Closeable
         }
 
         @Override
-        public IndexReader newReader()
+        public IndexReader newReader() throws IOException
         {
             return delegate.newReader();
         }

@@ -19,6 +19,7 @@
  */
 package org.neo4j.consistency.checking.full;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -80,6 +81,10 @@ public class NodeCorrectlyIndexedCheck implements RecordCheck<NodeRecord, Consis
                 {
                     verifyNodeCorrectlyIndexed( nodeId, propertyValue, engine, indexRule, reader );
                 }
+            }
+            catch ( IOException e )
+            {
+                throw new RuntimeException( e );
             }
         }
     }

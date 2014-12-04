@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.io.IOException;
+
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.kernel.api.DataWriteOperations;
@@ -145,17 +147,17 @@ public class KernelStatement implements TxState.Holder, Statement
         return locks;
     }
 
-    public IndexReader getIndexReader( long indexId ) throws IndexNotFoundKernelException
+    public IndexReader getIndexReader( long indexId ) throws IndexNotFoundKernelException, IOException
     {
         return indexReaderFactory.newReader( indexId );
     }
 
-    public IndexReader getFreshIndexReader( long indexId ) throws IndexNotFoundKernelException
+    public IndexReader getFreshIndexReader( long indexId ) throws IndexNotFoundKernelException, IOException
     {
         return indexReaderFactory.newUnCachedReader( indexId );
     }
 
-    public LabelScanReader getLabelScanReader()
+    public LabelScanReader getLabelScanReader() throws IOException
     {
         if ( labelScanReader == null )
         {

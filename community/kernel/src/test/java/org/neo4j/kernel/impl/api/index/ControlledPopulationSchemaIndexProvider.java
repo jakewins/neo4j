@@ -55,7 +55,14 @@ public class ControlledPopulationSchemaIndexProvider extends SchemaIndexProvider
     {
         super( PROVIDER_DESCRIPTOR, 10 );
         setInitialIndexState( initialIndexState );
-        when( mockedWriter.newReader() ).thenReturn( IndexReader.EMPTY );
+        try
+        {
+            when( mockedWriter.newReader() ).thenReturn( IndexReader.EMPTY );
+        }
+        catch(Exception e)
+        {
+            throw new Error(e);
+        }
     }
 
     public DoubleLatch installPopulationJobCompletionLatch()

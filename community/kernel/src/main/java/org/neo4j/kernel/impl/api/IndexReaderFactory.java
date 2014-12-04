@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,9 +30,9 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 
 public interface IndexReaderFactory
 {
-    IndexReader newReader( long indexId ) throws IndexNotFoundKernelException;
+    IndexReader newReader( long indexId ) throws IndexNotFoundKernelException, IOException;
 
-    IndexReader newUnCachedReader( long indexId ) throws IndexNotFoundKernelException;
+    IndexReader newUnCachedReader( long indexId ) throws IndexNotFoundKernelException, IOException;
 
     void close();
 
@@ -46,7 +47,7 @@ public interface IndexReaderFactory
         }
 
         @Override
-        public IndexReader newReader( long indexId ) throws IndexNotFoundKernelException
+        public IndexReader newReader( long indexId ) throws IndexNotFoundKernelException, IOException
         {
             if( indexReaders == null )
             {
@@ -62,7 +63,7 @@ public interface IndexReaderFactory
             return reader;
         }
 
-        public IndexReader newUnCachedReader( long indexId ) throws IndexNotFoundKernelException
+        public IndexReader newUnCachedReader( long indexId ) throws IndexNotFoundKernelException, IOException
         {
             IndexProxy index = indexingService.getIndexProxy( indexId );
             return index.newReader();

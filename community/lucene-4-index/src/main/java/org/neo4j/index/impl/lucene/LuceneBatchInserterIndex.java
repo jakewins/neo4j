@@ -1,0 +1,506 @@
+/**
+ * Copyright (c) 2002-2014 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.neo4j.index.impl.lucene;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TopDocs;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.index.IndexHits;
+import org.neo4j.index.lucene.ValueContext;
+import org.neo4j.kernel.impl.cache.LruCache;
+import org.neo4j.kernel.impl.index.IndexEntityType;
+import org.neo4j.kernel.impl.util.IoPrimitiveUtils;
+import org.neo4j.unsafe.batchinsert.BatchInserterIndex;
+
+import static org.neo4j.index.impl.lucene.LuceneDataSource.LUCENE_VERSION;
+import static org.neo4j.index.impl.lucene.LuceneDataSource.getDirectory;
+import static org.neo4j.index.impl.lucene.SearchResultConverters.legacyIndexDocToId;
+
+class LuceneBatchInserterIndex implements BatchInserterIndex
+{
+    private final IndexIdentifier identifier;
+    private final IndexType type;
+
+    private IndexWriter writer;
+    private boolean writerModified;
+    private IndexSearcher searcher;
+    private final boolean createdNow;
+    private Map<String, LruCache<String, Collection<Long>>> cache;
+    private int updateCount;
+    private int commitBatchSize = 500000;
+    private final RelationshipLookup relationshipLookup;
+
+    interface RelationshipLookup
+    {
+        RelationshipId lookup( long id );
+    }
+
+    LuceneBatchInserterIndex( File dbStoreDir,
+            IndexIdentifier identifier, Map<String, String> config, RelationshipLookup relationshipLookup )
+    {
+        File storeDir = getStoreDir( dbStoreDir );
+        this.createdNow = !LuceneDataSource.getFileDirectory( storeDir, identifier ).exists();
+        this.identifier = identifier;
+        this.type = IndexType.getIndexType( config );
+        this.relationshipLookup = relationshipLookup;
+        this.writer = instantiateWriter( storeDir );
+    }
+
+    /**
+     * Sets the number of modifications that will be the threshold for a commit
+     * to happen. This will free up memory.
+     *
+     * @param size the threshold for triggering a commit.
+     */
+    public void setCommitBatchSize( int size )
+    {
+        this.commitBatchSize = size;
+    }
+
+    @Override
+    public void add( long id, Map<String, Object> properties )
+    {
+        try
+        {
+            Document document = IndexType.newDocument( entityId( id ) );
+            for ( Map.Entry<String, Object> entry : properties.entrySet() )
+            {
+                String key = entry.getKey();
+                Object value = entry.getValue();
+                addSingleProperty( id, document, key, value );
+            }
+            writer.addDocument( document );
+            if ( ++updateCount == commitBatchSize )
+            {
+                writer.commit();
+                updateCount = 0;
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    private Object entityId( long id )
+    {
+        if ( identifier.entityType == IndexEntityType.Node )
+        {
+            return id;
+        }
+
+        return relationshipLookup.lookup( id );
+    }
+
+    private void addSingleProperty( long entityId, Document document, String key, Object value ) {
+        for ( Object oneValue : IoPrimitiveUtils.asArray(value) )
+        {
+            boolean isValueContext = oneValue instanceof ValueContext;
+            oneValue = isValueContext ? ((ValueContext) oneValue).getCorrectValue() : oneValue.toString();
+            type.addToDocument( document, key, oneValue );
+            if ( createdNow )
+            {
+                // If we know that the index was created this session
+                // then we can go ahead and add stuff to the cache directly
+                // when adding to the index.
+                addToCache( entityId, key, oneValue );
+            }
+        }
+    }
+
+    private void addToCache( long entityId, String key, Object value )
+    {
+        if ( this.cache == null )
+        {
+            return;
+        }
+
+        String valueAsString = value.toString();
+        LruCache<String, Collection<Long>> cache = this.cache.get( key );
+        if ( cache != null )
+        {
+            Collection<Long> ids = cache.get( valueAsString );
+            if ( ids == null )
+            {
+                ids = new HashSet<>();
+                cache.put( valueAsString, ids );
+            }
+            ids.add( entityId );
+        }
+    }
+
+    private void addToCache( Collection<Long> ids, String key, Object value )
+    {
+        if ( this.cache == null )
+        {
+            return;
+        }
+
+        String valueAsString = value.toString();
+        LruCache<String, Collection<Long>> cache = this.cache.get( key );
+        if ( cache != null )
+        {
+            cache.put( valueAsString, ids );
+        }
+    }
+
+    private Collection<Long> getFromCache( String key, Object value )
+    {
+        if ( this.cache == null )
+        {
+            return null;
+        }
+
+        String valueAsString = value.toString();
+        LruCache<String, Collection<Long>> cache = this.cache.get( key );
+        if ( cache != null )
+        {
+            return cache.get( valueAsString );
+        }
+        return null;
+    }
+
+    @Override
+    public void updateOrAdd( long entityId, Map<String, Object> properties )
+    {
+        try
+        {
+            removeFromCache( entityId );
+            writer.deleteDocuments( type.idTermQuery( entityId ) );
+            add( entityId, properties );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    private void removeFromCache( long entityId ) throws IOException
+    {
+        IndexSearcher searcher = searcher();
+        Query query = type.idTermQuery( entityId );
+        TopDocs docs = searcher.search( query, 1 );
+        if ( docs.totalHits > 0 )
+        {
+            Document document = searcher.doc( docs.scoreDocs[0].doc );
+            for ( IndexableField field : document.getFields() )
+            {
+                String key = field.name();
+                Object value = field.stringValue();
+                removeFromCache( entityId, key, value );
+            }
+        }
+    }
+
+    private void removeFromCache( long entityId, String key, Object value )
+    {
+        if ( this.cache == null )
+        {
+            return;
+        }
+
+        String valueAsString = value.toString();
+        LruCache<String, Collection<Long>> cache = this.cache.get( key );
+        if ( cache != null )
+        {
+            Collection<Long> ids = cache.get( valueAsString );
+            if ( ids != null )
+            {
+                ids.remove( entityId );
+            }
+        }
+    }
+
+    private IndexWriter instantiateWriter( File directory )
+    {
+        try
+        {
+            IndexWriterConfig writerConfig = new IndexWriterConfig( LUCENE_VERSION, type.analyzer );
+            writerConfig.setRAMBufferSizeMB( determineGoodBufferSize( writerConfig.getRAMBufferSizeMB() ) );
+            IndexWriter writer = new IndexWriter( getDirectory( directory, identifier ), writerConfig );
+            return writer;
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    private double determineGoodBufferSize( double atLeast )
+    {
+        double heapHint = Runtime.getRuntime().maxMemory()/(1024*1024*14);
+        double result = Math.max( atLeast, heapHint );
+        return Math.min( result, 700 );
+    }
+
+    private IndexSearcher searcher()
+    {
+        IndexSearcher result = this.searcher;
+        try
+        {
+            if ( result == null || writerModified )
+            {
+                if ( result != null )
+                {
+                    result.getIndexReader().close();
+                }
+
+                IndexReader newReader = DirectoryReader.open( writer, true );
+                result = new IndexSearcher( newReader );
+                writerModified = false;
+            }
+            return result;
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+        finally
+        {
+            this.searcher = result;
+        }
+    }
+
+    private void closeWriter()
+    {
+        try
+        {
+            LuceneUtil.close( this.writer );
+        }
+        finally
+        {
+            this.writer = null;
+        }
+    }
+
+    private IndexHits<Long> query( Query query, final String key, final Object value )
+    {
+        if ( key == null || this.cache == null || !this.cache.containsKey( key ) )
+        {
+            return wrapIndexHits(SearchIterator.search( legacyIndexDocToId(), searcher(), query ));
+        }
+        else
+        {
+            return wrapIndexHits(new SearchIterator<Long>( legacyIndexDocToId(), searcher(), 100, query, null, false )
+            {
+                private final Collection<Long> ids = new ArrayList<>();
+
+                @Override
+                protected Long fetchNextOrNull()
+                {
+                    Long next = super.fetchNextOrNull();
+                    if(next != null)
+                    {
+                        ids.add( next );
+                        return next;
+                    }
+                    addToCache( ids, key, value );
+                    return null;
+                }
+            });
+        }
+    }
+
+    private IndexHits<Long> wrapIndexHits( final SearchIterator<Long> ids )
+    {
+        return new IndexHits<Long>()
+        {
+            @Override
+            public boolean hasNext()
+            {
+                return ids.hasNext();
+            }
+
+            @Override
+            public Long next()
+            {
+                return ids.next();
+            }
+
+            @Override
+            public void remove()
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public ResourceIterator<Long> iterator()
+            {
+                return this;
+            }
+
+            @Override
+            public int size()
+            {
+                return ids.approximateSize();
+            }
+
+            @Override
+            public void close()
+            {
+
+            }
+
+            @Override
+            public Long getSingle()
+            {
+                return ids.hasNext() ? ids.next() : null;
+            }
+
+            @Override
+            public float currentScore()
+            {
+                return 0;
+            }
+        };
+    }
+
+    private IndexHits<Long> wrapIndexHits( final Collection<Long> collection )
+    {
+        final Iterator<Long> ids = collection.iterator();
+        return new IndexHits<Long>()
+        {
+            @Override
+            public boolean hasNext()
+            {
+                return ids.hasNext();
+            }
+
+            @Override
+            public Long next()
+            {
+                return ids.next();
+            }
+
+            @Override
+            public void remove()
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public ResourceIterator<Long> iterator()
+            {
+                return this;
+            }
+
+            @Override
+            public int size()
+            {
+                return collection.size();
+            }
+
+            @Override
+            public void close()
+            {
+
+            }
+
+            @Override
+            public Long getSingle()
+            {
+                return ids.hasNext() ? ids.next() : null;
+            }
+
+            @Override
+            public float currentScore()
+            {
+                return 0;
+            }
+        };
+    }
+
+    @Override
+    public IndexHits<Long> get( String key, Object value )
+    {
+        Collection<Long> cached = getFromCache( key, value );
+        return cached != null ? wrapIndexHits( cached ) : query( type.get( key, value ), key, value );
+    }
+
+    @Override
+    public IndexHits<Long> query( String key, Object queryOrQueryObject )
+    {
+        return query( type.query( key, queryOrQueryObject, null ), null, null );
+    }
+
+    @Override
+    public IndexHits<Long> query( Object queryOrQueryObject )
+    {
+        return query( type.query( null, queryOrQueryObject, null ), null, null );
+    }
+
+    public void shutdown()
+    {
+        closeWriter();
+    }
+
+    private File getStoreDir( File dbStoreDir )
+    {
+        File dir = new File( dbStoreDir, "index" );
+        if ( !dir.exists() && !dir.mkdirs() )
+        {
+            throw new RuntimeException( "Unable to create directory path["
+                    + dir.getAbsolutePath() + "] for Neo4j store." );
+        }
+        return dir;
+    }
+
+    @Override
+    public void flush()
+    {
+        writerModified = true;
+    }
+
+    @Override
+    public void setCacheCapacity( String key, int size )
+    {
+        if ( this.cache == null )
+        {
+            this.cache = new HashMap<>();
+        }
+        LruCache<String, Collection<Long>> cache = this.cache.get( key );
+        if ( cache != null )
+        {
+            cache.resize( size );
+        }
+        else
+        {
+            cache = new LruCache<>( "Batch inserter cache for " + key, size );
+            this.cache.put( key, cache );
+        }
+    }
+}
