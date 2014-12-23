@@ -53,12 +53,12 @@ public class LogRotationControl
 
     public void forceEverything()
     {
-        indexingService.flushAll();
-        labelScanStore.force();
-        for ( IndexImplementation index : indexProviders )
-        {
-            index.force();
-        }
-        neoStore.flush();
+//        indexingService.flushAll();
+//        labelScanStore.force();
+//        for ( IndexImplementation index : indexProviders )
+//        {
+//            index.force();
+//        }
+//        neoStore.flush();
     }
 }
