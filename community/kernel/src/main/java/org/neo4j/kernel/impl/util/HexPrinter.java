@@ -307,7 +307,7 @@ public class HexPrinter
      */
     public static String hex( ByteBuffer bytes )
     {
-        return hex( bytes, 0, bytes.position() );
+        return hex( bytes, 0, bytes.limit() );
     }
 
     /**
