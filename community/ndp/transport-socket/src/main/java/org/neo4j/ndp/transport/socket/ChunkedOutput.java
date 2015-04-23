@@ -111,7 +111,7 @@ public class ChunkedOutput implements PackOutput
         if ( buffer != null && buffer.readableBytes() > 0 )
         {
             closeChunkIfOpen();
-            channel.writeAndFlush( buffer );
+            channel.writeAndFlush( buffer, channel.voidPromise() );
             newBuffer();
         }
         return this;

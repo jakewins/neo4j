@@ -225,10 +225,13 @@ public class PackStreamMessageFormatV1 implements MessageFormat
         private void packRawMap( Map<String,Object> map ) throws IOException
         {
             packer.packMapHeader( map.size() );
-            for ( Map.Entry<String,Object> entry : map.entrySet() )
+            if(map.size() > 0)
             {
-                packer.pack( entry.getKey() );
-                packValue( entry.getValue() );
+                for ( Map.Entry<String,Object> entry : map.entrySet() )
+                {
+                    packer.pack( entry.getKey() );
+                    packValue( entry.getValue() );
+                }
             }
         }
 

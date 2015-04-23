@@ -50,11 +50,13 @@ public class DocExchangeExample implements Iterable<DocExchangeExample.Event>
         }
     };
 
+
+
     public enum Type
     {
         CONNECT,
         DISCONNECT,
-        SEND
+        SEND;
     }
 
     public class Event
@@ -116,6 +118,11 @@ public class DocExchangeExample implements Iterable<DocExchangeExample.Event>
 
     private final List<Event> events = new ArrayList<>();
     private final String raw;
+
+    public String name()
+    {
+        return raw;
+    }
 
     public DocExchangeExample( String raw )
     {
