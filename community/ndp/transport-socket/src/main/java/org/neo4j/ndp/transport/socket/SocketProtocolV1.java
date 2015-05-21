@@ -54,7 +54,7 @@ public class SocketProtocolV1 implements SocketProtocol
     private final Log log;
     private final AtomicInteger inFlight = new AtomicInteger( 0 );
 
-    enum State
+    public enum State
     {
         AWAITING_CHUNK,
         IN_CHUNK,
@@ -174,6 +174,11 @@ public class SocketProtocolV1 implements SocketProtocol
         session.close();
     }
 
+    public State state()
+    {
+        return state;
+    }
+
     private void handleHeader( ChannelHandlerContext channelContext )
     {
         if(chunkSize == 0)
@@ -188,7 +193,7 @@ public class SocketProtocolV1 implements SocketProtocol
         }
     }
 
-    public void processCollectedMessage( final ChannelHandlerContext channelContext )
+    private void processCollectedMessage( final ChannelHandlerContext channelContext )
     {
         output.setTargetChannel( channelContext );
         try
@@ -209,6 +214,7 @@ public class SocketProtocolV1 implements SocketProtocol
 
     private void handleUnexpectedError( ChannelHandlerContext channelContext, Throwable e )
     {
+        e.printStackTrace();
         log.error( String.format( "Session %s: Unexpected error while processing message. Session will be " +
                                   "terminated: %s", session.key(), e.getMessage() ), e );
         try
