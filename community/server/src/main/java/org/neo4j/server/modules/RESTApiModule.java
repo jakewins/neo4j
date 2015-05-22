@@ -32,6 +32,7 @@ import org.neo4j.server.database.Database;
 import org.neo4j.server.guard.GuardingRequestFilter;
 import org.neo4j.server.plugins.PluginManager;
 import org.neo4j.server.rest.web.BatchOperationService;
+import org.neo4j.server.rest.web.CollectUserAgentFilter;
 import org.neo4j.server.rest.web.CypherService;
 import org.neo4j.server.rest.web.DatabaseMetadataService;
 import org.neo4j.server.rest.web.ExtensionService;
@@ -40,6 +41,8 @@ import org.neo4j.server.rest.web.RestfulGraphDatabase;
 import org.neo4j.server.rest.web.TransactionalService;
 import org.neo4j.server.web.ServerInternalSettings;
 import org.neo4j.server.web.WebServer;
+import org.neo4j.udc.UsageDataKeys;
+import org.neo4j.udc.UsageData;
 
 import static org.neo4j.server.JAXRSHelper.listFrom;
 
@@ -48,19 +51,23 @@ import static org.neo4j.server.JAXRSHelper.listFrom;
  */
 public class RESTApiModule implements ServerModule
 {
-    private PluginManager plugins;
     private final Config config;
     private final WebServer webServer;
     private final Database database;
-    private GuardingRequestFilter requestTimeLimitFilter;
+    private final UsageData usageData;
     private final LogProvider logProvider;
     private final Log log;
 
-    public RESTApiModule( WebServer webServer, Database database, Config config, LogProvider logProvider )
+    private PluginManager plugins;
+    private GuardingRequestFilter requestTimeLimitFilter;
+
+    public RESTApiModule( WebServer webServer, Database database, Config config, UsageData usageData,
+                          LogProvider logProvider )
     {
         this.webServer = webServer;
         this.config = config;
         this.database = database;
+        this.usageData = usageData;
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
     }
@@ -72,6 +79,7 @@ public class RESTApiModule implements ServerModule
         {
             URI restApiUri = restApiUri( );
 
+            webServer.addFilter( new CollectUserAgentFilter( usageData.get( UsageDataKeys.clientNames ) ), "/*" );
             webServer.addJAXRSClasses( getClassNames(), restApiUri.toString(), null );
             loadPlugins();
 
@@ -102,23 +110,25 @@ public class RESTApiModule implements ServerModule
         {
             webServer.removeJAXRSClasses( getClassNames(), restApiUri().toString() );
 
-        tearDownRequestTimeLimit();
-        unloadPlugins();
+            tearDownRequestTimeLimit();
+            unloadPlugins();
         }
         catch ( URISyntaxException e )
         {
-          log.warn( "Unable to unmount REST API", e );
+            log.warn( "Unable to unmount REST API", e );
         }
     }
 
-    private void tearDownRequestTimeLimit() {
+    private void tearDownRequestTimeLimit()
+    {
         if(requestTimeLimitFilter != null)
         {
             webServer.removeFilter(requestTimeLimitFilter, "/*");
         }
     }
 
-    private void setupRequestTimeLimit() {
+    private void setupRequestTimeLimit()
+    {
         Long limit = config.get( ServerSettings.webserver_limit_execution_time );
         
         if ( limit != null )
@@ -147,7 +157,8 @@ public class RESTApiModule implements ServerModule
         plugins = new PluginManager( config, logProvider );
     }
 
-    private void unloadPlugins() {
+    private void unloadPlugins()
+    {
         // TODO
     }
 

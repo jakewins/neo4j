@@ -36,6 +36,7 @@ import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.StoreLocker;
 import org.neo4j.kernel.StoreLockerLifecycleAdapter;
+import org.neo4j.kernel.Version;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.extension.KernelExtensions;
@@ -57,6 +58,8 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.udc.UsageDataKeys;
+import org.neo4j.udc.UsageData;
 
 /**
  * Platform module for {@link org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory}. This creates
@@ -115,6 +118,9 @@ public class PlatformModule
                 externalDependencies.settingsClasses(), externalDependencies.kernelExtensions() ) ) );
 
         this.storeDir = storeDir.getAbsoluteFile();
+
+        // Database system information, used by UDC
+        dependencies.satisfyDependency( new UsageData() );
 
         fileSystem = life.add( dependencies.satisfyDependency( createFileSystemAbstraction() ) );
 
@@ -175,6 +181,15 @@ public class PlatformModule
                 externalDependencies.kernelExtensions(),
                 dependencies,
                 UnsatisfiedDependencyStrategies.fail() ) );
+
+        publishPlatformInfo( dependencies.resolveDependency( UsageData.class ) );
+    }
+
+    private void publishPlatformInfo( UsageData usageData )
+    {
+        usageData.set( UsageDataKeys.version, Version.getKernel().getReleaseVersion() );
+        usageData.set( UsageDataKeys.revision, Version.getKernel().getRevision() );
+        usageData.set( UsageDataKeys.operationalMode, UsageDataKeys.OperationalMode.ha );
     }
 
     public LifeSupport createLife()

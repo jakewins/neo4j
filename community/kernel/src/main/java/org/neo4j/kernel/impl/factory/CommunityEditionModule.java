@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.factory;
 
+import java.io.File;
+
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
@@ -64,8 +66,8 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleListener;
 import org.neo4j.kernel.lifecycle.LifecycleStatus;
-
-import java.io.File;
+import org.neo4j.udc.UsageData;
+import org.neo4j.udc.UsageDataKeys;
 
 /**
  * This implementation of {@link org.neo4j.kernel.impl.factory.EditionModule} creates the implementations of services
@@ -90,7 +92,7 @@ public class CommunityEditionModule
         idGeneratorFactory = deps.satisfyDependency( createIdGeneratorFactory() );
 
         propertyKeyTokenHolder = life.add( deps.satisfyDependency( new PropertyKeyTokenHolder(
-                createPropertyKeyCreator( config, dataSourceManager, idGeneratorFactory ) ) ));
+                createPropertyKeyCreator( config, dataSourceManager, idGeneratorFactory ) ) ) );
         labelTokenHolder = life.add( deps.satisfyDependency(new LabelTokenHolder( createLabelIdCreator( config,
                 dataSourceManager, idGeneratorFactory ) ) ));
         relationshipTypeTokenHolder = life.add( deps.satisfyDependency(new RelationshipTypeTokenHolder(
@@ -109,6 +111,39 @@ public class CommunityEditionModule
         upgradeConfiguration = new ConfigMapUpgradeConfiguration( config );
 
         registerRecovery( config.get( GraphDatabaseFacadeFactory.Configuration.editionName), life, deps );
+
+        publishEditionInfo( deps.resolveDependency( UsageData.class ) );
+    }
+
+    private void publishEditionInfo( UsageData usageData )
+    {
+        usageData.set( UsageDataKeys.edition, determineEdition() );
+        usageData.set( UsageDataKeys.operationalMode, UsageDataKeys.OperationalMode.single );
+    }
+
+    private UsageDataKeys.Edition determineEdition()
+    {
+        // Currently, a user can be running enterprise or advanced edition and end up using this module to bootstrap
+        // So, until we've organized this differently, we use introspection to tell which edition is running
+        try
+        {
+            getClass().getClassLoader().loadClass( "org.neo4j.kernel.ha.HighlyAvailableGraphDatabase" );
+            return UsageDataKeys.Edition.enterprise;
+        }
+        catch ( ClassNotFoundException e )
+        {
+            // Not Enterprise
+        }
+        try
+        {
+            getClass().getClassLoader().loadClass( "org.neo4j.management.Neo4jManager" );
+            return UsageDataKeys.Edition.advanced;
+        }
+        catch ( ClassNotFoundException e )
+        {
+            // Not Advanced
+        }
+        return UsageDataKeys.Edition.community;
     }
 
     public static CommitProcessFactory createCommitProcessFactory()

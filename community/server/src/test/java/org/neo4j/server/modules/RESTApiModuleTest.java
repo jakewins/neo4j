@@ -19,17 +19,18 @@
  */
 package org.neo4j.server.modules;
 
+import org.junit.Test;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.junit.Test;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.web.WebServer;
+import org.neo4j.udc.UsageData;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyCollection;
@@ -51,7 +52,8 @@ public class RESTApiModuleTest
 
         Database db = mock(Database.class);
 
-        RESTApiModule module = new RESTApiModule( webServer, db, config, NullLogProvider.getInstance() );
+        RESTApiModule module = new RESTApiModule( webServer, db, config, new UsageData(),
+                                                  NullLogProvider.getInstance() );
         module.start();
 
         verify( webServer ).addJAXRSClasses( any( List.class ), anyString(), anyCollection() );

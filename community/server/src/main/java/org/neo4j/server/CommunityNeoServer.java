@@ -53,6 +53,7 @@ import org.neo4j.server.rest.management.console.ConsoleService;
 import org.neo4j.server.web.Jetty9WebServer;
 import org.neo4j.server.web.ServerInternalSettings;
 import org.neo4j.server.web.WebServer;
+import org.neo4j.udc.UsageData;
 
 import static org.neo4j.server.database.LifecycleManagingDatabase.lifecycleManagingDatabase;
 
@@ -101,7 +102,8 @@ public class CommunityNeoServer extends AbstractNeoServer
     {
         return Arrays.asList(
                 new DBMSModule( webServer ),
-                new RESTApiModule( webServer, database, configurator.configuration(), logProvider ),
+                new RESTApiModule( webServer, database, configurator.configuration(),
+                        resolveDependency( UsageData.class ), logProvider ),
                 new ManagementApiModule( webServer, configurator.configuration() ),
                 new ThirdPartyJAXRSModule( webServer, configurator.configuration(), logProvider, this ),
                 new WebAdminModule( webServer ),
