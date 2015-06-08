@@ -392,7 +392,7 @@ public abstract class AbstractNeoServer implements NeoServer
     // TODO: Once WebServer is fully implementing LifeCycle,
     // it should manage all but static (eg. unchangeable during runtime)
     // configuration itself.
-    private void configureWebServer()
+    private void configureWebServer() throws Exception
     {
         int webServerPort = getWebServerPort();
         String webServerAddr = getWebServerAddress();
@@ -530,13 +530,13 @@ public abstract class AbstractNeoServer implements NeoServer
      * permissions etc), like you do with Apache Web Server. On each startup
      * we set up a key store for them with their certificate in it.
      */
-    protected KeyStoreInformation initHttpsKeyStore()
+    protected KeyStoreInformation initHttpsKeyStore() throws Exception
     {
         File keystorePath = configurator.configuration().get( ServerSettings.webserver_keystore_path );
 
-        File privateKeyPath = configurator.configuration().get( ServerSettings.webserver_https_key_path );
+        File privateKeyPath = configurator.configuration().get( ServerSettings.tls_key_file );
 
-        File certificatePath = configurator.configuration().get( ServerSettings.webserver_https_cert_path );
+        File certificatePath = configurator.configuration().get( ServerSettings.tls_certificate_file );
 
         if ( !certificatePath.exists() )
         {

@@ -30,10 +30,10 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.ssl.SslContext;
 
 import org.neo4j.collection.primitive.PrimitiveLongObjectMap;
 import org.neo4j.function.BiConsumer;
-import org.neo4j.function.Factory;
 import org.neo4j.function.Function;
 import org.neo4j.helpers.HostnamePort;
 
@@ -46,11 +46,14 @@ public class WebSocketTransport implements BiConsumer<EventLoopGroup,EventLoopGr
     private static final int MAX_WEBSOCKET_HANDSHAKE_SIZE = 65536;
 
     private final HostnamePort address;
+    private final SslContext sslCtx;
     private final PrimitiveLongObjectMap<Function<Channel, SocketProtocol>> availableVersions;
 
-    public WebSocketTransport( HostnamePort address, PrimitiveLongObjectMap<Function<Channel, SocketProtocol>> protocolVersions )
+    public WebSocketTransport( HostnamePort address, SslContext sslCtx,
+            PrimitiveLongObjectMap<Function<Channel, SocketProtocol>> protocolVersions )
     {
         this.address = address;
+        this.sslCtx = sslCtx;
         this.availableVersions = protocolVersions;
     }
 
@@ -66,6 +69,8 @@ public class WebSocketTransport implements BiConsumer<EventLoopGroup,EventLoopGr
                     @Override
                     public void initChannel( SocketChannel ch ) throws Exception
                     {
+                        ch.config().setAllocator( PooledByteBufAllocator.DEFAULT );
+                        ch.pipeline().addLast( sslCtx.newHandler( ch.alloc() ) );
                         ch.pipeline().addLast(
                                 new HttpServerCodec(),
                                 new HttpObjectAggregator( MAX_WEBSOCKET_HANDSHAKE_SIZE ),

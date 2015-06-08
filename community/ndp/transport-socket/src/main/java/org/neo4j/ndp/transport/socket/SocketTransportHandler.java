@@ -28,11 +28,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import org.neo4j.collection.primitive.PrimitiveLongObjectMap;
-import org.neo4j.function.Factory;
 import org.neo4j.function.Function;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.neo4j.collection.primitive.Primitive.longObjectMap;
 
 /**
  * Handles incoming chunks of data for a given client channel. This initially will negotiate a protocol version to use,

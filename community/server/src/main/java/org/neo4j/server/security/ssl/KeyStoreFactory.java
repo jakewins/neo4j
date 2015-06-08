@@ -42,25 +42,16 @@ public class KeyStoreFactory
     }
 
     public KeyStoreInformation createKeyStore( File keyStorePath, File privateKeyPath, File certificatePath )
+            throws Exception
     {
-        try
-        {
+        char[] keyStorePassword = getRandomChars( 50 );
+        char[] keyPassword = getRandomChars( 50 );
 
-            char[] keyStorePassword = getRandomChars( 50 );
-            char[] keyPassword = getRandomChars( 50 );
+        createKeyStore( keyStorePath, keyStorePassword, keyPassword,
+                privateKeyPath, certificatePath );
 
-            createKeyStore( keyStorePath, keyStorePassword, keyPassword,
-                    privateKeyPath, certificatePath );
-
-            return new KeyStoreInformation( keyStorePath.getAbsolutePath(),
-                    keyStorePassword, keyPassword );
-
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException(
-                    "Unable to setup keystore for SSL certificate, see nested exception.", e );
-        }
+        return new KeyStoreInformation( keyStorePath.getAbsolutePath(),
+                keyStorePassword, keyPassword );
     }
 
     private void createKeyStore( File keyStorePath, char[] keyStorePassword,
@@ -70,43 +61,25 @@ public class KeyStoreFactory
             InvalidKeySpecException, NoSuchPaddingException,
             InvalidAlgorithmParameterException
     {
-        FileOutputStream fis = null;
-        try
+        if ( keyStorePath.exists() )
         {
-
-            if ( keyStorePath.exists() )
-            {
-                keyStorePath.delete();
-            }
-
-            ensureFolderExists( keyStorePath.getParentFile() );
-
-            KeyStore keyStore = KeyStore.getInstance( "JKS" );
-            keyStore.load( null, keyStorePassword );
-
-            keyStore.setKeyEntry(
-                    "key",
-                    sslCertificateFactory.loadPrivateKey( privateKeyFile ),
-                    keyPassword,
-                    sslCertificateFactory.loadCertificates( certFile ) );
-
-            fis = new FileOutputStream( keyStorePath.getAbsolutePath() );
-            keyStore.store( fis, keyStorePassword );
-
+            keyStorePath.delete();
         }
-        finally
+
+        ensureFolderExists( keyStorePath.getParentFile() );
+
+        KeyStore keyStore = KeyStore.getInstance( "JKS" );
+        keyStore.load( null, keyStorePassword );
+
+        keyStore.setKeyEntry(
+                "key",
+                sslCertificateFactory.loadPrivateKey( privateKeyFile ),
+                keyPassword,
+                sslCertificateFactory.loadCertificates( certFile ) );
+
+        try(FileOutputStream out = new FileOutputStream( keyStorePath.getAbsolutePath() ))
         {
-            if ( fis != null )
-            {
-                try
-                {
-                    fis.close();
-                }
-                catch ( IOException e )
-                {
-                    throw new RuntimeException( e );
-                }
-            }
+            keyStore.store( out, keyStorePassword );
         }
     }
 

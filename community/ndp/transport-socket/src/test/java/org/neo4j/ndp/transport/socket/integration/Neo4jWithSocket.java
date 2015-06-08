@@ -20,6 +20,9 @@
 package org.neo4j.ndp.transport.socket.integration;
 
 import io.netty.channel.Channel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -80,9 +83,13 @@ public class Neo4jWithSocket implements TestRule
                     }
                 } );
 
+                SelfSignedCertificate ssc = new SelfSignedCertificate();
+                SslContext sslCtx = SslContextBuilder.forServer( ssc.certificate(), ssc.privateKey() ).build();
+
                 // Start services
-                socketTransport = new SocketTransport( new HostnamePort( "localhost:7687" ), availableVersions );
-                wsTransport = new WebSocketTransport( new HostnamePort( "localhost:7688" ), availableVersions );
+                socketTransport = new SocketTransport( new HostnamePort( "localhost:7687" ), sslCtx,
+                        availableVersions );
+                wsTransport = new WebSocketTransport( new HostnamePort( "localhost:7688" ), sslCtx, availableVersions );
                 life.add( new NettyServer( asList(
                         socketTransport,
                         wsTransport )) );

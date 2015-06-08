@@ -20,6 +20,9 @@
 package org.neo4j.ext;
 
 import io.netty.channel.Channel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import org.neo4j.collection.primitive.PrimitiveLongObjectMap;
 import org.neo4j.function.Function;
@@ -112,6 +115,9 @@ public class NDPKernelExtension extends KernelExtensionFactory<NDPKernelExtensio
                     dependencies.scheduler(),
                     logging ) );
 
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            SslContext sslCtx = SslContextBuilder.forServer( ssc.certificate(), ssc.privateKey() ).build();
+
             PrimitiveLongObjectMap<Function<Channel, SocketProtocol>> availableVersions = longObjectMap();
             availableVersions.put( SocketProtocolV1.VERSION, new Function<Channel, SocketProtocol>()
             {
@@ -124,8 +130,8 @@ public class NDPKernelExtension extends KernelExtensionFactory<NDPKernelExtensio
 
             // Start services
             life.add( new NettyServer( asList(
-                    new SocketTransport( socketAddress, availableVersions ),
-                    new WebSocketTransport( webSocketAddress, availableVersions ) ) ) );
+                    new SocketTransport( socketAddress, sslCtx, availableVersions ),
+                    new WebSocketTransport( webSocketAddress, sslCtx, availableVersions ) ) ) );
             log.info( "NDP Server extension loaded." );
         }
 

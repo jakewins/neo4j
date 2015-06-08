@@ -19,10 +19,13 @@
  */
 package org.neo4j.server.security.ssl;
 
+import org.bouncycastle.jce.X509Principal;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.x509.X509V3CertificateGenerator;
+
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -32,10 +35,13 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.security.SignatureException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.spec.InvalidKeySpecException;
@@ -43,12 +49,7 @@ import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Collection;
 import java.util.Date;
-
 import javax.crypto.NoSuchPaddingException;
-
-import org.bouncycastle.jce.X509Principal;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.x509.X509V3CertificateGenerator;
 
 public class SslCertificateFactory {
 
@@ -58,78 +59,46 @@ public class SslCertificateFactory {
     {
         Security.addProvider(new BouncyCastleProvider());
     }
-    
-    public void createSelfSignedCertificate(File certificatePath,
-            File privateKeyPath, String hostName)
+
+    public void createSelfSignedCertificate(File certificatePath, File privateKeyPath, String hostName)
+            throws NoSuchAlgorithmException, CertificateEncodingException, NoSuchProviderException, InvalidKeyException,
+            SignatureException, IOException
     {
-        FileOutputStream fos = null;
-        try {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance( KEY_ENCRYPTION );
+        keyPairGenerator.initialize(1024);
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
 
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator
-                    .getInstance(KEY_ENCRYPTION);
-            keyPairGenerator.initialize(1024);
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
+        X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
 
-            X509V3CertificateGenerator certGenertor = new X509V3CertificateGenerator();
+        certGen.setSerialNumber( BigInteger.valueOf( new SecureRandom().nextInt() ).abs() );
+        certGen.setIssuerDN( new X509Principal( "CN=" + hostName + ", OU=None, O=None L=None, C=None" ) );
+        certGen.setNotBefore( new Date( System.currentTimeMillis() - 1000L * 60 * 60 * 24 * 30 ) );
+        certGen.setNotAfter( new Date( System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 365 * 10) ) );
+        certGen.setSubjectDN( new X509Principal( "CN=" + hostName + ", OU=None, O=None L=None, C=None" ) );
 
-            certGenertor.setSerialNumber(BigInteger.valueOf(
-                    new SecureRandom().nextInt()).abs());
-            certGenertor.setIssuerDN(new X509Principal("CN=" + hostName
-                    + ", OU=None, O=None L=None, C=None"));
-            certGenertor.setNotBefore(new Date(System.currentTimeMillis()
-                    - 1000L * 60 * 60 * 24 * 30));
-            certGenertor.setNotAfter(new Date(System.currentTimeMillis()
-                    + (1000L * 60 * 60 * 24 * 365 * 10)));
-            certGenertor.setSubjectDN(new X509Principal("CN=" + hostName
-                    + ", OU=None, O=None L=None, C=None"));
+        certGen.setPublicKey( keyPair.getPublic() );
+        certGen.setSignatureAlgorithm( "MD5WithRSAEncryption" );
 
-            certGenertor.setPublicKey(keyPair.getPublic());
-            certGenertor.setSignatureAlgorithm("MD5WithRSAEncryption");
+        Certificate certificate = certGen.generate( keyPair.getPrivate(), "BC");
 
-            Certificate certificate = certGenertor.generate(
-                    keyPair.getPrivate(), "BC");            
+        ensureFolderExists(certificatePath.getParentFile());
+        ensureFolderExists(privateKeyPath.getParentFile());
 
-            ensureFolderExists(certificatePath.getParentFile());
-            ensureFolderExists(privateKeyPath.getParentFile());
-            
-            fos = new FileOutputStream(certificatePath);
-            fos.write(certificate.getEncoded());
-            fos.close();
-
-            fos = new FileOutputStream(privateKeyPath);
-            fos.write(keyPair.getPrivate().getEncoded());
-            fos.close();
-
-        } catch (Exception e)
+        try(FileOutputStream certStream = new FileOutputStream(certificatePath);
+            FileOutputStream keyStream = new FileOutputStream( privateKeyPath ))
         {
-            throw new RuntimeException("Unable to create self signed SSL certificate, please see nested exception.", e);
-        } finally {
-            if (fos != null) {
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+            certStream.write( certificate.getEncoded() );
+            keyStream.write( keyPair.getPrivate().getEncoded() );
         }
     }
 
-    public Certificate[] loadCertificates(File certFile)
-            throws CertificateException, FileNotFoundException {
-        FileInputStream fis = null;
-        try {
-            fis = new FileInputStream(certFile);
-            Collection<? extends Certificate> certificates = CertificateFactory.getInstance(CERTIFICATE_TYPE).generateCertificates(
-                    fis);
-            return certificates.toArray(new Certificate[]{});
-        } finally {
-            if (fis != null) {
-                try {
-                    fis.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+    public Certificate[] loadCertificates(File certFile) throws CertificateException, IOException
+    {
+        try(FileInputStream in = new FileInputStream(certFile))
+        {
+            CertificateFactory factory = CertificateFactory.getInstance( CERTIFICATE_TYPE );
+            Collection<? extends Certificate> certificates = factory.generateCertificates( in );
+            return certificates.toArray(new Certificate[certificates.size()]);
         }
     }
 
@@ -137,35 +106,22 @@ public class SslCertificateFactory {
             throws IOException, NoSuchAlgorithmException,
             InvalidKeySpecException, NoSuchPaddingException,
             InvalidKeyException, InvalidAlgorithmParameterException 
-            {
-        DataInputStream dis = null;
-        try 
+    {
+        try(DataInputStream in = new DataInputStream(new FileInputStream(privateKeyFile)))
         {
-            FileInputStream fis = new FileInputStream(privateKeyFile);
-            dis = new DataInputStream(fis);
             byte[] keyBytes = new byte[(int) privateKeyFile.length()];
-            dis.readFully(keyBytes);
+            in.readFully( keyBytes );
 
             KeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
 
             return KeyFactory.getInstance(KEY_ENCRYPTION).generatePrivate(keySpec);
-        } catch (FileNotFoundException e ) 
-        {
-            throw new IOException("Could not find private key file to use for SSL support, see nested exception.", e);
-        } finally 
-        {
-            if (dis != null) {
-                try {
-                    dis.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
         }
     }
 
-    private void ensureFolderExists(File path) {
-        if(!path.exists()) {
+    private void ensureFolderExists(File path)
+    {
+        if(!path.exists())
+        {
             path.mkdirs();
         }
     }
