@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -79,6 +80,28 @@ public class SocketTransportHandler extends ChannelInboundHandlerAdapter
     public void handlerRemoved( ChannelHandlerContext ctx ) throws Exception
     {
         close();
+    }
+
+    @Override
+    public void userEventTriggered( ChannelHandlerContext ctx, Object evt ) throws Exception
+    {
+        if( evt instanceof SslHandshakeCompletionEvent )
+        {
+            if ( !((SslHandshakeCompletionEvent) evt).isSuccess() )
+            {
+                //handshake failed
+                //TODO downgrade to normal connection and send 0, 0, 0, 0 out
+//                ctx.writeAndFlush( wrappedBuffer( new byte[]{0, 0, 0, 0} ) )
+//                        .sync()
+//                        .channel()
+//                        .close();
+            }
+            // TODO another way to know the handshake result is
+//            ChannelPipeline p = ...;
+//            SslHandler sslHandler = p.get(SslHandler.class);
+//            sslHandler.handshakeFuture().addListener(new FutureListener<Channel> { ... });
+        }
+        ctx.fireUserEventTriggered( evt ); // TODO this will call ctx.close automatically
     }
 
     private void close()
