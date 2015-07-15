@@ -1,13 +1,24 @@
 package org.neo4j.kernel.impl.api.integrationtest;
 
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Iterator;
 
+import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.SchemaWriteOperations;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 
+import static java.util.Arrays.asList;
+import static junit.framework.TestCase.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
 import static org.neo4j.kernel.api.procedure.ProcedureSignature.Neo4jType.INTEGER;
 import static org.neo4j.kernel.api.procedure.ProcedureSignature.Neo4jType.TEXT;
 import static org.neo4j.kernel.api.procedure.ProcedureSignature.procedureSignature;
@@ -19,18 +30,44 @@ public class ProceduresKernelIT extends KernelIntegrationTest
     {
         // Given
         SchemaWriteOperations ops = schemaWriteOperationsInNewTransaction();
+        ProcedureSignature signature = procedureSignature( new String[]{"neo4j"}, "exampleProc" )
+                .in( "name", TEXT )
+                .out( "age", INTEGER ).build();
 
         // When
-        ops.procedureCreate( procedureSignature( new String[]{"neo4j"}, "exampleProc" )
-                        .in( "name", TEXT )
-                        .out( "age", INTEGER ).build(), "js", streamOf(
-                        "{\n" +
-                        "  yield record(1);\n" +
-                        "}\n" ) );
+        ops.procedureCreate( signature, "js", streamOf( "yield record(1);\n" ) );
 
         // Then
-//        assertThat( proc.language(), equalTo( "js" ) );
+        assertThat( asCollection( ops.proceduresGetAll() ),
+                Matchers.<Collection<ProcedureSignature>>equalTo( asList( signature ) ) );
 
+    }
+
+    @Test
+    public void shouldBeAbleToInvokeSimpleProcedure() throws Throwable
+    {
+        // Given
+        ProcedureSignature signature = procedureSignature( new String[]{"neo4j"}, "exampleProc" )
+                .in( "name", TEXT )
+                .out( "name", TEXT ).build();
+
+        // Create a procedure
+        {
+            SchemaWriteOperations ops = schemaWriteOperationsInNewTransaction();
+
+            ops.procedureCreate( signature, "js", streamOf( "yield record(name);\n" ) );
+            commit();
+        }
+
+        ReadOperations ops = readOperationsInNewTransaction();
+
+        // When
+        Iterator<Object[]> res = ops.procedureCall( signature, new Object[]{"hello"} );
+
+        // Then
+        assertTrue( res.hasNext() );
+        assertEquals( new Object[]{"hello"}, res.next() );
+        assertFalse( res.hasNext() );
     }
 
     private InputStream streamOf( String s )

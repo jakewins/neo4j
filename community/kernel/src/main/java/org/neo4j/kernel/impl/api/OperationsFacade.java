@@ -56,6 +56,7 @@ import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
@@ -72,6 +73,8 @@ import org.neo4j.kernel.impl.api.operations.SchemaStateOperations;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
 import org.neo4j.kernel.impl.core.Token;
 import org.neo4j.kernel.impl.locking.Locks;
+
+import static org.neo4j.helpers.collection.Iterables.map;
 
 public class OperationsFacade implements ReadOperations, DataWriteOperations, SchemaWriteOperations
 {
@@ -507,6 +510,20 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     {
         statement.assertOpen();
         return schemaRead().indexGetOwningUniquenessConstraintId( statement, index );
+    }
+
+    @Override
+    public Iterator<ProcedureSignature> proceduresGetAll()
+    {
+        statement.assertOpen();
+        return map( new Function<ProcedureDescriptor,ProcedureSignature>()
+        {
+            @Override
+            public ProcedureSignature apply( ProcedureDescriptor o )
+            {
+                return o.signature();
+            }
+        }, schemaRead().proceduresGetAll() );
     }
 
     @Override
