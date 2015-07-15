@@ -137,6 +137,7 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
     private DiffSets<IndexDescriptor> indexChanges;
     private DiffSets<IndexDescriptor> constraintIndexChanges;
     private DiffSets<PropertyConstraint> constraintsChanges;
+    private DiffSets<ProcedureDescriptor> procedureChanges;
 
     private PropertyChanges propertyChangesForNodes;
 
@@ -275,6 +276,11 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
             constraintsChanges.accept( constraintsVisitor( visitor ) );
         }
 
+        if( procedureChanges != null )
+        {
+            procedureChanges.accept( procedureVisitor( visitor ) );
+        }
+
         if ( createdLabelTokens != null )
         {
             for ( Map.Entry<Integer, String> entry : createdLabelTokens.entrySet() )
@@ -360,6 +366,24 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
             protected void visitAddedRelationship( long relationshipId, int type, long startNode, long endNode )
             {
                 visitor.visitCreatedRelationship( relationshipId, type, startNode, endNode );
+            }
+        };
+    }
+
+    private static DiffSetsVisitor<ProcedureDescriptor> procedureVisitor( final TxStateVisitor visitor )
+    {
+        return new DiffSetsVisitor<ProcedureDescriptor>()
+        {
+            @Override
+            public void visitAdded( ProcedureDescriptor element )
+            {
+                visitor.visitCreatedProcedure( element );
+            }
+
+            @Override
+            public void visitRemoved( ProcedureDescriptor element )
+            {
+                visitor.visitDroppedProcedure( element.signature() );
             }
         };
     }
@@ -844,16 +868,29 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
         return LABEL_STATE.get( this, labelId ).nodeDiffSets();
     }
 
-    @Override
-    public void procedureDoDrop( ProcedureSignature procedure )
+    private DiffSets<ProcedureDescriptor> procedureChanges()
     {
-
+        return procedureChanges == null ? procedureChanges = new DiffSets<>() : procedureChanges;
     }
 
     @Override
-    public ProcedureDescriptor procedureDoAdd( ProcedureSignature signature, String language, InputStream body )
+    public void procedureDoDrop( ProcedureSignature procedure )
     {
-        return new ProcedureDescriptor( signature, language, body );
+        procedureChanges().remove( new ProcedureDescriptor( procedure, null, null ) );
+        hasChanges = true;
+    }
+
+    @Override
+    public void procedureDoAdd( ProcedureSignature signature, String language, InputStream body )
+    {
+        procedureChanges().add( new ProcedureDescriptor( signature, language, body ) );
+        hasChanges = true;
+    }
+
+    @Override
+    public Iterator<ProcedureDescriptor> augmentProcedures( Iterator<ProcedureDescriptor> procedures )
+    {
+        return procedureChanges != null ? procedureChanges.apply( procedures ) : procedures;
     }
 
     @Override

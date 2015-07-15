@@ -623,15 +623,19 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public Iterator<ProcedureDescriptor> proceduresGetAll()
+    public Iterator<ProcedureDescriptor> proceduresGetAll( KernelStatement statement )
     {
-        return null;
+        if( statement.hasTxStateWithChanges() )
+        {
+            return statement.txState().augmentProcedures( statement.getStoreStatement().proceduresGetAll() );
+        }
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature )
+    public ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature )
     {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override

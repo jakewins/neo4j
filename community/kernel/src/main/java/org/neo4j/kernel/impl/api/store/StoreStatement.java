@@ -19,12 +19,16 @@
  */
 package org.neo4j.kernel.impl.api.store;
 
+import java.util.Iterator;
+
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.cursor.LabelCursor;
 import org.neo4j.kernel.api.cursor.NodeCursor;
 import org.neo4j.kernel.api.cursor.PropertyCursor;
 import org.neo4j.kernel.api.cursor.RelationshipCursor;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.impl.store.NeoStore;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
@@ -166,6 +170,11 @@ public class StoreStatement
     {
         neoStore.assertOpen();
         return iteratorRelationshipCursor.get().init( iterator );
+    }
+
+    public Iterator<ProcedureDescriptor> proceduresGetAll()
+    {
+        return IteratorUtil.emptyIterator();
     }
 
     @Override

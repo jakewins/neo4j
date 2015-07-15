@@ -26,7 +26,6 @@ import org.neo4j.kernel.api.constraints.MandatoryPropertyConstraint;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
@@ -109,5 +108,5 @@ public interface TransactionState extends ReadableTxState
 
     void procedureDoDrop( ProcedureSignature procedure );
 
-    ProcedureDescriptor procedureDoAdd( ProcedureSignature signature, String language, InputStream body );
+    void procedureDoAdd( ProcedureSignature signature, String language, InputStream body );
 }

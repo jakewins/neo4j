@@ -28,7 +28,6 @@ import org.junit.rules.TestRule;
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,6 +37,7 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
@@ -47,6 +47,7 @@ import org.neo4j.kernel.impl.util.diffsets.ReadableDiffSets;
 import org.neo4j.test.RandomizedTestRule;
 import org.neo4j.test.RepeatRule;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -361,7 +362,7 @@ public class TxStateTest
 
         // Then
         assertThat( IteratorUtil.asList( state.nodeRelationshipTypes( startNode ) ),
-                    equalTo( Arrays.asList( relType ) ) );
+                    equalTo( asList( relType ) ) );
     }
 
     @Test
@@ -429,7 +430,8 @@ public class TxStateTest
         // Then
         GatheringVisitor visitor = new GatheringVisitor();
         state.accept( visitor );
-//        assertThat( visitor.procedureChanges(), equalTo( ));
+        assertThat( visitor.proceduresCreated, equalTo( asList( new ProcedureDescriptor( signature, "js", body ) )));
+        assertThat( visitor.proceduresDropped.size(), equalTo( 0 ));
     }
 
     @Test

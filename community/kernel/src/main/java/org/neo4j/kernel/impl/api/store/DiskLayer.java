@@ -196,7 +196,6 @@ public class DiskLayer implements StoreReadLayer
         return nodeListRelationships( statement, nodeId, direction, null );
     }
 
-    @Override
     public RelationshipIterator nodeListRelationships( final StoreStatement statement,
             long nodeId,
             Direction direction,
@@ -757,12 +756,6 @@ public class DiskLayer implements StoreReadLayer
             throw new EntityNotFoundException( EntityType.RELATIONSHIP, relationshipId );
         }
         relationshipVisitor.visit( relationshipId, record.getType(), record.getFirstNode(), record.getSecondNode() );
-    }
-
-    @Override
-    public long highestNodeIdInUse()
-    {
-        return nodeStore.getHighestPossibleIdInUse();
     }
 
     @Override

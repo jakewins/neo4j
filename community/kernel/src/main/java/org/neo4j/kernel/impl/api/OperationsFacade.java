@@ -523,7 +523,7 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
             {
                 return o.signature();
             }
-        }, schemaRead().proceduresGetAll() );
+        }, schemaRead().proceduresGetAll( statement ) );
     }
 
     @Override

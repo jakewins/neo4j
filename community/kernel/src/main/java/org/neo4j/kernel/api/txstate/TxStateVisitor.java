@@ -27,6 +27,8 @@ import org.neo4j.kernel.api.constraints.MandatoryPropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.impl.api.state.RelationshipChangesForNode;
 
@@ -69,6 +71,10 @@ public interface TxStateVisitor
     void visitAddedMandatoryPropertyConstraint( MandatoryPropertyConstraint element );
 
     void visitRemovedMandatoryPropertyConstraint( MandatoryPropertyConstraint element );
+
+    void visitCreatedProcedure( ProcedureDescriptor procedure );
+
+    void visitDroppedProcedure( ProcedureSignature signature );
 
     void visitCreatedLabelToken( String name, int id );
 
@@ -235,6 +241,24 @@ public interface TxStateVisitor
             if ( next != null )
             {
                 next.visitRemovedMandatoryPropertyConstraint( element );
+            }
+        }
+
+        @Override
+        public void visitCreatedProcedure( ProcedureDescriptor procedure )
+        {
+            if( next != null )
+            {
+                next.visitCreatedProcedure( procedure );
+            }
+        }
+
+        @Override
+        public void visitDroppedProcedure( ProcedureSignature signature )
+        {
+            if( next != null )
+            {
+                next.visitDroppedProcedure( signature );
             }
         }
 

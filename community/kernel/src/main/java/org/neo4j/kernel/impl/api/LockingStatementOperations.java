@@ -339,15 +339,15 @@ public class LockingStatementOperations implements
     }
 
     @Override
-    public Iterator<ProcedureDescriptor> proceduresGetAll()
+    public Iterator<ProcedureDescriptor> proceduresGetAll( KernelStatement statement )
     {
-        return null;
+        return schemaReadDelegate.proceduresGetAll( statement );
     }
 
     @Override
-    public ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature )
+    public ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature )
     {
-        return null;
+        return schemaReadDelegate.procedureGetBySignature( statement, signature );
     }
 
     @Override

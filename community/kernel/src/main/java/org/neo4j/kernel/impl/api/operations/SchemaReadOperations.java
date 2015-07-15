@@ -108,9 +108,10 @@ public interface SchemaReadOperations
      */
     long indexGetCommittedId( KernelStatement state, IndexDescriptor index, SchemaStorage.IndexRuleKind constraint ) throws SchemaRuleNotFoundException;
 
-    /** List all defined procedures, given the current transactional context */
-    Iterator<ProcedureDescriptor> proceduresGetAll();
+    /** List all defined procedures, given the current transactional context
+     * @param kernelStatement*/
+    Iterator<ProcedureDescriptor> proceduresGetAll( KernelStatement kernelStatement );
 
     /** Load a procedure description given a signature */
-    ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature );
+    ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature );
 }

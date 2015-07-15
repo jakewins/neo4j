@@ -61,9 +61,6 @@ public interface StoreReadLayer
             Direction direction )
             throws EntityNotFoundException;
 
-    RelationshipIterator nodeListRelationships( StoreStatement statement, long nodeId, Direction direction,
-            int[] relTypes ) throws EntityNotFoundException;
-
     int nodeGetDegree( StoreStatement statement, long nodeId, Direction direction )
             throws EntityNotFoundException;
 
@@ -151,8 +148,6 @@ public interface StoreReadLayer
 
     <EXCEPTION extends Exception> void relationshipVisit( long relationshipId,
             RelationshipVisitor<EXCEPTION> relationshipVisitor ) throws EntityNotFoundException, EXCEPTION;
-
-    long highestNodeIdInUse();
 
     PrimitiveLongIterator nodesGetAll();
 

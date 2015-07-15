@@ -49,4 +49,34 @@ public class ProcedureDescriptor
     {
         return procedureBody;
     }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        // Note that equality is *only* checked on signature, this is probably wrong, but is depended on in
+        // TxState. Please don't change this without modifying how txstate tracks changes to procedures.
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+
+        ProcedureDescriptor that = (ProcedureDescriptor) o;
+
+        if ( !signature.equals( that.signature ) )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return signature.hashCode();
+    }
 }

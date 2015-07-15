@@ -32,6 +32,7 @@ import org.neo4j.kernel.api.cursor.PropertyCursor;
 import org.neo4j.kernel.api.cursor.RelationshipCursor;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.state.NodeState;
@@ -152,6 +153,8 @@ public interface ReadableTxState
             NodeState nodeState,
             Direction direction,
             int[] relTypes );
+
+    Iterator<ProcedureDescriptor> augmentProcedures( Iterator<ProcedureDescriptor> procedures );
 
     NodeCursor augmentNodesGetAllCursor( NodeCursor cursor );
 

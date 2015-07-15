@@ -377,13 +377,6 @@ public class CacheLayer implements StoreReadLayer
     }
 
     @Override
-    public RelationshipIterator nodeListRelationships( StoreStatement statement, long nodeId, Direction direction,
-            int[] relTypes ) throws EntityNotFoundException
-    {
-        return diskLayer.nodeListRelationships( statement, nodeId, direction, relTypes );
-    }
-
-    @Override
     public int nodeGetDegree( StoreStatement statement, long nodeId, Direction direction )
             throws EntityNotFoundException
     {
@@ -429,12 +422,6 @@ public class CacheLayer implements StoreReadLayer
     public long countsForRelationship( int startLabelId, int typeId, int endLabelId )
     {
         return diskLayer.countsForRelationship( startLabelId, typeId, endLabelId );
-    }
-
-    @Override
-    public long highestNodeIdInUse()
-    {
-        return diskLayer.highestNodeIdInUse();
     }
 
     @Override

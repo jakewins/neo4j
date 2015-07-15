@@ -30,6 +30,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.txstate.TxStateVisitor;
 import org.neo4j.kernel.api.txstate.TransactionState;
@@ -162,15 +164,11 @@ public class TxStateVisitorTest
             }
         }
 
-        static class ProcedureChange
-        {
-
-        }
-
         public List<PropertyChange> nodePropertyChanges = new ArrayList<>();
         public List<PropertyChange> relPropertyChanges = new ArrayList<>();
         public List<PropertyChange> graphPropertyChanges = new ArrayList<>();
-        public List<ProcedureChange> procedureChanges = new ArrayList<>();
+        public List<ProcedureDescriptor> proceduresCreated = new ArrayList<>();
+        public List<ProcedureSignature> proceduresDropped = new ArrayList<>();
 
         @Override
         public void visitNodePropertyChanges( long id, Iterator<DefinedProperty> added, Iterator<DefinedProperty>
@@ -191,6 +189,18 @@ public class TxStateVisitorTest
                                                Iterator<Integer> removed )
         {
             graphPropertyChanges.add( new PropertyChange( -1, added, changed, removed ) );
+        }
+
+        @Override
+        public void visitCreatedProcedure( ProcedureDescriptor procedure )
+        {
+            proceduresCreated.add( procedure );
+        }
+
+        @Override
+        public void visitDroppedProcedure( ProcedureSignature signature )
+        {
+            proceduresDropped.add( signature );
         }
     }
 }
