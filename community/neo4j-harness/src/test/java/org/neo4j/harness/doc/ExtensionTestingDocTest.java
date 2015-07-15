@@ -19,12 +19,12 @@
  */
 package org.neo4j.harness.doc;
 
+import org.junit.Rule;
+import org.junit.Test;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
-
-import org.junit.Rule;
-import org.junit.Test;
 
 import org.neo4j.function.Function;
 import org.neo4j.graphdb.DynamicLabel;
@@ -37,7 +37,7 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.test.SuppressOutput;
 import org.neo4j.test.server.HTTP;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class ExtensionTestingDocTest
 {

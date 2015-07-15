@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.io.InputStream;
 import java.util.Iterator;
 
 import org.neo4j.function.Function;
@@ -37,6 +38,8 @@ import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.operations.EntityReadOperations;
@@ -49,6 +52,7 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 
+import static org.neo4j.kernel.impl.locking.ResourceTypes.SCHEMA;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.schemaResource;
 
 public class LockingStatementOperations implements
@@ -317,6 +321,33 @@ public class LockingStatementOperations implements
     {
         state.locks().acquireExclusive( ResourceTypes.SCHEMA, schemaResource() );
         schemaWriteDelegate.constraintDrop( state, constraint );
+    }
+
+    @Override
+    public void procedureDrop( KernelStatement statement, ProcedureSignature procedure )
+    {
+        statement.locks().acquireExclusive( SCHEMA, schemaResource() );
+        schemaWriteDelegate.procedureDrop( statement, procedure );
+    }
+
+    @Override
+    public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
+            String language, InputStream body )
+    {
+        statement.locks().acquireExclusive( SCHEMA, schemaResource() );
+        schemaWriteDelegate.procedureCreate( statement, signature, language, body );
+    }
+
+    @Override
+    public Iterator<ProcedureDescriptor> proceduresGetAll()
+    {
+        return null;
+    }
+
+    @Override
+    public ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature )
+    {
+        return null;
     }
 
     @Override

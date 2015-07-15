@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -61,6 +62,8 @@ import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
@@ -597,6 +600,38 @@ public class StateHandlingStatementOperations implements
     public void constraintDrop( KernelStatement state, PropertyConstraint constraint )
     {
         state.txState().constraintDoDrop( constraint );
+    }
+
+    @Override
+    public void procedureDrop( KernelStatement statement, ProcedureSignature signature )
+    {
+        statement.txState().procedureDoDrop( signature );
+    }
+
+    @Override
+    public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
+            String language, InputStream body )
+    {
+        statement.txState().procedureDoAdd( signature, language, body );
+    }
+
+    @Override
+    public long indexGetCommittedId( KernelStatement state, IndexDescriptor index, SchemaStorage.IndexRuleKind kind )
+            throws SchemaRuleNotFoundException
+    {
+        return storeLayer.indexGetCommittedId( index, kind );
+    }
+
+    @Override
+    public Iterator<ProcedureDescriptor> proceduresGetAll()
+    {
+        return null;
+    }
+
+    @Override
+    public ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature )
+    {
+        return null;
     }
 
     @Override
@@ -1250,13 +1285,6 @@ public class StateHandlingStatementOperations implements
             throws SchemaRuleNotFoundException
     {
         return storeLayer.indexGetOwningUniquenessConstraintId( index );
-    }
-
-    @Override
-    public long indexGetCommittedId( KernelStatement state, IndexDescriptor index, SchemaStorage.IndexRuleKind kind )
-            throws SchemaRuleNotFoundException
-    {
-        return storeLayer.indexGetCommittedId( index, kind );
     }
 
     @Override

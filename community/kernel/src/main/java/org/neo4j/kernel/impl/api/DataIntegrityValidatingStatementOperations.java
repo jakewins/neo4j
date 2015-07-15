@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.io.InputStream;
 import java.util.Iterator;
 
 import org.neo4j.kernel.api.Statement;
@@ -37,6 +38,7 @@ import org.neo4j.kernel.api.exceptions.schema.NoSuchIndexException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException.OperationContext;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.api.operations.KeyWriteOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
@@ -184,6 +186,20 @@ public class DataIntegrityValidatingStatementOperations implements
             throw new DropConstraintFailureException( constraint, e );
         }
         schemaWriteDelegate.constraintDrop( state, constraint );
+    }
+
+    @Override
+    public void procedureDrop( KernelStatement statement, ProcedureSignature procedure )
+    {
+        schemaWriteDelegate.procedureDrop( statement, procedure );
+    }
+
+    @Override
+    public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
+            String language, InputStream body )
+    {
+        // TODO: compile, verify that code is correct
+        schemaWriteDelegate.procedureCreate( statement, signature, language, body );
     }
 
     private void checkIndexExistence( KernelStatement state, OperationContext context, int labelId, int propertyKey )

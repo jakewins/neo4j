@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.io.InputStream;
 import java.util.Iterator;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
@@ -45,6 +46,7 @@ import org.neo4j.kernel.api.exceptions.schema.IndexBrokenKernelException;
 import org.neo4j.kernel.api.exceptions.schema.UnableToValidateConstraintKernelException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyConstraintViolationKernelException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
@@ -586,5 +588,18 @@ public class ConstraintEnforcingEntityOperations implements EntityOperations, Sc
             throws DropConstraintFailureException
     {
         schemaWriteOperations.constraintDrop( state, constraint );
+    }
+
+    @Override
+    public void procedureDrop( KernelStatement statement, ProcedureSignature procedure )
+    {
+        schemaWriteOperations.procedureDrop( statement, procedure );
+    }
+
+    @Override
+    public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
+            String language, InputStream body )
+    {
+        schemaWriteOperations.procedureCreate( statement, signature, language, body );
     }
 }

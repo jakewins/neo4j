@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api.state;
 
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -43,6 +44,8 @@ import org.neo4j.kernel.api.cursor.PropertyCursor;
 import org.neo4j.kernel.api.cursor.RelationshipCursor;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.txstate.ReadableTxState;
@@ -839,6 +842,18 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
     public ReadableDiffSets<Long> nodesWithLabelChanged( int labelId )
     {
         return LABEL_STATE.get( this, labelId ).nodeDiffSets();
+    }
+
+    @Override
+    public void procedureDoDrop( ProcedureSignature procedure )
+    {
+
+    }
+
+    @Override
+    public ProcedureDescriptor procedureDoAdd( ProcedureSignature signature, String language, InputStream body )
+    {
+        return new ProcedureDescriptor( signature, language, body );
     }
 
     @Override

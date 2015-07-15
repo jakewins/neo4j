@@ -25,24 +25,24 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 
+import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.TxStateVisitor;
-import org.neo4j.kernel.impl.api.RelationshipVisitor;
-import org.neo4j.kernel.impl.api.store.RelationshipIterator;
 import org.neo4j.kernel.impl.util.diffsets.ReadableDiffSets;
 import org.neo4j.test.RandomizedTestRule;
 import org.neo4j.test.RepeatRule;
@@ -52,10 +52,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
+import static org.neo4j.kernel.api.procedure.ProcedureSignature.procedureSignature;
 import static org.neo4j.kernel.api.properties.Property.noNodeProperty;
 import static org.neo4j.kernel.api.properties.Property.stringProperty;
+import static org.neo4j.kernel.impl.api.state.TxStateVisitorTest.GatheringVisitor;
 
 public class TxStateTest
 {
@@ -414,6 +415,24 @@ public class TxStateTest
     }
 
     @Test
+    public void shouldCreateDropCreateShowProcedure() throws Throwable
+    {
+        // Given
+        ProcedureSignature signature = procedureSignature( new String[]{"example"}, "myProc" ).build();
+        ByteArrayInputStream body = new ByteArrayInputStream( "asd".getBytes( StandardCharsets.UTF_8 ) );
+
+        // When
+        state.procedureDoAdd( signature, "js", body );
+        state.procedureDoDrop( signature );
+        state.procedureDoAdd( signature, "js", body );
+
+        // Then
+        GatheringVisitor visitor = new GatheringVisitor();
+        state.accept( visitor );
+//        assertThat( visitor.procedureChanges(), equalTo( ));
+    }
+
+    @Test
     @RepeatRule.Repeat(times = 100)
     public void shouldVisitCreatedNodesBeforeDeletedNodes() throws Exception
     {
@@ -635,29 +654,7 @@ public class TxStateTest
         }
     }
 
-    public static RelationshipIterator wrapInRelationshipIterator( final PrimitiveLongIterator iterator )
-    {
-        return new RelationshipIterator.BaseIterator()
-        {
-            private int cursor;
-
-            @Override
-            public <EXCEPTION extends Exception> boolean relationshipVisit( long relationshipId,
-                    RelationshipVisitor<EXCEPTION> visitor ) throws EXCEPTION
-            {
-                throw new UnsupportedOperationException( "Shouldn't be required" );
-            }
-
-            @Override
-            protected boolean fetchNext()
-            {
-                return iterator.hasNext() ? next( iterator.next() ) : false;
-            }
-        };
-    }
-
     private TransactionState state;
-    private final Set<Long> emptySet = Collections.emptySet();
 
     @Before
     public void before() throws Exception

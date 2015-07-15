@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.api;
 
+import java.io.InputStream;
+
 import org.neo4j.kernel.api.constraints.MandatoryPropertyConstraint;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
@@ -28,6 +30,7 @@ import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 
 interface SchemaWrite
 {
@@ -54,4 +57,17 @@ interface SchemaWrite
      * That external job should become an internal job, at which point this operation should go away.
      */
     void uniqueIndexDrop( IndexDescriptor descriptor ) throws DropIndexFailureException;
+
+    /**
+     * @param signature the namespace, name, typed inputs and typed outputs
+     * @param language named procedure language, eg "js"
+     * @param body the procedure code, format is language-handler specific
+     */
+    void procedureCreate( ProcedureSignature signature, String language, InputStream body );
+
+    /**
+     * @param procedure the procedure to drop
+     */
+    void procedureDrop( ProcedureSignature procedure );
+
 }

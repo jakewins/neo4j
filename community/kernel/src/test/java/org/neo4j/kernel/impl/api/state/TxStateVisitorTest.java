@@ -162,9 +162,15 @@ public class TxStateVisitorTest
             }
         }
 
+        static class ProcedureChange
+        {
+
+        }
+
         public List<PropertyChange> nodePropertyChanges = new ArrayList<>();
         public List<PropertyChange> relPropertyChanges = new ArrayList<>();
         public List<PropertyChange> graphPropertyChanges = new ArrayList<>();
+        public List<ProcedureChange> procedureChanges = new ArrayList<>();
 
         @Override
         public void visitNodePropertyChanges( long id, Iterator<DefinedProperty> added, Iterator<DefinedProperty>

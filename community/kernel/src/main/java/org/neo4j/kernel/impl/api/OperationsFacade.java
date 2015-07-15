@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -55,6 +56,7 @@ import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.operations.CountsOperations;
@@ -354,6 +356,13 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     {
         statement.assertOpen();
         dataRead().relationshipVisit( statement, relId, visitor );
+    }
+
+    @Override
+    public Iterator<Object[]> procedureCall( ProcedureSignature signature, Object[] args )
+    {
+        statement.assertOpen();
+        throw new UnsupportedOperationException( );
     }
 
     // </DataRead>
@@ -818,6 +827,21 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
         statement.assertOpen();
         schemaWrite().uniqueIndexDrop( statement, descriptor );
     }
+
+    @Override
+    public void procedureCreate( ProcedureSignature signature, String language, InputStream body )
+    {
+        statement.assertOpen();
+        schemaWrite().procedureCreate( statement, signature, language, body );
+    }
+
+    @Override
+    public void procedureDrop( ProcedureSignature procedure )
+    {
+        statement.assertOpen();
+        schemaWrite().procedureDrop( statement, procedure );
+    }
+
     // </SchemaWrite>
 
 

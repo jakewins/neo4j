@@ -19,12 +19,15 @@
  */
 package org.neo4j.kernel.api.txstate;
 
+import java.io.InputStream;
 import java.util.Map;
 
 import org.neo4j.kernel.api.constraints.MandatoryPropertyConstraint;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 
@@ -102,4 +105,9 @@ public interface TransactionState extends ReadableTxState
     // </Legacy index>
 
     void indexDoUpdateProperty( IndexDescriptor descriptor, long nodeId, DefinedProperty before, DefinedProperty after );
+
+
+    void procedureDoDrop( ProcedureSignature procedure );
+
+    ProcedureDescriptor procedureDoAdd( ProcedureSignature signature, String language, InputStream body );
 }

@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.api.operations;
 
+import java.io.InputStream;
+
 import org.neo4j.kernel.api.constraints.MandatoryPropertyConstraint;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
@@ -28,6 +30,7 @@ import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.api.KernelStatement;
 
 public interface SchemaWriteOperations
@@ -55,4 +58,8 @@ public interface SchemaWriteOperations
             throws AlreadyConstrainedException, CreateConstraintFailureException;
 
     void constraintDrop( KernelStatement state, PropertyConstraint constraint ) throws DropConstraintFailureException;
+
+    void procedureDrop( KernelStatement statement, ProcedureSignature procedure );
+
+    void procedureCreate( KernelStatement statement, ProcedureSignature signature, String language, InputStream body );
 }
