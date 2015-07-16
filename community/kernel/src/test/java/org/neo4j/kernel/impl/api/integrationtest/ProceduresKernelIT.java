@@ -22,12 +22,8 @@ package org.neo4j.kernel.impl.api.integrationtest;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.SchemaWriteOperations;
@@ -35,7 +31,6 @@ import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.RecordCursor;
 
 import static java.util.Arrays.asList;
-import static junit.framework.TestCase.assertEquals;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -95,10 +90,5 @@ public class ProceduresKernelIT extends KernelIntegrationTest
         assertTrue( res.next() );
         assertTrue( Arrays.equals(new Object[]{"hello"}, res.getRecord() ));
         assertFalse( res.next() );
-    }
-
-    private InputStream streamOf( String s )
-    {
-        return new ByteArrayInputStream( s.getBytes( StandardCharsets.UTF_8 ) );
     }
 }
