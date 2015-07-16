@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import java.io.InputStream;
 import java.util.Iterator;
 
 import org.neo4j.function.Function;
@@ -39,6 +38,7 @@ import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
@@ -332,7 +332,7 @@ public class LockingStatementOperations implements
 
     @Override
     public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
-            String language, InputStream body )
+            String language, String body )
     {
         statement.locks().acquireExclusive( SCHEMA, schemaResource() );
         schemaWriteDelegate.procedureCreate( statement, signature, language, body );
@@ -346,6 +346,7 @@ public class LockingStatementOperations implements
 
     @Override
     public ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature )
+            throws ProcedureException
     {
         return schemaReadDelegate.procedureGetBySignature( statement, signature );
     }

@@ -223,11 +223,6 @@ public class NeoStore extends AbstractStore implements TransactionIdStore, LogVe
         }
     }
 
-    public StoreStatement acquireStatement()
-    {
-        return new StoreStatement( this );
-    }
-
     @Override
     protected void checkVersion()
     {

@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import java.io.InputStream;
 import java.util.Iterator;
 
 import org.neo4j.kernel.api.Statement;
@@ -196,7 +195,7 @@ public class DataIntegrityValidatingStatementOperations implements
 
     @Override
     public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
-            String language, InputStream body )
+            String language, String body )
     {
         // TODO: compile, verify that code is correct
         schemaWriteDelegate.procedureCreate( statement, signature, language, body );

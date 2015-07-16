@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.api;
 
-import java.io.InputStream;
-
 import org.neo4j.kernel.api.constraints.MandatoryPropertyConstraint;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
@@ -63,7 +61,7 @@ interface SchemaWrite
      * @param language named procedure language, eg "js"
      * @param body the procedure code, format is language-handler specific
      */
-    void procedureCreate( ProcedureSignature signature, String language, InputStream body );
+    void procedureCreate( ProcedureSignature signature, String language, String body );
 
     /**
      * @param procedure the procedure to drop

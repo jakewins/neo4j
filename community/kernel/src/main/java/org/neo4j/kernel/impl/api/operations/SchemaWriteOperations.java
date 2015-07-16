@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.impl.api.operations;
 
-import java.io.InputStream;
-
 import org.neo4j.kernel.api.constraints.MandatoryPropertyConstraint;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.constraints.UniquenessConstraint;
@@ -61,5 +59,5 @@ public interface SchemaWriteOperations
 
     void procedureDrop( KernelStatement statement, ProcedureSignature procedure );
 
-    void procedureCreate( KernelStatement statement, ProcedureSignature signature, String language, InputStream body );
+    void procedureCreate( KernelStatement statement, ProcedureSignature signature, String language, String body );
 }

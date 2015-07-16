@@ -108,5 +108,5 @@ public interface TransactionState extends ReadableTxState
 
     void procedureDoDrop( ProcedureSignature procedure );
 
-    void procedureDoAdd( ProcedureSignature signature, String language, InputStream body );
+    void procedureDoAdd( ProcedureSignature signature, String language, String body );
 }

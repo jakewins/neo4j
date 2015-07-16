@@ -143,7 +143,7 @@ public class DiskLayer implements StoreReadLayer
     @Override
     public StoreStatement acquireStatement()
     {
-        return neoStore.acquireStatement();
+        return new StoreStatement( neoStore, schemaStorage );
     }
 
     @Override

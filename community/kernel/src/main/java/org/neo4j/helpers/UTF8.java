@@ -19,6 +19,8 @@
  */
 package org.neo4j.helpers;
 
+import java.io.DataOutput;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
@@ -97,6 +99,13 @@ public final class UTF8
         byte[] data = encode( text );
         target.putInt( data.length );
         target.put( data );
+    }
+
+    public static void putEncodedStringInto( String text, DataOutput target ) throws IOException
+    {
+        byte[] data = encode( text );
+        target.writeInt( data.length );
+        target.write( data );
     }
 
     public static int computeRequiredByteBufferSize( String text )

@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import java.io.InputStream;
 import java.util.Iterator;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
@@ -598,7 +597,7 @@ public class ConstraintEnforcingEntityOperations implements EntityOperations, Sc
 
     @Override
     public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
-            String language, InputStream body )
+            String language, String body )
     {
         schemaWriteOperations.procedureCreate( statement, signature, language, body );
     }

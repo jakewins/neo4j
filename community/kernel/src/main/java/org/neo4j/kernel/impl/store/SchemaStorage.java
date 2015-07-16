@@ -27,10 +27,14 @@ import org.neo4j.function.Functions;
 import org.neo4j.function.Predicate;
 import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.helpers.collection.PrefetchingIterator;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.schema.MalformedSchemaRuleException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
+import org.neo4j.kernel.api.procedure.ProcedureException;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.IndexRule;
+import org.neo4j.kernel.impl.store.record.ProcedureRule;
 import org.neo4j.kernel.impl.store.record.SchemaRule;
 
 import static org.neo4j.helpers.collection.Iterables.filter;
@@ -253,6 +257,30 @@ public class SchemaStorage implements SchemaRuleAccess
             throws SchemaRuleNotFoundException
     {
         return propertyConstraint( UniquePropertyConstraintRule.class, labelId, propertyKeyId );
+    }
+
+    public ProcedureRule procedure( final ProcedureSignature signature ) throws ProcedureException
+    {
+        Iterator<ProcedureRule> rules = schemaRules( ProcedureRule.class, 0, new Predicate<ProcedureRule>()
+        {
+            @Override
+            public boolean test( ProcedureRule item )
+            {
+                return item.descriptor().signature().equals( signature );
+            }
+        } );
+
+        if ( !rules.hasNext() )
+        {
+            throw new ProcedureException( Status.Schema.NoSuchProcedure, "No such procedure: " + signature.toString() );
+        }
+
+        return rules.next();
+    }
+
+    public Iterator<ProcedureRule> allProcedures()
+    {
+        return schemaRules( ProcedureRule.class );
     }
 
     private <Rule extends PropertyConstraintRule> Rule propertyConstraint( Class<Rule> type,

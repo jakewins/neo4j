@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2002-2014 "Neo Technology,"
+/*
+ * Copyright (c) 2002-2015 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.api.procedure;
 
-import java.io.InputStream;
-
 /** Describes a procedure stored in the database */
 public class ProcedureDescriptor
 {
@@ -39,10 +37,10 @@ public class ProcedureDescriptor
     private final ProcedureSignature signature;
     private final String language;
     private final Mode mode;
-    private final InputStream procedureBody;
+    private final String procedureBody;
 
 
-    public ProcedureDescriptor( ProcedureSignature signature, String language, Mode mode, InputStream procedureBody )
+    public ProcedureDescriptor( ProcedureSignature signature, String language, Mode mode, String procedureBody )
     {
         this.signature = signature;
         this.language = language;
@@ -60,9 +58,14 @@ public class ProcedureDescriptor
         return language;
     }
 
-    public InputStream procedureBody()
+    public String procedureBody()
     {
         return procedureBody;
+    }
+
+    public Mode mode()
+    {
+        return mode;
     }
 
     @Override

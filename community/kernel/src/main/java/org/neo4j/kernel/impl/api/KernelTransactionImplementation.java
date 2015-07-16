@@ -47,6 +47,7 @@ import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.txstate.LegacyIndexTransactionState;
@@ -67,6 +68,7 @@ import org.neo4j.kernel.impl.store.NeoStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.UniquePropertyConstraintRule;
 import org.neo4j.kernel.impl.store.record.IndexRule;
+import org.neo4j.kernel.impl.store.record.ProcedureRule;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.TransactionMonitor;
 import org.neo4j.kernel.impl.transaction.command.Command;
@@ -642,20 +644,23 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private class TransactionToRecordStateVisitor extends TxStateVisitor.Adapter
     {
         private final RelationshipDataExtractor edge = new RelationshipDataExtractor();
-        private boolean clearState;
+        private boolean clearSchemaState;
 
         void done()
         {
             try
             {
-                if ( clearState )
+                // TODO: This seems wrong. The schema state needs to be transactionally cleared, meaning transaction
+                // application should clear this. How does schema state get cleared on slaves? Whatever mechanism is
+                // used there should obviate needing this
+                if ( clearSchemaState )
                 {
                     schemaState.clear();
                 }
             }
             finally
             {
-                clearState = false;
+                clearSchemaState = false;
             }
         }
 
@@ -874,7 +879,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         @Override
         public void visitAddedUniquePropertyConstraint( UniquenessConstraint element )
         {
-            clearState = true;
+            clearSchemaState = true;
             long constraintId = schemaStorage.newRuleId();
             IndexRule indexRule = schemaStorage.indexRule(
                     element.label(),
@@ -890,7 +895,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         {
             try
             {
-                clearState = true;
+                clearSchemaState = true;
                 UniquePropertyConstraintRule rule = schemaStorage
                         .uniquenessConstraint( element.label(), element.propertyKeyId() );
                 recordState.dropSchemaRule( rule );
@@ -909,7 +914,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         @Override
         public void visitAddedMandatoryPropertyConstraint( MandatoryPropertyConstraint element )
         {
-            clearState = true;
+            clearSchemaState = true;
             recordState.createSchemaRule( MandatoryPropertyConstraintRule.mandatoryPropertyConstraintRule(
                     schemaStorage.newRuleId(), element.label(), element.propertyKeyId() ) );
         }
@@ -919,7 +924,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         {
             try
             {
-                clearState = true;
+                clearSchemaState = true;
                 recordState.dropSchemaRule(
                         schemaStorage.mandatoryPropertyConstraint( element.label(), element.propertyKeyId() ) );
             }
@@ -965,13 +970,25 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         @Override
         public void visitCreatedProcedure( ProcedureDescriptor procedure )
         {
-            StoreStatement.PHAT_HACK.put( procedure.signature(), procedure );
+            clearSchemaState = true;
+            recordState.createSchemaRule( new ProcedureRule( schemaStorage.newRuleId(), procedure ) );
         }
 
         @Override
         public void visitDroppedProcedure( ProcedureSignature signature )
         {
-            StoreStatement.PHAT_HACK.remove( signature );
+            try
+            {
+                clearSchemaState = true;
+                recordState.dropSchemaRule( schemaStorage.procedure( signature ) );
+            }
+            catch ( ProcedureException e )
+            {
+                throw new ThisShouldNotHappenError(
+                        "Jake",
+                        "Procedure to be removed should exist, since its existence should " +
+                        "have been validated earlier and the schema should have been locked." );
+            }
         }
     }
 

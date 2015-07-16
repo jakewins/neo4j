@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -854,7 +853,7 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     }
 
     @Override
-    public void procedureCreate( ProcedureSignature signature, String language, InputStream body )
+    public void procedureCreate( ProcedureSignature signature, String language, String body )
     {
         statement.assertOpen();
         schemaWrite().procedureCreate( statement, signature, language, body );

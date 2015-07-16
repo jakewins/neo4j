@@ -24,18 +24,24 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.function.Function;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.kernel.api.cursor.LabelCursor;
 import org.neo4j.kernel.api.cursor.NodeCursor;
 import org.neo4j.kernel.api.cursor.PropertyCursor;
 import org.neo4j.kernel.api.cursor.RelationshipCursor;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.store.NeoStore;
+import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.ProcedureRule;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.util.InstanceCache;
+
+import static org.neo4j.helpers.collection.Iterables.map;
 
 /**
  * Statement for store layer. This allows for acquisition of cursors on the store data.
@@ -48,19 +54,21 @@ import org.neo4j.kernel.impl.util.InstanceCache;
 public class StoreStatement
         implements AutoCloseable
 {
-    private InstanceCache<StoreSingleNodeCursor> singleNodeCursor;
-    private InstanceCache<StoreIteratorNodeCursor> iteratorNodeCursor;
-    private InstanceCache<StorePropertyCursor> propertyCursor;
-    private InstanceCache<StoreLabelCursor> labelCursor;
-    private InstanceCache<StoreSingleRelationshipCursor> singleRelationshipCursor;
-    private InstanceCache<StoreNodeRelationshipCursor> nodeRelationshipCursor;
-    private InstanceCache<StoreIteratorRelationshipCursor> iteratorRelationshipCursor;
+    private final InstanceCache<StoreSingleNodeCursor> singleNodeCursor;
+    private final InstanceCache<StoreIteratorNodeCursor> iteratorNodeCursor;
+    private final InstanceCache<StorePropertyCursor> propertyCursor;
+    private final InstanceCache<StoreLabelCursor> labelCursor;
+    private final InstanceCache<StoreSingleRelationshipCursor> singleRelationshipCursor;
+    private final InstanceCache<StoreNodeRelationshipCursor> nodeRelationshipCursor;
+    private final InstanceCache<StoreIteratorRelationshipCursor> iteratorRelationshipCursor;
 
-    private NeoStore neoStore;
+    private final NeoStore neoStore;
+    private final SchemaStorage schema;
 
-    public StoreStatement( NeoStore neoStore )
+    public StoreStatement( NeoStore neoStore, SchemaStorage schema )
     {
         this.neoStore = neoStore;
+        this.schema = schema;
 
         singleNodeCursor = new InstanceCache<StoreSingleNodeCursor>()
         {
@@ -177,16 +185,21 @@ public class StoreStatement
     public Iterator<ProcedureDescriptor> proceduresGetAll()
     {
         neoStore.assertOpen();
-        return PHAT_HACK.values().iterator();
+        return map( new Function<ProcedureRule, ProcedureDescriptor>()
+        {
+            @Override
+            public ProcedureDescriptor apply( ProcedureRule o )
+            {
+                return o.descriptor();
+            }
+        }, schema.allProcedures() );
     }
 
-    public ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature )
+    public ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature ) throws ProcedureException
     {
         neoStore.assertOpen();
-        return PHAT_HACK.get( signature );
+        return schema.procedure( signature ).descriptor();
     }
-
-    public static Map<ProcedureSignature, ProcedureDescriptor> PHAT_HACK = new ConcurrentHashMap<>();
 
     @Override
     public void close()

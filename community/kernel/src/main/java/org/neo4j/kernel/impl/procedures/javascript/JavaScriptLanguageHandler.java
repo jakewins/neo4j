@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2002-2015 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.procedures.javascript;
 
 import org.mozilla.javascript.Context;
@@ -26,6 +45,9 @@ import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.Procedure;
+import org.neo4j.kernel.impl.store.Neo4jTypes;
+
+import static org.neo4j.kernel.impl.store.Neo4jTypes.AnyType;
 
 /**
  * TODO
@@ -99,17 +121,15 @@ public class JavaScriptLanguageHandler
     }
 
     @Override
-    public Procedure compile( ProcedureSignature signature, InputStream codeStream ) throws ProcedureException
+    public Procedure compile( ProcedureSignature signature, String code ) throws ProcedureException
     {
         try
         {
-            String code = readAsString( codeStream );
-
             StringBuilder header = new StringBuilder(  );
             header.append( "function procedure(" );
             for ( int i = 0; i < signature.getInputSignature().size(); i++ )
             {
-                Pair<String,ProcedureSignature.Neo4jType> arg =
+                Pair<String,AnyType> arg =
                         signature.getInputSignature().get( i );
                 if (i > 0)
                     header.append( ',' );
@@ -130,47 +150,6 @@ public class JavaScriptLanguageHandler
                                                                                       "JavaScript" );
         }
     }
-
-    private static String readAsString( InputStream input )
-    {
-        final char[] buffer = new char[0x10000];
-        StringBuilder out = new StringBuilder();
-        Reader reader = null;
-        try
-        {
-            reader = new InputStreamReader( input, StandardCharsets.UTF_8 );
-            int read;
-            do
-            {
-                read = reader.read( buffer, 0, buffer.length );
-                if ( read > 0 )
-                {
-                    out.append( buffer, 0, read );
-                }
-            }
-            while ( read >= 0 );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
-        finally
-        {
-            if ( reader != null )
-            {
-                try
-                {
-                    reader.close();
-                }
-                catch ( IOException e )
-                {
-                    // OK
-                }
-            }
-        }
-        return out.toString();
-    }
-
 
     private class JavaScriptProcedure implements Procedure
     {

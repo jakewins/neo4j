@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.api.state;
 
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -881,7 +880,7 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
     }
 
     @Override
-    public void procedureDoAdd( ProcedureSignature signature, String language, InputStream body )
+    public void procedureDoAdd( ProcedureSignature signature, String language, String body )
     {
         // TODO: Mode
         procedureChanges().add( new ProcedureDescriptor( signature, language, ProcedureDescriptor.Mode.READ_ONLY, body ) );

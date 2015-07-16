@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -63,6 +62,7 @@ import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
@@ -610,7 +610,7 @@ public class StateHandlingStatementOperations implements
 
     @Override
     public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
-            String language, InputStream body )
+            String language, String body )
     {
         statement.txState().procedureDoAdd( signature, language, body );
     }
@@ -631,6 +631,7 @@ public class StateHandlingStatementOperations implements
 
     @Override
     public ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature )
+            throws ProcedureException
     {
         // TODO state
         return statement.getStoreStatement().procedureGetBySignature( signature );

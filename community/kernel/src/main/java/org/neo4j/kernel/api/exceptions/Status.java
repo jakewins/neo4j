@@ -208,14 +208,14 @@ public interface Status
         NoSuchPropertyKey( DatabaseError, "The request accessed a property that does not exist." ),
         NoSuchRelationshipType( DatabaseError, "The request accessed a relationship type that does not exist." ),
         NoSuchSchemaRule( DatabaseError, "The request referred to a schema rule that does not exist." ),
+        NoSuchProcedure( DatabaseError, "The request referred to a prodecure that does not exist." ),
 
         LabelLimitReached( ClientError, "The maximum number of labels supported has been reached, no more labels can be created." ),
         IndexLimitReached( ClientError, "The maximum number of index entries supported has been reached, no more entities can be indexed." ),
 
         ModifiedConcurrently( TransientError, "The database schema was modified while this transaction was running, the transaction should be retried." ),
 
-        ProcedureCompilationError (ClientError, "Could not compile the procedure"),
-        ;
+        ProcedureCompilationError (ClientError, "Could not compile the procedure");
 
         private final Code code;
 

@@ -54,6 +54,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
+import static org.neo4j.kernel.api.procedure.ProcedureDescriptor.Mode.READ_ONLY;
 import static org.neo4j.kernel.api.procedure.ProcedureSignature.procedureSignature;
 import static org.neo4j.kernel.api.properties.Property.noNodeProperty;
 import static org.neo4j.kernel.api.properties.Property.stringProperty;
@@ -420,7 +421,7 @@ public class TxStateTest
     {
         // Given
         ProcedureSignature signature = procedureSignature( new String[]{"example"}, "myProc" ).build();
-        ByteArrayInputStream body = new ByteArrayInputStream( "asd".getBytes( StandardCharsets.UTF_8 ) );
+        String body = "asd";
 
         // When
         state.procedureDoAdd( signature, "js", body );
@@ -431,7 +432,7 @@ public class TxStateTest
         GatheringVisitor visitor = new GatheringVisitor();
         state.accept( visitor );
         assertThat( visitor.proceduresCreated, equalTo( asList( new ProcedureDescriptor( signature, "js",
-                ProcedureDescriptor.Mode.READ_ONLY, body ) )));
+                READ_ONLY, body ) )));
         assertThat( visitor.proceduresDropped.size(), equalTo( 0 ));
     }
 
