@@ -24,14 +24,29 @@ import java.io.InputStream;
 /** Describes a procedure stored in the database */
 public class ProcedureDescriptor
 {
+    /**
+     * For future-compatibility with the cypher planner, and to keep the door open to perform write-forwarding
+     * of cypher statements, we track read/update mode of each procedure and store this in the definition on disk.
+     * Please don't remove this, I know it's now being used, it's there to not have to break backwards compat when
+     * we need it for the planner, auth and clustering.
+     */
+    public enum Mode
+    {
+        READ_ONLY,
+        UPDATE
+    }
+
     private final ProcedureSignature signature;
     private final String language;
+    private final Mode mode;
     private final InputStream procedureBody;
 
-    public ProcedureDescriptor( ProcedureSignature signature, String language, InputStream procedureBody )
+
+    public ProcedureDescriptor( ProcedureSignature signature, String language, Mode mode, InputStream procedureBody )
     {
         this.signature = signature;
         this.language = language;
+        this.mode = mode;
         this.procedureBody = procedureBody;
     }
 

@@ -29,6 +29,10 @@ import org.neo4j.kernel.impl.store.record.PropertyBlock;
 
 /**
  * Defines valid property types.
+ * This is distinct from {@link org.neo4j.kernel.impl.store.Neo4jType} as this describes the various
+ * stored versions of types. For each Neo4j type, there may be multiple
+ * {@link org.neo4j.kernel.impl.store.PropertyType}, each optimized to store a particular value
+ * permutation for the type.
  */
 @SuppressWarnings("UnnecessaryBoxing")
 public enum PropertyType

@@ -41,6 +41,12 @@ public class ProceduresKernelIT extends KernelIntegrationTest
         assertThat( asCollection( ops.proceduresGetAll() ),
                 Matchers.<Collection<ProcedureSignature>>equalTo( asList( signature ) ) );
 
+        // And when
+        commit();
+
+        // Then
+        assertThat( asCollection( readOperationsInNewTransaction().proceduresGetAll() ),
+                Matchers.<Collection<ProcedureSignature>>equalTo( asList( signature ) ) );
     }
 
     @Test

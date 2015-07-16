@@ -25,6 +25,8 @@ public class ProcedureSignature
     }
 
     // TODO this should move to a unified Neo4j type system place
+    // See also PropertyType etc, and this likely needs to be classes rather than
+    // enums, to handle generics (if we support that)
     public enum Neo4jType
     {
         TEXT,

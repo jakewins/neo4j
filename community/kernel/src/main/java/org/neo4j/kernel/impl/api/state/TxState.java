@@ -876,14 +876,15 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
     @Override
     public void procedureDoDrop( ProcedureSignature procedure )
     {
-        procedureChanges().remove( new ProcedureDescriptor( procedure, null, null ) );
+        procedureChanges().remove( new ProcedureDescriptor( procedure, null, null, null ) );
         hasChanges = true;
     }
 
     @Override
     public void procedureDoAdd( ProcedureSignature signature, String language, InputStream body )
     {
-        procedureChanges().add( new ProcedureDescriptor( signature, language, body ) );
+        // TODO: Mode
+        procedureChanges().add( new ProcedureDescriptor( signature, language, ProcedureDescriptor.Mode.READ_ONLY, body ) );
         hasChanges = true;
     }
 

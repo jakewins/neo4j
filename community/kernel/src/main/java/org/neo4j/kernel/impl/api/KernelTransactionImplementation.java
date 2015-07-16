@@ -46,6 +46,8 @@ import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.txstate.LegacyIndexTransactionState;
 import org.neo4j.kernel.api.txstate.TransactionState;
@@ -958,6 +960,18 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         public void visitCreatedRelationshipLegacyIndex( String name, Map<String, String> config )
         {
             legacyIndexTransactionState.createIndex( IndexEntityType.Relationship, name, config );
+        }
+
+        @Override
+        public void visitCreatedProcedure( ProcedureDescriptor procedure )
+        {
+            StoreStatement.PHAT_HACK.put( procedure.signature(), procedure );
+        }
+
+        @Override
+        public void visitDroppedProcedure( ProcedureSignature signature )
+        {
+            StoreStatement.PHAT_HACK.remove( signature );
         }
     }
 

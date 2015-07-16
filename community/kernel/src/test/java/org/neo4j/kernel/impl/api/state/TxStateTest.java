@@ -430,7 +430,8 @@ public class TxStateTest
         // Then
         GatheringVisitor visitor = new GatheringVisitor();
         state.accept( visitor );
-        assertThat( visitor.proceduresCreated, equalTo( asList( new ProcedureDescriptor( signature, "js", body ) )));
+        assertThat( visitor.proceduresCreated, equalTo( asList( new ProcedureDescriptor( signature, "js",
+                ProcedureDescriptor.Mode.READ_ONLY, body ) )));
         assertThat( visitor.proceduresDropped.size(), equalTo( 0 ));
     }
 

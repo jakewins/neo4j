@@ -20,15 +20,17 @@
 package org.neo4j.kernel.impl.api.store;
 
 import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.graphdb.Direction;
-import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.cursor.LabelCursor;
 import org.neo4j.kernel.api.cursor.NodeCursor;
 import org.neo4j.kernel.api.cursor.PropertyCursor;
 import org.neo4j.kernel.api.cursor.RelationshipCursor;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.store.NeoStore;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
@@ -174,11 +176,21 @@ public class StoreStatement
 
     public Iterator<ProcedureDescriptor> proceduresGetAll()
     {
-        return IteratorUtil.emptyIterator();
+        neoStore.assertOpen();
+        return PHAT_HACK.values().iterator();
     }
+
+    public ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature )
+    {
+        neoStore.assertOpen();
+        return PHAT_HACK.get( signature );
+    }
+
+    public static Map<ProcedureSignature, ProcedureDescriptor> PHAT_HACK = new ConcurrentHashMap<>();
 
     @Override
     public void close()
     {
     }
+
 }

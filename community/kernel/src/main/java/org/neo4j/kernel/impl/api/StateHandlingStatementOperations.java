@@ -625,17 +625,15 @@ public class StateHandlingStatementOperations implements
     @Override
     public Iterator<ProcedureDescriptor> proceduresGetAll( KernelStatement statement )
     {
-        if( statement.hasTxStateWithChanges() )
-        {
-            return statement.txState().augmentProcedures( statement.getStoreStatement().proceduresGetAll() );
-        }
-        throw new UnsupportedOperationException();
+        Iterator<ProcedureDescriptor> procs = statement.getStoreStatement().proceduresGetAll();
+        return statement.hasTxStateWithChanges() ? statement.txState().augmentProcedures( procs ) : procs;
     }
 
     @Override
     public ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature )
     {
-        throw new UnsupportedOperationException();
+        // TODO state
+        return statement.getStoreStatement().procedureGetBySignature( signature );
     }
 
     @Override

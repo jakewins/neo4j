@@ -75,6 +75,14 @@ public interface SchemaRule extends RecordSerializable
             {
                 return MandatoryPropertyConstraintRule.readMandatoryPropertyConstraintRule( id, labelId, buffer );
             }
+        },
+        PROCEDURE( 5, ProcedureRule.class )
+        {
+            @Override
+            protected SchemaRule newRule( long id, int labelId, ByteBuffer buffer )
+            {
+                return ProcedureRule.readProcedureRule( id, buffer );
+            }
         };
 
         private final byte id;
@@ -128,6 +136,7 @@ public interface SchemaRule extends RecordSerializable
             case 2: return CONSTRAINT_INDEX_RULE;
             case 3: return UNIQUENESS_CONSTRAINT;
             case 4: return MANDATORY_PROPERTY_CONSTRAINT;
+            case 5: return PROCEDURE;
             default:
                 throw new MalformedSchemaRuleException( null, "Unknown kind id %d", id );
             }
