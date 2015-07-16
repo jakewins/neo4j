@@ -1,5 +1,6 @@
 package org.neo4j.kernel.api.procedure;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -22,6 +23,54 @@ public class ProcedureSignature
         this.name = name;
         this.inputSignature = inputSignature;
         this.outputSignature = outputSignature;
+    }
+
+    public String[] getNamespace()
+    {
+        return namespace;
+    }
+
+    public String getName()
+    {
+        return name;
+    }
+
+    public List<Pair<String,Neo4jType>> getInputSignature()
+    {
+        return inputSignature;
+    }
+
+    public List<Pair<String,Neo4jType>> getOutputSignature()
+    {
+        return outputSignature;
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        { return true; }
+        if ( o == null || getClass() != o.getClass() )
+        { return false; }
+
+        ProcedureSignature that = (ProcedureSignature) o;
+
+        if ( !inputSignature.equals( that.inputSignature ) )
+        { return false; }
+        if ( !name.equals( that.name ) )
+        { return false; }
+        if ( !Arrays.equals( namespace, that.namespace ) )
+        { return false; }
+        if ( !outputSignature.equals( that.outputSignature ) )
+        { return false; }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return name.hashCode();
     }
 
     // TODO this should move to a unified Neo4j type system place

@@ -27,6 +27,7 @@ import org.neo4j.kernel.impl.api.operations.KeyWriteOperations;
 import org.neo4j.kernel.impl.api.operations.LegacyIndexReadOperations;
 import org.neo4j.kernel.impl.api.operations.LegacyIndexWriteOperations;
 import org.neo4j.kernel.impl.api.operations.LockOperations;
+import org.neo4j.kernel.impl.api.operations.ProcedureExecutionOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaStateOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
@@ -44,6 +45,7 @@ public class StatementOperationParts
     private final CountsOperations countsStatementOperations;
     private final LegacyIndexReadOperations legacyIndexReadOperations;
     private final LegacyIndexWriteOperations legacyIndexWriteOperations;
+    private final ProcedureExecutionOperations procedureExecutionOperations;
 
     public StatementOperationParts(
             KeyReadOperations keyReadOperations,
@@ -56,7 +58,8 @@ public class StatementOperationParts
             LockOperations lockingStatementOperations,
             CountsOperations countsStatementOperations,
             LegacyIndexReadOperations legacyIndexReadOperations,
-            LegacyIndexWriteOperations legacyIndexWriteOperations )
+            LegacyIndexWriteOperations legacyIndexWriteOperations,
+            ProcedureExecutionOperations procedureExecutionOperations )
     {
         this.keyReadOperations = keyReadOperations;
         this.keyWriteOperations = keyWriteOperations;
@@ -69,6 +72,7 @@ public class StatementOperationParts
         this.countsStatementOperations = countsStatementOperations;
         this.legacyIndexReadOperations = legacyIndexReadOperations;
         this.legacyIndexWriteOperations = legacyIndexWriteOperations;
+        this.procedureExecutionOperations = procedureExecutionOperations;
     }
 
     public KeyReadOperations keyReadOperations()
@@ -121,6 +125,11 @@ public class StatementOperationParts
         return checkNotNull( legacyIndexWriteOperations, LegacyIndexWriteOperations.class );
     }
 
+    public ProcedureExecutionOperations procedureExecutionOperations()
+    {
+        return checkNotNull( procedureExecutionOperations, ProcedureExecutionOperations.class );
+    }
+
     public CountsOperations counting()
     {
         return checkNotNull( countsStatementOperations, CountsOperations.class );
@@ -137,7 +146,8 @@ public class StatementOperationParts
             LockOperations lockingStatementOperations,
             CountsOperations countsStatementOperations,
             LegacyIndexReadOperations legacyIndexReadOperations,
-            LegacyIndexWriteOperations legacyIndexWriteOperations )
+            LegacyIndexWriteOperations legacyIndexWriteOperations,
+            ProcedureExecutionOperations procedureExecutionOperations)
     {
         return new StatementOperationParts(
             eitherOr( keyReadOperations, this.keyReadOperations, KeyReadOperations.class ),
@@ -150,7 +160,9 @@ public class StatementOperationParts
             eitherOr( lockingStatementOperations, this.lockingStatementOperations, LockOperations.class ),
             eitherOr( countsStatementOperations, this.countsStatementOperations, CountsOperations.class ),
             eitherOr( legacyIndexReadOperations, this.legacyIndexReadOperations, LegacyIndexReadOperations.class ),
-            eitherOr( legacyIndexWriteOperations, this.legacyIndexWriteOperations, LegacyIndexWriteOperations.class ) );
+            eitherOr( legacyIndexWriteOperations, this.legacyIndexWriteOperations, LegacyIndexWriteOperations.class ),
+            eitherOr( procedureExecutionOperations, this.procedureExecutionOperations, ProcedureExecutionOperations
+                    .class ));
     }
 
     private <T> T checkNotNull( T object, Class<T> cls )

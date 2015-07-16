@@ -93,6 +93,9 @@ import org.neo4j.kernel.impl.index.LegacyIndexStore;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ReentrantLockService;
+import org.neo4j.kernel.impl.procedures.ProcedureExecutor;
+import org.neo4j.kernel.impl.procedures.javascript.JavaScriptLanguageHandler;
+import org.neo4j.kernel.impl.procedures.javascript.Neo4jRhinoStdLib;
 import org.neo4j.kernel.impl.store.NeoStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -1207,10 +1210,17 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
         StateHandlingStatementOperations stateHandlingContext = new StateHandlingStatementOperations( storeReadLayer,
                 legacyPropertyTrackers, constraintIndexCreator,
                 legacyIndexStore );
+
+        SchemaStateConcern schemaStateOperations = new SchemaStateConcern( updateableSchemaState );
+
+        ProcedureExecutor procedureExecutor = new ProcedureExecutor( stateHandlingContext, schemaStateOperations);
+
+        procedureExecutor.addLanguageHandler( JavaScriptLanguageHandler.LANG_JS, new JavaScriptLanguageHandler( new Neo4jRhinoStdLib() ) );
+
         StatementOperationParts parts = new StatementOperationParts( stateHandlingContext, stateHandlingContext,
                 stateHandlingContext, stateHandlingContext, stateHandlingContext, stateHandlingContext,
-                new SchemaStateConcern( updateableSchemaState ), null, stateHandlingContext, stateHandlingContext,
-                stateHandlingContext );
+                schemaStateOperations, null, stateHandlingContext, stateHandlingContext,
+                stateHandlingContext, procedureExecutor );
         // + Constraints
         ConstraintEnforcingEntityOperations constraintEnforcingEntityOperations =
                 new ConstraintEnforcingEntityOperations( parts.entityWriteOperations(), parts.entityReadOperations(),
@@ -1220,20 +1230,20 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
                 new DataIntegrityValidatingStatementOperations(
                         parts.keyWriteOperations(), parts.schemaReadOperations(), constraintEnforcingEntityOperations );
         parts = parts.override( null, dataIntegrityContext, constraintEnforcingEntityOperations,
-                constraintEnforcingEntityOperations, null, dataIntegrityContext, null, null, null, null, null );
+                constraintEnforcingEntityOperations, null, dataIntegrityContext, null, null, null, null, null, null );
         // + Locking
         LockingStatementOperations lockingContext = new LockingStatementOperations( parts.entityReadOperations(),
                 parts.entityWriteOperations(), parts.schemaReadOperations(), parts.schemaWriteOperations(),
                 parts.schemaStateOperations() );
         parts = parts.override( null, null, null, lockingContext, lockingContext, lockingContext, lockingContext,
-                lockingContext, null, null, null );
+                lockingContext, null, null, null, null );
         // + Guard
         if ( guard != null )
         {
             GuardingStatementOperations guardingOperations = new GuardingStatementOperations(
                     parts.entityWriteOperations(), parts.entityReadOperations(), guard );
             parts = parts.override( null, null, guardingOperations, guardingOperations, null, null, null, null,
-                    null, null, null );
+                    null, null, null, null );
         }
 
         return parts;

@@ -214,6 +214,7 @@ public interface Status
 
         ModifiedConcurrently( TransientError, "The database schema was modified while this transaction was running, the transaction should be retried." ),
 
+        ProcedureCompilationError (ClientError, "Could not compile the procedure"),
         ;
 
         private final Code code;

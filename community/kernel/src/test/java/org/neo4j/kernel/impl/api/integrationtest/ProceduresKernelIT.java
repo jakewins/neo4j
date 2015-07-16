@@ -6,12 +6,14 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.SchemaWriteOperations;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.RecordCursor;
 
 import static java.util.Arrays.asList;
 import static junit.framework.TestCase.assertEquals;
@@ -35,7 +37,7 @@ public class ProceduresKernelIT extends KernelIntegrationTest
                 .out( "age", INTEGER ).build();
 
         // When
-        ops.procedureCreate( signature, "js", streamOf( "yield record(1);\n" ) );
+        ops.procedureCreate( signature, "javascript", streamOf( "yield record(1);\n" ) );
 
         // Then
         assertThat( asCollection( ops.proceduresGetAll() ),
@@ -61,19 +63,19 @@ public class ProceduresKernelIT extends KernelIntegrationTest
         {
             SchemaWriteOperations ops = schemaWriteOperationsInNewTransaction();
 
-            ops.procedureCreate( signature, "js", streamOf( "yield record(name);\n" ) );
+            ops.procedureCreate( signature, "javascript", streamOf( "yield record(name);\n" ) );
             commit();
         }
 
         ReadOperations ops = readOperationsInNewTransaction();
 
         // When
-        Iterator<Object[]> res = ops.procedureCall( signature, new Object[]{"hello"} );
+        RecordCursor res = ops.procedureCall( signature, new Object[]{"hello"} );
 
         // Then
-        assertTrue( res.hasNext() );
-        assertEquals( new Object[]{"hello"}, res.next() );
-        assertFalse( res.hasNext() );
+        assertTrue( res.next() );
+        assertTrue( Arrays.equals(new Object[]{"hello"}, res.getRecord() ));
+        assertFalse( res.next() );
     }
 
     private InputStream streamOf( String s )

@@ -57,7 +57,9 @@ import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.operations.CountsOperations;
@@ -68,6 +70,7 @@ import org.neo4j.kernel.impl.api.operations.KeyWriteOperations;
 import org.neo4j.kernel.impl.api.operations.LegacyIndexReadOperations;
 import org.neo4j.kernel.impl.api.operations.LegacyIndexWriteOperations;
 import org.neo4j.kernel.impl.api.operations.LockOperations;
+import org.neo4j.kernel.impl.api.operations.ProcedureExecutionOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaStateOperations;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
@@ -135,6 +138,11 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     final LockOperations locking()
     {
         return operations.locking();
+    }
+
+    final ProcedureExecutionOperations procedures()
+    {
+        return operations.procedureExecutionOperations();
     }
 
     final CountsOperations counting()
@@ -362,10 +370,10 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     }
 
     @Override
-    public Iterator<Object[]> procedureCall( ProcedureSignature signature, Object[] args )
+    public RecordCursor procedureCall( ProcedureSignature signature, Object[] args ) throws ProcedureException
     {
         statement.assertOpen();
-        throw new UnsupportedOperationException( );
+        return procedures().call( statement, signature, args );
     }
 
     // </DataRead>
