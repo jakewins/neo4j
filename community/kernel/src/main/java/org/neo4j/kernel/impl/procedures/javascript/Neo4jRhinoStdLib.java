@@ -24,26 +24,30 @@ import org.mozilla.javascript.FunctionObject;
 import org.mozilla.javascript.Scriptable;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.DynamicRelationshipType;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.helpers.collection.Visitor;
+
+import static org.mozilla.javascript.Context.getCurrentContext;
 
 /**
  * TODO
  */
 public class Neo4jRhinoStdLib implements Visitor<Scriptable,RuntimeException>
 {
-    private final Map<String, Object> bindings = new HashMap<>();
+    private final Map<String,Object> bindings = new HashMap<>();
 
     public Object require( String key )
     {
         Object o = bindings.get( key );
-        if(o == null)
+        if ( o == null )
         {
-            throw new IllegalArgumentException( String.format("'%s' cannot be found by require().", key) );
+            throw new IllegalArgumentException( String.format( "'%s' cannot be found by require().", key ) );
         }
 
         return o;
@@ -62,7 +66,8 @@ public class Neo4jRhinoStdLib implements Visitor<Scriptable,RuntimeException>
         try
         {
             scope.put( "require", scope,
-                    new FunctionObject("require", getClass().getMethod( "require", String.class ), scope){
+                    new FunctionObject( "require", getClass().getMethod( "require", String.class ), scope )
+                    {
                         @Override
                         public Object call( Context cx, Scriptable scope, Scriptable thisObj, Object[] args )
                         {
@@ -70,14 +75,31 @@ public class Neo4jRhinoStdLib implements Visitor<Scriptable,RuntimeException>
                         }
                     } );
             scope.put( "label", scope,
-                    new FunctionObject("label", DynamicLabel.class.getMethod( "label", String.class ), scope));
+                    new FunctionObject( "label", DynamicLabel.class.getMethod( "label", String.class ), scope ) );
             scope.put( "type", scope,
-                    new FunctionObject("type", DynamicRelationshipType.class.getMethod( "withName", String.class ),
-                            scope));
+                    new FunctionObject( "type", DynamicRelationshipType.class.getMethod( "withName", String.class ),
+                            scope ) );
+
+            bind( "neo4j.findNodes", new FunctionObject( "findNodes",
+                    NativeJavaIterator.class.getConstructor(), scope )
+            {
+                @Override
+                public Object call( Context cx, Scriptable scope, Scriptable thisObj, Object[] args )
+                {
+                    Scriptable topScope = scope.getParentScope().getPrototype();
+
+                    GraphDatabaseService gds = (GraphDatabaseService) Context.jsToJava( ((Scriptable) topScope.get(
+                            "neo4j", scope )).get( "db", scope ), GraphDatabaseService.class );
+
+                    Iterator result = gds.findNodes( DynamicLabel.label( (String) args[0] ), (String) args[1],
+                            args[2] );
+                    return cx.newObject( scope, "NativeJavaIterator", new Object[]{result} );
+                }
+            } );
 
             for ( Map.Entry<String,Object> binding : bindings.entrySet() )
             {
-                scope.put(binding.getKey(), scope, binding.getValue());
+                bind( binding.getKey(), scope, Context.javaToJS( binding.getValue(), scope ) );
             }
         }
         catch ( NoSuchMethodException e )
@@ -85,5 +107,29 @@ public class Neo4jRhinoStdLib implements Visitor<Scriptable,RuntimeException>
             throw new ThisShouldNotHappenError( "jake", "This function must exist at this point." );
         }
         return false;
+    }
+
+    private void bind( String name, Scriptable scope, Object value )
+    {
+        String[] names = name.split( "\\." );
+        Scriptable currentScope = scope;
+        for ( int i = 0; i < names.length - 1; i++ )
+        {
+            String str = names[i];
+            Scriptable nextScope;
+            if ( currentScope.has( str, currentScope ) )
+            {
+                nextScope = (Scriptable) currentScope.get( str, currentScope );
+            }
+            else
+            {
+
+                nextScope = getCurrentContext().newObject( currentScope );
+                currentScope.put( str, currentScope, nextScope );
+            }
+            currentScope = nextScope;
+        }
+
+        currentScope.put( names[names.length - 1], currentScope, value );
     }
 }

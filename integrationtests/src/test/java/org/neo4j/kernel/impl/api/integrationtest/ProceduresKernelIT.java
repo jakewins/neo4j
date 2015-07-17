@@ -167,8 +167,7 @@ public class ProceduresKernelIT extends KernelIntegrationTest
             ProcedureSignature chain = procedureSignature( new String[]{"procs"}, "getChain" )
                     .in( "id", NTInteger )
                     .out( "link", NTNode).build();
-            ops.procedureCreate( chain, "cypher", "MATCH (n)-[:PARENT*0..]->(link) WHERE id(n) = {id} RETURN " +
-                                                            "link"
+            ops.procedureCreate( chain, "cypher", "MATCH (n)-[:PARENT*0..]->(link) WHERE id(n) = {id} RETURN link"
             );
 
             commit();
