@@ -20,9 +20,13 @@
 package org.neo4j.kernel.impl.util;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -230,5 +234,45 @@ public abstract class IoPrimitiveUtils
             throw new IllegalArgumentException( "Casting long value " + value + " to an int would wrap around" );
         }
         return (int) value;
+    }
+
+    public static String readAsString( InputStream input )
+    {
+        final char[] buffer = new char[0x10000];
+        StringBuilder out = new StringBuilder();
+        Reader reader = null;
+        try
+        {
+            reader = new InputStreamReader( input, StandardCharsets.UTF_8 );
+            int read;
+            do
+            {
+                read = reader.read( buffer, 0, buffer.length );
+                if ( read > 0 )
+                {
+                    out.append( buffer, 0, read );
+                }
+            }
+            while ( read >= 0 );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+        finally
+        {
+            if ( reader != null )
+            {
+                try
+                {
+                    reader.close();
+                }
+                catch ( IOException e )
+                {
+                    // OK
+                }
+            }
+        }
+        return out.toString();
     }
 }

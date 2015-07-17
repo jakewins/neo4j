@@ -293,7 +293,6 @@ the relevant Commercial Agreement.
     <dependency>
       <groupId>org.mozilla</groupId>
       <artifactId>rhino</artifactId>
-      <version>1.7R5</version>
     </dependency>
 
     <!-- test dependencies -->

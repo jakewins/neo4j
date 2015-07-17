@@ -19,10 +19,14 @@
  */
 package org.neo4j.kernel.api.procedure;
 
+import java.io.InputStream;
+
+import org.neo4j.kernel.api.Statement;
+
 /**
  * TODO
  */
 public interface LanguageHandler
 {
-    Procedure compile(ProcedureSignature signature, String code) throws ProcedureException;
+    Procedure compile(Statement statement, ProcedureSignature signature, String code) throws ProcedureException;
 }

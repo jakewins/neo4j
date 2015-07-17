@@ -33,6 +33,8 @@ import java.util.concurrent.locks.LockSupport;
 
 import org.neo4j.function.Supplier;
 import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -94,6 +96,7 @@ import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ReentrantLockService;
 import org.neo4j.kernel.impl.procedures.ProcedureExecutor;
+import org.neo4j.kernel.impl.procedures.cypher.CypherLanguageHandler;
 import org.neo4j.kernel.impl.procedures.javascript.JavaScriptLanguageHandler;
 import org.neo4j.kernel.impl.procedures.javascript.Neo4jRhinoStdLib;
 import org.neo4j.kernel.impl.store.NeoStore;
@@ -284,6 +287,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
     public static final String DEFAULT_DATA_SOURCE_NAME = "nioneodb";
     private final Monitors monitors;
     private final Tracers tracers;
+    private GraphDatabaseService graphDatabaseService;
 
     private final Log msgLog;
     private final LogProvider logProvider;
@@ -362,7 +366,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
             IndexConfigStore indexConfigStore, CommitProcessFactory commitProcessFactory,
             PageCache pageCache,
             Monitors monitors,
-            Tracers tracers )
+            Tracers tracers, GraphDatabaseService graphDatabaseService )
     {
         this.storeDir = storeDir;
         this.config = config;
@@ -389,6 +393,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
         this.indexConfigStore = indexConfigStore;
         this.monitors = monitors;
         this.tracers = tracers;
+        this.graphDatabaseService = graphDatabaseService;
 
         readOnly = config.get( Configuration.read_only );
         msgLog = logProvider.getLog( getClass() );
@@ -494,7 +499,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
                     indexingModule.indexUpdatesValidator(),
                     storeLayerModule.storeLayer(),
                     cacheModule.updateableSchemaState(), indexingModule.labelScanStore(),
-                    indexingModule.schemaIndexProviderMap() );
+                    indexingModule.schemaIndexProviderMap(), graphDatabaseService );
 
 
             // Do these assignments last so that we can ensure no cyclical dependencies exist
@@ -934,7 +939,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
             NeoStore neoStore, TransactionRepresentationStoreApplier storeApplier, IndexingService indexingService,
             IndexUpdatesValidator indexUpdatesValidator, StoreReadLayer storeLayer,
             UpdateableSchemaState updateableSchemaState, LabelScanStore labelScanStore,
-            SchemaIndexProviderMap schemaIndexProviderMap )
+            SchemaIndexProviderMap schemaIndexProviderMap, GraphDatabaseService gds )
     {
         final TransactionCommitProcess transactionCommitProcess =
                 commitProcessFactory.create( appender, kernelHealth, neoStore, storeApplier,
@@ -966,7 +971,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
                 new NeoStoreTransactionContextSupplier( neoStore );
 
         StatementOperationParts statementOperations = buildStatementOperations( storeLayer, legacyPropertyTrackers,
-                constraintIndexCreator, updateableSchemaState, guard, legacyIndexStore );
+                constraintIndexCreator, updateableSchemaState, guard, legacyIndexStore, gds );
 
         final TransactionHooks hooks = new TransactionHooks();
         final KernelTransactions kernelTransactions =
@@ -1202,7 +1207,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
     private StatementOperationParts buildStatementOperations(
             StoreReadLayer storeReadLayer, LegacyPropertyTrackers legacyPropertyTrackers,
             ConstraintIndexCreator constraintIndexCreator, UpdateableSchemaState updateableSchemaState,
-            Guard guard, LegacyIndexStore legacyIndexStore )
+            Guard guard, LegacyIndexStore legacyIndexStore, GraphDatabaseService gds )
     {
         // The passed in StoreReadLayer is the bottom most layer: Read-access to committed data.
         // To it we add:
@@ -1215,12 +1220,19 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
 
         ProcedureExecutor procedureExecutor = new ProcedureExecutor( stateHandlingContext, schemaStateOperations);
 
-        procedureExecutor.addLanguageHandler( JavaScriptLanguageHandler.LANG_JS, new JavaScriptLanguageHandler( new Neo4jRhinoStdLib() ) );
-
         StatementOperationParts parts = new StatementOperationParts( stateHandlingContext, stateHandlingContext,
                 stateHandlingContext, stateHandlingContext, stateHandlingContext, stateHandlingContext,
                 schemaStateOperations, null, stateHandlingContext, stateHandlingContext,
                 stateHandlingContext, procedureExecutor );
+
+        procedureExecutor.addLanguageHandler( JavaScriptLanguageHandler.LANG_JS,
+                new JavaScriptLanguageHandler( new Neo4jRhinoStdLib().
+                        bind( "neo4j_db", gds ).
+                        bind( "neo4j_OUTGOING", Direction.OUTGOING ) ) );
+        procedureExecutor.addLanguageHandler( CypherLanguageHandler.CYPHER_JS, new CypherLanguageHandler( gds ) );
+
+
+
         // + Constraints
         ConstraintEnforcingEntityOperations constraintEnforcingEntityOperations =
                 new ConstraintEnforcingEntityOperations( parts.entityWriteOperations(), parts.entityReadOperations(),

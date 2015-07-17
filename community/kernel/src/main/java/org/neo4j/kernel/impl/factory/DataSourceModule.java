@@ -203,7 +203,7 @@ public class DataSourceModule
                 platformModule.monitors.newMonitor( PhysicalLogFile.Monitor.class ),
                 editionModule.headerInformationFactory, startupStatistics, nodeManager, guard, indexStore,
                 editionModule.commitProcessFactory, pageCache, platformModule.monitors,
-                platformModule.tracers ) );
+                platformModule.tracers, platformModule.graphDatabaseFacade ) );
         dataSourceManager.register( neoStoreDataSource );
 
         life.add( new MonitorGc( config, logging.getInternalLog( MonitorGc.class ) ) );

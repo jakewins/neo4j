@@ -32,7 +32,8 @@ import org.neo4j.kernel.impl.api.KernelStatement;
  */
 public interface ProcedureExecutionOperations
 {
-    void verify( ProcedureSignature signature, String language, String code ) throws ProcedureException;
+    void verify( KernelStatement statement, ProcedureSignature signature, String language, String code ) throws
+            ProcedureException;
 
     RecordCursor call( KernelStatement statement, ProcedureSignature signature, Object[] args )
             throws ProcedureException;

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.function.Function;
+import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.LanguageHandlers;
 import org.neo4j.kernel.api.procedure.Procedure;
@@ -57,7 +58,9 @@ public class ProcedureExecutor
     public void addLanguageHandler( String language, LanguageHandler handler )
     {
         if ( languageHandlers.containsKey( language ) )
-        { throw new IllegalArgumentException( String.format( "Language %s already registered", language ) ); }
+        {
+            throw new IllegalArgumentException( String.format( "Language %s already registered", language ) );
+        }
 
         languageHandlers.put( language, handler );
     }
@@ -68,12 +71,13 @@ public class ProcedureExecutor
         languageHandlers.remove( language );
     }
 
-    @Override
-    public void verify( ProcedureSignature signature, String language, String code ) throws ProcedureException
+    public void verify( KernelStatement statement, ProcedureSignature signature, String language, String code )
+            throws
+            ProcedureException
     {
         LanguageHandler languageHandler = languageHandlers.get( language );
 
-        Procedure procedure = languageHandler.compile( signature, code );
+        Procedure procedure = languageHandler.compile( statement, signature, code );
     }
 
     @Override
@@ -98,7 +102,7 @@ public class ProcedureExecutor
                     signature );
 
             LanguageHandler languageHandler = languageHandlers.get( procedureDescriptor.language() );
-            procedure = languageHandler.compile( signature, procedureDescriptor.procedureBody() );
+            procedure = languageHandler.compile( statement, signature, procedureDescriptor.procedureBody() );
             procedures.put( signature, procedure );
         }
 

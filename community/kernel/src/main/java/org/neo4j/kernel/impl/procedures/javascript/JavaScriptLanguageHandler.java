@@ -19,33 +19,39 @@
  */
 package org.neo4j.kernel.impl.procedures.javascript;
 
+import org.mozilla.javascript.BaseFunction;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.FunctionObject;
 import org.mozilla.javascript.IdFunctionObject;
 import org.mozilla.javascript.JavaScriptException;
 import org.mozilla.javascript.NativeGenerator;
-import org.mozilla.javascript.Script;
 import org.mozilla.javascript.Scriptable;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringReader;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.procedure.LanguageHandler;
+import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.impl.store.Neo4jTypes;
+
+import static org.mozilla.javascript.Context.exit;
+import static org.neo4j.kernel.impl.util.IoPrimitiveUtils.readAsString;
 
 import static org.neo4j.kernel.impl.store.Neo4jTypes.AnyType;
 
@@ -59,18 +65,6 @@ public class JavaScriptLanguageHandler
 
     private final Scriptable parentScope;
 
-    public JavaScriptLanguageHandler()
-    {
-        this( new Visitor<Scriptable,RuntimeException>()
-        {
-            @Override
-            public boolean visit( Scriptable element )
-            {
-                return false;
-            }
-        } );
-    }
-
     public JavaScriptLanguageHandler(Visitor<Scriptable, RuntimeException> stdLibraryProvider)
     {
         Context context = ctx();
@@ -80,7 +74,8 @@ public class JavaScriptLanguageHandler
         {
             Method recordMethod = getClass().getMethod( "record", Object.class );
             parentScope.put( "record", parentScope,
-                    new FunctionObject("record", recordMethod, parentScope){
+                    new FunctionObject("record", recordMethod, parentScope)
+                    {
                         @Override
                         public Object call( Context cx, Scriptable scope, Scriptable thisObj, Object[] args )
                         {
@@ -96,8 +91,13 @@ public class JavaScriptLanguageHandler
         stdLibraryProvider.visit( parentScope );
     }
 
-    public Object record( Object args )
+    public Object[] record( Object arg )
     {
+        Object[] args = (Object[]) arg;
+        for ( int i = 0; i < args.length; i++ )
+        {
+            args[i] = Context.jsToJava(args[i], Object.class);
+        }
         return args;
     }
 
@@ -121,33 +121,105 @@ public class JavaScriptLanguageHandler
     }
 
     @Override
-    public Procedure compile( ProcedureSignature signature, String code ) throws ProcedureException
+    public Procedure compile( Statement statement, ProcedureSignature signature, String code ) throws
+            ProcedureException
     {
+        StringBuilder header = new StringBuilder(  );
+        header.append( "function procedure(" );
+        for ( int i = 0; i < signature.getInputSignature().size(); i++ )
+        {
+            Pair<String,AnyType> arg =
+                    signature.getInputSignature().get( i );
+            if (i > 0)
+                header.append( ',' );
+            header.append( arg.first() );
+        }
+        header.append( "){" );
+
+        code = header.toString()+code+"\n}";
+
+        // Import all functions into scope
+        Context ctx = ctx();
+        Scriptable proceduresScope;
+        Function script;
         try
         {
-            StringBuilder header = new StringBuilder(  );
-            header.append( "function procedure(" );
-            for ( int i = 0; i < signature.getInputSignature().size(); i++ )
+            proceduresScope = ctx.newObject(parentScope);
+            proceduresScope.setPrototype( parentScope );
+            proceduresScope.setParentScope( null );
+
+            Iterator<ProcedureSignature> procedures = statement.readOperations().proceduresGetAll();
+            while ( procedures.hasNext() )
             {
-                Pair<String,AnyType> arg =
-                        signature.getInputSignature().get( i );
-                if (i > 0)
-                    header.append( ',' );
-                header.append( arg.first() );
+                ProcedureSignature proc = procedures.next();
+
+                StringBuilder name = new StringBuilder(  );
+                for ( String nameSpace : proc.getNamespace() )
+                {
+                    name.append( nameSpace ).append( '_' );
+                }
+                name.append( proc.getName() );
+
+                proceduresScope.put( name.toString(), proceduresScope, new ProcedureFunction(proc));
             }
-            header.append( ")\n{\n" );
 
-            code = header.toString()+code+"\n}";
-
-            Function script = ctx().compileFunction( parentScope, code, "myFile.js", 0,
-                    null );
-
-            return new JavaScriptProcedure( signature, script );
+            script = ctx().compileFunction( proceduresScope, code, signature.getName(), 0, null );
         }
-        catch ( RuntimeException e )
+        catch ( EvaluatorException e )
         {
-            throw new ProcedureException( Status.Schema.ProcedureCompilationError, e, "Could not compile the " +
-                                                                                      "JavaScript" );
+            throw new ProcedureException( Status.Schema.ProcedureCompilationError, e, e.getMessage() );
+        }
+        finally
+        {
+            exit();
+        }
+
+        return new JavaScriptProcedure( signature, script, proceduresScope );
+    }
+
+    private class ProcedureFunction
+        extends BaseFunction
+    {
+        private ProcedureSignature signature;
+
+        public ProcedureFunction( ProcedureSignature signature )
+        {
+            this.signature = signature;
+        }
+
+        @Override
+        public Object call( Context cx, Scriptable scope, Scriptable thisObj, Object[] args )
+        {
+            try
+            {
+                Statement statement = (Statement) cx.getThreadLocal( "__statement" );
+
+                RecordCursor cursor = statement.readOperations().procedureCall( signature, args );
+
+                List<Scriptable> results = new ArrayList<>(  );
+                while (cursor.next())
+                {
+                    Scriptable result = cx.newObject( scope );
+                    for ( int i = 0; i < signature.getOutputSignature().size(); i++ )
+                    {
+                        Pair<String,AnyType> arg = signature.getOutputSignature().get( i );
+                        result.put(arg.first(), result, cx.javaToJS(cursor.getRecord()[i], scope));
+                    }
+                    results.add(result);
+                }
+
+                return results;
+            }
+            catch ( ProcedureException e )
+            {
+                throw new RuntimeException( e );
+            }
+        }
+
+        @Override
+        public int getArity()
+        {
+            return signature.getInputSignature().size();
         }
     }
 
@@ -155,11 +227,13 @@ public class JavaScriptLanguageHandler
     {
         private ProcedureSignature signature;
         private final Function function;
+        private Scriptable proceduresScope;
 
-        public JavaScriptProcedure( ProcedureSignature signature, Function function )
+        public JavaScriptProcedure( ProcedureSignature signature, Function function, Scriptable proceduresScope )
         {
             this.signature = signature;
             this.function = function;
+            this.proceduresScope = proceduresScope;
         }
 
         @Override
@@ -168,11 +242,13 @@ public class JavaScriptLanguageHandler
             Context ctx = ctx();
 
             // Create a sub-scope so that side-effects of the function do not pollute the global scope
-            Scriptable scope = ctx.newObject(parentScope);
-            scope.setPrototype( parentScope );
+            Scriptable scope = ctx.newObject(proceduresScope);
+            scope.setPrototype( proceduresScope );
             scope.setParentScope( null );
 
-            NativeGenerator generator = (NativeGenerator) function.call( ctx, scope, null, args );
+            ctx.putThreadLocal( "__statement", statement );
+
+            NativeGenerator generator = (NativeGenerator) function.call( ctx, scope, scope, args );
 
             return new JavaScriptRecordCursor( generator, ctx, scope );
         }
@@ -225,6 +301,7 @@ public class JavaScriptLanguageHandler
         public void close()
         {
             generator.execIdCall( FUNC_CLOSE, ctx, scope, generator, new Object[]{} );
+//            exit();
         }
     }
 }

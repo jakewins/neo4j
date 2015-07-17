@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.helpers.ThisShouldNotHappenError;
 import org.neo4j.helpers.collection.Visitor;
 
@@ -70,6 +71,14 @@ public class Neo4jRhinoStdLib implements Visitor<Scriptable,RuntimeException>
                     } );
             scope.put( "label", scope,
                     new FunctionObject("label", DynamicLabel.class.getMethod( "label", String.class ), scope));
+            scope.put( "type", scope,
+                    new FunctionObject("type", DynamicRelationshipType.class.getMethod( "withName", String.class ),
+                            scope));
+
+            for ( Map.Entry<String,Object> binding : bindings.entrySet() )
+            {
+                scope.put(binding.getKey(), scope, binding.getValue());
+            }
         }
         catch ( NoSuchMethodException e )
         {

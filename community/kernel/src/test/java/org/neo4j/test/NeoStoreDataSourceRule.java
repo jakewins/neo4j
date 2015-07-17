@@ -24,6 +24,7 @@ import java.io.File;
 import java.util.Map;
 
 import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -92,7 +93,7 @@ public class NeoStoreDataSourceRule extends ExternalResource
                 mock( PhysicalLogFile.Monitor.class ), TransactionHeaderInformationFactory.DEFAULT,
                 new StartupStatisticsProvider(), mock( NodeManager.class ), null, null,
                 CommunityEditionModule.createCommitProcessFactory(), mock( PageCache.class ),
-                new Monitors(), new Tracers( "null", NullLog.getInstance() ) );
+                new Monitors(), new Tracers( "null", NullLog.getInstance() ), mock(GraphDatabaseService.class));
 
         return theDs;
     }
