@@ -114,6 +114,5 @@ public interface SchemaReadOperations
     Iterator<ProcedureDescriptor> proceduresGetAll( KernelStatement kernelStatement );
 
     /** Load a procedure description given a signature */
-    ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature )
-            throws ProcedureException;
+    ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature ) throws ProcedureException;
 }

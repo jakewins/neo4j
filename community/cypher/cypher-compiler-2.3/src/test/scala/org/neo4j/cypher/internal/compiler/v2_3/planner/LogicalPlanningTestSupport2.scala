@@ -38,6 +38,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.RewriterStepSeq
 import org.neo4j.helpers.collection.Visitable
 import org.neo4j.kernel.api.constraints.{UniquenessConstraint, PropertyConstraint}
 import org.neo4j.kernel.api.index.IndexDescriptor
+import org.neo4j.kernel.api.procedure.ProcedureSignature
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureVisitor
 
 import scala.language.reflectiveCalls
@@ -122,6 +123,8 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
 
       def getOptRelTypeId(relType: String): Option[Int] =
         semanticTable.resolvedRelTypeNames.get(relType).map(_.id)
+
+      def getProcedureSignature(namespace: Seq[String], name: String): Option[ProcedureSignature] = ???
 
       def checkNodeIndex(idxName: String): Unit = ???
 

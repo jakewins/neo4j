@@ -19,6 +19,11 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.commands
 
+import org.neo4j.cypher.internal.compiler.v2_3.ast.FunctionInvocation
+import org.neo4j.cypher.internal.compiler.v2_3.commands.expressions.Expression
+import org.neo4j.kernel.api.procedure.ProcedureSignature
+import org.neo4j.kernel.impl.store.Neo4jTypes.AnyType
+
 sealed abstract class IndexOperation extends AbstractQuery {
   val label: String
 }
@@ -74,4 +79,18 @@ final case class CreateRelationshipMandatoryPropertyConstraint(id: String, relTy
 final case class DropRelationshipMandatoryPropertyConstraint(id: String, relType: String, idForProperty: String, propertyKey: String,
                                                              queryString: QueryString = QueryString.empty) extends RelationshipPropertyConstraintOperation {
   def setQueryText(t: String): DropRelationshipMandatoryPropertyConstraint = copy(queryString = QueryString(t))
+}
+
+
+sealed abstract class ProcedureOperation extends AbstractQuery {
+}
+
+// TODO: This shouldn't be in 'IndexOperation'
+final case class CreateProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body:Expression, queryString: QueryString = QueryString.empty) extends ProcedureOperation {
+  def setQueryText(t: String): CreateProcedure = copy(queryString = QueryString(t))
+}
+
+final case class CallProcedure(namespace: Seq[String], name:String, args: IndexedSeq[Expression], queryString: QueryString = QueryString.empty) extends ProcedureOperation {
+
+  def setQueryText(t: String): CallProcedure = copy(queryString = QueryString(t))
 }

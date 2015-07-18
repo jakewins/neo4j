@@ -1,6 +1,24 @@
+/*
+ * Copyright (c) 2002-2015 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.procedures.cypher;
 
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,8 +32,6 @@ import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.store.Neo4jTypes;
-
-import static org.neo4j.kernel.impl.util.IoPrimitiveUtils.readAsString;
 
 /**
  * TODO
@@ -42,10 +58,10 @@ public class CypherLanguageHandler
             public RecordCursor call( Statement statement, Object[] args )
             {
                 Map<String,Object> params = new HashMap<>();
-                for ( int i = 0; i < signature.getInputSignature().size(); i++ )
+                for ( int i = 0; i < signature.inputSignature().size(); i++ )
                 {
                     Pair<String,Neo4jTypes.AnyType> arg =
-                            signature.getInputSignature().get( i );
+                            signature.inputSignature().get( i );
                     params.put( arg.first(), args[i] );
                 }
 
@@ -65,7 +81,7 @@ public class CypherLanguageHandler
         {
             this.result = result;
             this.signature = signature;
-            record = new Object[signature.getOutputSignature().size()];
+            record = new Object[signature.outputSignature().size()];
         }
 
         @Override
@@ -80,10 +96,10 @@ public class CypherLanguageHandler
             if ( result.hasNext() )
             {
                 Map<String,Object> row = result.next();
-                for ( int i = 0; i < signature.getOutputSignature().size(); i++ )
+                for ( int i = 0; i < signature.outputSignature().size(); i++ )
                 {
                     Pair<String,Neo4jTypes.AnyType> arg =
-                            signature.getOutputSignature().get( i );
+                            signature.outputSignature().get( i );
                     record[i] = row.get( arg.first() );
                 }
                 return true;

@@ -69,7 +69,7 @@ public class ServerInternalSettings
     public static final Setting<URI> browser_path = setting( "org.neo4j.server.webadmin.browser.uri", URI, "/browser/" );
 
     public static final Setting<Boolean> script_sandboxing_enabled = setting("org.neo4j.server.script.sandboxing.enabled",
-            BOOLEAN, TRUE );
+            BOOLEAN, FALSE );
 
     public static final Setting<Boolean> wadl_enabled = setting( "unsupported_wadl_generation_enabled", BOOLEAN,
             FALSE );

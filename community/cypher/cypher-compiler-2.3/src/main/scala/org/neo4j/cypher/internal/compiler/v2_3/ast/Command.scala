@@ -72,3 +72,13 @@ case class DropNodeMandatoryPropertyConstraint(identifier: Identifier, label: La
 case class CreateRelationshipMandatoryPropertyConstraint(identifier: Identifier, relType: RelTypeName, property: Property)(val position: InputPosition) extends RelationshipPropertyConstraintCommand
 
 case class DropRelationshipMandatoryPropertyConstraint(identifier: Identifier, relType: RelTypeName, property: Property)(val position: InputPosition) extends RelationshipPropertyConstraintCommand
+
+case class CreateProcedure(readOnly: Boolean, namespace: List[Identifier], name: Identifier,
+                           inputs: Seq[(Identifier, Type)], outputs: Option[Seq[(Identifier, Type)]],
+                           language: Identifier, body: Expression) (val position: InputPosition) extends Command {
+  def semanticCheck = Seq()
+}
+
+case class CallProcedure(namespace: List[Identifier], call:FunctionInvocation) (val position: InputPosition) extends Command {
+  def semanticCheck = Seq()
+}

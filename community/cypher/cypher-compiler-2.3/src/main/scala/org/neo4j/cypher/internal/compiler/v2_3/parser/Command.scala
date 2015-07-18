@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.compiler.v2_3.parser
 
 import org.neo4j.cypher.internal.compiler.v2_3.ast
+import org.neo4j.cypher.internal.compiler.v2_3.ast.{Type, Identifier}
 import org.parboiled.scala._
 
 trait Command extends Parser
@@ -31,6 +32,8 @@ trait Command extends Parser
     CreateUniqueConstraint
       | CreateNodeMandatoryConstraint
       | CreateRelMandatoryConstraint
+      | CreateProcedure
+      | CallProcedure
       | CreateIndex
       | DropUniqueConstraint
       | DropNodeMandatoryConstraint
@@ -70,6 +73,20 @@ trait Command extends Parser
     group(keyword("DROP") ~~ RelationshipMandatoryConstraintSyntax) ~~>> (ast.DropRelationshipMandatoryPropertyConstraint(_, _, _))
   }
 
+  def CreateProcedure: Rule1[ast.CreateProcedure] = rule {
+    group(keyword("CREATE")
+      ~~ (keyword("READ ONLY") ~ push(true) | (keyword("READ WRITE") ~ push(false)))
+      ~~ keyword("PROCEDURE")
+      ~~ zeroOrMore( Identifier ~ "." ) ~ Identifier ~~ "(" ~~ MaybeTypeSignature ~~ ")" // TODO: SymbolicName/FunctionName
+      ~~ optional(":" ~~ "(" ~~ MaybeTypeSignature ~~ ")" )
+      ~~ keyword("USING") ~~ Identifier
+      ~~ keyword("FROM SOURCE") ~~ Expression ) ~~>> (ast.CreateProcedure(_, _, _, _, _, _, _))
+  }
+
+  def CallProcedure: Rule1[ast.CallProcedure] = rule {
+    group(keyword("CALL") ~~ zeroOrMore( Identifier ~ "." ) ~ FunctionInvocation ) ~~>> (ast.CallProcedure(_,_))
+  }
+
   private def UniqueConstraintSyntax = keyword("CONSTRAINT ON") ~~ "(" ~~ Identifier ~~ NodeLabel ~~ ")" ~~
     keyword("ASSERT") ~~ PropertyExpression ~~ keyword("IS UNIQUE")
 
@@ -84,4 +101,7 @@ trait Command extends Parser
       | ("()-[" ~~ Identifier ~~ RelType ~~ "]->()")
       | ("()<-[" ~~ Identifier ~~ RelType ~~ "]-()")
   )
+
+  private def MaybeTypeSignature: Rule1[Seq[(Identifier, Type)]] = zeroOrMore(Identifier ~~ ":" ~~ TypeLiteral, separator = CommaSep)
+
 }

@@ -29,6 +29,9 @@ import org.neo4j.cypher.internal.compiler.v2_3.pipes._
 import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.RewriterStepSequencer
 import org.neo4j.cypher.internal.compiler.v2_3._
+import org.neo4j.kernel.api.procedure.ProcedureSignature
+
+import scala.None
 
 trait ExecutionPlanInProgressRewriter {
   def rewrite(in: ExecutionPlanInProgress)(implicit context: PipeMonitor): ExecutionPlanInProgress
@@ -57,6 +60,9 @@ class LegacyExecutablePlanBuilder(monitors: Monitors, rewriterSequencer: (String
       case q: PropertyConstraintOperation =>
         buildConstraintQuery(q)
 
+      case q: ProcedureOperation =>
+        buildProcedureQuery(q, planContext)
+
       case q: Union =>
         buildUnionQuery(q, planContext)
     }
@@ -78,6 +84,16 @@ class LegacyExecutablePlanBuilder(monitors: Monitors, rewriterSequencer: (String
     val propertyKey = KeyToken.Unresolved(op.propertyKey, TokenType.PropertyKey)
 
     PipeInfo(new ConstraintOperationPipe(op, label, propertyKey), updating = true, plannerUsed = RulePlannerName)
+  }
+
+  private def buildProcedureQuery(op: ProcedureOperation, context: PlanContext): PipeInfo = op match {
+    case op:CallProcedure => {
+      context.getProcedureSignature( op.namespace, op.name ) match {
+        case Some(sig) => PipeInfo(new ProcedureCallPipe(op, sig), updating = true, plannerUsed = RulePlannerName)
+        case _ => throw new MissingProcedureException( op.namespace, op.name )
+      }
+    }
+    case _ => PipeInfo(new ProcedureOperationPipe(op), updating = true, plannerUsed = RulePlannerName)
   }
 
   def buildQuery(inputQuery: Query, context: PlanContext)(implicit pipeMonitor:PipeMonitor): PipeInfo = {

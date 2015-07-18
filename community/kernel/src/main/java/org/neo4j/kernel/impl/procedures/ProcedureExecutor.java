@@ -19,12 +19,10 @@
  */
 package org.neo4j.kernel.impl.procedures;
 
-import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.function.Function;
-import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.LanguageHandlers;
 import org.neo4j.kernel.api.procedure.Procedure;
@@ -75,9 +73,7 @@ public class ProcedureExecutor
             throws
             ProcedureException
     {
-        LanguageHandler languageHandler = languageHandlers.get( language );
-
-        Procedure procedure = languageHandler.compile( statement, signature, code );
+        languageHandlers.get( language ).compile( statement, signature, code );
     }
 
     @Override
@@ -98,11 +94,10 @@ public class ProcedureExecutor
         Procedure procedure = procedures.get( signature );
         if ( procedure == null )
         {
-            ProcedureDescriptor procedureDescriptor = schemaReadOperations.procedureGetBySignature( statement,
-                    signature );
+            ProcedureDescriptor procedureDescriptor = schemaReadOperations.procedureGetBySignature( statement, signature );
 
             LanguageHandler languageHandler = languageHandlers.get( procedureDescriptor.language() );
-            procedure = languageHandler.compile( statement, signature, procedureDescriptor.procedureBody() );
+            procedure = languageHandler.compile( statement, procedureDescriptor.signature(), procedureDescriptor.procedureBody() );
             procedures.put( signature, procedure );
         }
 

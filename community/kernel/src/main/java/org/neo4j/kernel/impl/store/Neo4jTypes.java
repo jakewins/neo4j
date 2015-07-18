@@ -61,6 +61,8 @@ public class Neo4jTypes
          */
         private final int ordinal;
 
+        private final String name;
+
         public int ordinal()
         {
             return ordinal;
@@ -68,12 +70,19 @@ public class Neo4jTypes
 
         public AnyType()
         {
-            this( ORD_ANY );
+            this( ORD_ANY, "Any" );
         }
 
-        protected AnyType( int ordinal )
+        protected AnyType( int ordinal, String name )
         {
             this.ordinal = ordinal;
+            this.name = name;
+        }
+
+        @Override
+        public String toString()
+        {
+            return name;
         }
     }
 
@@ -81,7 +90,7 @@ public class Neo4jTypes
     {
         public TextType()
         {
-            super( ORD_TEXT );
+            super( ORD_TEXT, "Text" );
         }
     }
 
@@ -89,12 +98,12 @@ public class Neo4jTypes
     {
         public NumberType()
         {
-            super( ORD_NUMBER );
+            super( ORD_NUMBER, "Number" );
         }
 
-        protected NumberType( int ordinal )
+        protected NumberType( int ordinal, String name )
         {
-            super( ordinal );
+            super( ordinal, name );
         }
     }
 
@@ -102,7 +111,7 @@ public class Neo4jTypes
     {
         public IntegerType()
         {
-            super( ORD_INTEGER );
+            super( ORD_INTEGER, "Integer" );
         }
     }
 
@@ -110,7 +119,7 @@ public class Neo4jTypes
     {
         public FloatType()
         {
-            super( ORD_FLOAT );
+            super( ORD_FLOAT, "Float");
         }
     }
 
@@ -118,7 +127,7 @@ public class Neo4jTypes
     {
         public BooleanType()
         {
-            super( ORD_BOOLEAN );
+            super( ORD_BOOLEAN, "Boolean" );
         }
     }
 
@@ -129,11 +138,11 @@ public class Neo4jTypes
 
         public ListType(AnyType valueType)
         {
-            super( ORD_LIST );
+            super( ORD_LIST, "List[" + valueType.toString() + "]" );
             this.valueType = valueType;
         }
 
-        public AnyType valueType()
+        public AnyType innerType()
         {
             return valueType;
         }
@@ -143,12 +152,12 @@ public class Neo4jTypes
     {
         public MapType()
         {
-            super( ORD_MAP );
+            super( ORD_MAP, "Map" );
         }
 
-        protected MapType(int ordinal)
+        protected MapType(int ordinal, String name)
         {
-            super( ordinal );
+            super( ordinal, name );
         }
     }
 
@@ -156,7 +165,7 @@ public class Neo4jTypes
     {
         public NodeType()
         {
-            super( ORD_NODE );
+            super( ORD_NODE, "Node" );
         }
     }
 
@@ -164,7 +173,7 @@ public class Neo4jTypes
     {
         public RelationshipType()
         {
-            super( ORD_RELATIONSHIP );
+            super( ORD_RELATIONSHIP, "Relationship" );
         }
     }
 
@@ -172,7 +181,7 @@ public class Neo4jTypes
     {
         public PathType()
         {
-            super( ORD_PATH );
+            super( ORD_PATH, "Path" );
         }
     }
 }

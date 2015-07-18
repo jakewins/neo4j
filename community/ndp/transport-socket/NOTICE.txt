@@ -42,3 +42,6 @@ BSD License
   Scala Compiler
   scala-parser-combinators
 
+Mozilla Public License, Version 2.0
+  Mozilla Rhino
+

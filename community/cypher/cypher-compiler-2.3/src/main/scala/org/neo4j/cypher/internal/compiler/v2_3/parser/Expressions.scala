@@ -169,7 +169,7 @@ trait Expressions extends Parser
   private def IdInColl: Rule2[ast.Identifier, ast.Expression] =
     Identifier ~~ keyword("IN") ~~ Expression
 
-  private def FunctionInvocation: Rule1[ast.FunctionInvocation] = rule("a function") {
+  def FunctionInvocation: Rule1[ast.FunctionInvocation] = rule("a function") {
     ((group(FunctionName ~~ "(" ~~
       (keyword("DISTINCT") ~ push(true) | EMPTY ~ push(false)) ~~
       zeroOrMore(Expression, separator = CommaSep) ~~ ")"

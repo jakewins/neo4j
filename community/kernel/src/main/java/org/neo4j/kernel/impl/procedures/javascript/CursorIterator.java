@@ -66,9 +66,9 @@ public class CursorIterator
         }
 
         final Scriptable result = getCurrentContext().newObject( this );
-        for ( int i = 0; i < signature.getOutputSignature().size(); i++ )
+        for ( int i = 0; i < signature.outputSignature().size(); i++ )
         {
-            Pair<String,Neo4jTypes.AnyType> arg = signature.getOutputSignature().get( i );
+            Pair<String,Neo4jTypes.AnyType> arg = signature.outputSignature().get( i );
             result.put( arg.first(), result, Context.javaToJS( cursor.getRecord()[i], this ) );
         }
         return result;

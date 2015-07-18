@@ -19,6 +19,8 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.executionplan
 
+import java.util
+
 import org.neo4j.cypher.internal.compiler.v2_3.ast.Statement
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.QueryExecutionTracer
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.profiling.ProfilingTracer
@@ -38,10 +40,11 @@ import org.neo4j.function.Supplier
 import org.neo4j.function.Suppliers.singleton
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.QueryExecutionType.QueryType
-import org.neo4j.helpers.Clock
+import org.neo4j.helpers.{Pair, Clock}
 import org.neo4j.kernel.GraphDatabaseAPI
 import org.neo4j.kernel.api.{Statement => KernelStatement}
 import org.neo4j.kernel.impl.core.NodeManager
+import org.neo4j.kernel.impl.store.Neo4jTypes.AnyType
 
 
 trait RunnablePlan {
@@ -170,6 +173,8 @@ class ExecutionPlanBuilder(graph: GraphDatabaseService, statsDivergenceThreshold
   private def getQueryResultColumns(q: AbstractQuery, currentSymbols: SymbolTable): List[String] = q match {
     case in: PeriodicCommitQuery =>
       getQueryResultColumns(in.query, currentSymbols)
+
+    case in: CallProcedure => currentSymbols.identifiers.keys.toList
 
     case in: Query =>
       // Find the last query part

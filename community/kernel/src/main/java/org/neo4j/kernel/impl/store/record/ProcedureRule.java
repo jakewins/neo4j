@@ -104,12 +104,12 @@ public class ProcedureRule extends AbstractSchemaRule
             // Flags
             out.writeByte( descriptor.mode() == UPDATE ? MODE : 0 );
 
-            writeStringArray( out, descriptor.signature().getNamespace() );
-            putEncodedStringInto( descriptor.signature().getName(), out );
+            writeStringArray( out, descriptor.signature().namespace() );
+            putEncodedStringInto( descriptor.signature().name(), out );
             putEncodedStringInto( descriptor.language(), out );
 
-            writeFieldList( descriptor.signature().getInputSignature(), out );
-            writeFieldList( descriptor.signature().getOutputSignature(), out );
+            writeFieldList( descriptor.signature().inputSignature(), out );
+            writeFieldList( descriptor.signature().outputSignature(), out );
 
             putEncodedStringInto( descriptor.procedureBody(), out );
 
@@ -136,7 +136,7 @@ public class ProcedureRule extends AbstractSchemaRule
         out.writeByte( type.ordinal() );
         if( type.ordinal() ==  Neo4jTypes.ORD_LIST)
         {
-            writeType( ((Neo4jTypes.ListType)type).valueType(), out );
+            writeType( ((Neo4jTypes.ListType)type).innerType(), out );
         }
     }
 

@@ -26,6 +26,7 @@ import org.neo4j.graphdb.{ConstraintViolationException => KernelConstraintViolat
 import org.neo4j.kernel.api.TokenNameLookup
 import org.neo4j.kernel.api.exceptions.KernelException
 import org.neo4j.kernel.api.index.IndexDescriptor
+import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 class ExceptionTranslatingQueryContextFor2_3(inner: QueryContext) extends DelegatingQueryContext(inner) {
   override def setLabelsOnNode(node: Long, labelIds: Iterator[Int]): Int =
@@ -87,6 +88,12 @@ class ExceptionTranslatingQueryContextFor2_3(inner: QueryContext) extends Delega
 
   override def dropIndexRule(labelId: Int, propertyKeyId: Int) =
     translateException(super.dropIndexRule(labelId, propertyKeyId))
+
+  override def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String) =
+    translateException(super.createProcedure(readOnly, signature, language, body))
+
+  override def callProcedure(signature: ProcedureSignature, args: Seq[Any]) =
+    translateException(super.callProcedure(signature, args))
 
   override def indexSeek(index: IndexDescriptor, value: Any): Iterator[Node] =
     translateException(super.indexSeek(index, value))

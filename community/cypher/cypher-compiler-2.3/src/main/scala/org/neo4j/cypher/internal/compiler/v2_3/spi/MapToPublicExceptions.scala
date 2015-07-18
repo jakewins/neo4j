@@ -19,9 +19,10 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.spi
 
-import org.neo4j.cypher.internal.compiler.v2_3.CypherException
+import org.neo4j.cypher.internal.compiler.v2_3.{MissingProcedureException, CypherException}
 
 trait MapToPublicExceptions[T <: Throwable] {
+
   def failedIndexException(indexName: String, cause: Throwable): T
 
   def periodicCommitInOpenTransactionException(cause: Throwable): T
@@ -65,6 +66,8 @@ trait MapToPublicExceptions[T <: Throwable] {
   def uniquePathNotUniqueException(message: String, cause: Throwable): T
 
   def entityNotFoundException(message: String, cause: Throwable): T
+  
+  def missingProcedureException(namespace: Seq[String], name: String, cause: Throwable): T
 
   def cypherTypeException(message: String, cause: Throwable): T
 

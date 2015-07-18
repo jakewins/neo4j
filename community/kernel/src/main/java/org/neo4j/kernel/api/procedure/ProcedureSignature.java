@@ -28,6 +28,10 @@ import org.neo4j.helpers.Pair;
 import static org.neo4j.helpers.Pair.pair;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.AnyType;
 
+/**
+ * This describes the signature of a procedure, made up of its namespace, name, and input/output description.
+ * Procedure uniqueness is currently *only* on the namespace/name level - no procedure overloading allowed (yet).
+ */
 public class ProcedureSignature
 {
     private final String[] namespace;
@@ -45,22 +49,27 @@ public class ProcedureSignature
         this.outputSignature = outputSignature;
     }
 
-    public String[] getNamespace()
+    public ProcedureSignature( String[] namespace, String name )
+    {
+        this( namespace, name, null, null );
+    }
+
+    public String[] namespace()
     {
         return namespace;
     }
 
-    public String getName()
+    public String name()
     {
         return name;
     }
 
-    public List<Pair<String,AnyType>> getInputSignature()
+    public List<Pair<String,AnyType>> inputSignature()
     {
         return inputSignature;
     }
 
-    public List<Pair<String,AnyType>> getOutputSignature()
+    public List<Pair<String,AnyType>> outputSignature()
     {
         return outputSignature;
     }
@@ -68,29 +77,26 @@ public class ProcedureSignature
     @Override
     public boolean equals( Object o )
     {
-        if ( this == o )
-        { return true; }
-        if ( o == null || getClass() != o.getClass() )
-        { return false; }
+        if ( this == o ) { return true; }
+        if ( o == null || getClass() != o.getClass() ) { return false; }
 
         ProcedureSignature that = (ProcedureSignature) o;
 
-        if ( !inputSignature.equals( that.inputSignature ) )
-        { return false; }
-        if ( !name.equals( that.name ) )
-        { return false; }
-        if ( !Arrays.equals( namespace, that.namespace ) )
-        { return false; }
-        if ( !outputSignature.equals( that.outputSignature ) )
-        { return false; }
-
-        return true;
+        // Probably incorrect - comparing Object[] arrays with Arrays.equals
+        if ( !Arrays.equals( namespace, that.namespace ) ) { return false; }
+        return name.equals( that.name );
     }
 
     @Override
     public int hashCode()
     {
         return name.hashCode();
+    }
+
+    @Override
+    public String toString()
+    {
+        return Arrays.toString( namespace ) + "." + name + "(" + (inputSignature == null ? "..." : Arrays.toString( typesOf(inputSignature) )) + ")";
     }
 
     public static class Builder
@@ -129,5 +135,15 @@ public class ProcedureSignature
     public static Builder procedureSignature(String[] namespace, String name)
     {
         return new Builder(namespace, name);
+    }
+
+    private static AnyType[] typesOf( List<Pair<String,AnyType>> namedSig )
+    {
+        AnyType[] out = new AnyType[namedSig.size()];
+        for ( int i = 0; i < namedSig.size(); i++ )
+        {
+            out[i] = namedSig.get( i ).other();
+        }
+        return out;
     }
 }

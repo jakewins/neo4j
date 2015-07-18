@@ -25,6 +25,7 @@ import org.neo4j.cypher.internal.compiler.v2_3._
 import org.neo4j.cypher.internal.compiler.v2_3.pipes.{Pipe, PipeDecorator, QueryState}
 import org.neo4j.cypher.internal.compiler.v2_3.spi.{DelegatingOperations, DelegatingQueryContext, Operations, QueryContext}
 import org.neo4j.graphdb.{Node, PropertyContainer, Relationship}
+import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 import scala.collection.mutable
 

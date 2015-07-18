@@ -76,6 +76,10 @@ class FailedIndexException(indexName: String, cause: Throwable) extends CypherEx
   def this(indexName: String) = this(indexName, null)
 }
 
+class MissingProcedureException(namespace: Seq[String], name: String, cause: Throwable) extends CypherException("Procedure `" + namespace + "." + name + "` does not exist", null) {
+  val status = Status.Schema.NoSuchIndex
+}
+
 class MissingConstraintException(cause: Throwable) extends CypherException("Constraint not found", cause) {
   val status = Status.Schema.NoSuchConstraint
 }

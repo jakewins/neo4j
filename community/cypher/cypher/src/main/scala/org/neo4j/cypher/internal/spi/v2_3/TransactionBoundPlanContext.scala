@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.constraints.UniquenessConstraint
 import org.neo4j.kernel.api.exceptions.KernelException
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException
 import org.neo4j.kernel.api.index.{IndexDescriptor, InternalIndexState}
+import org.neo4j.kernel.api.procedure.ProcedureSignature
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore
 
 class TransactionBoundPlanContext(initialStatement: Statement, val gdb: GraphDatabaseService)
@@ -67,6 +68,12 @@ class TransactionBoundPlanContext(initialStatement: Statement, val gdb: GraphDat
     statement.readOperations().constraintsGetForLabelAndPropertyKey(labelId, propertyKeyId).asScala.collectFirst {
       case unique: UniquenessConstraint => unique
     }
+  } catch {
+    case _: KernelException => None
+  }
+
+  def getProcedureSignature(namespace: Seq[String], name: String): Option[ProcedureSignature] = try {
+    Some(statement.readOperations().procedureGet(namespace.toArray, name))
   } catch {
     case _: KernelException => None
   }

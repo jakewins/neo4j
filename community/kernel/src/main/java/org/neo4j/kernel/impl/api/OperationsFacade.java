@@ -523,6 +523,8 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     public Iterator<ProcedureSignature> proceduresGetAll()
     {
         statement.assertOpen();
+        // There is a mapping layer here because "inside" the kernel we use the definition object, rather than the signature,
+        // but we prefer to avoid leaking that outside the kernel.
         return map( new Function<ProcedureDescriptor,ProcedureSignature>()
         {
             @Override
@@ -531,6 +533,13 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
                 return o.signature();
             }
         }, schemaRead().proceduresGetAll( statement ) );
+    }
+
+    @Override
+    public ProcedureSignature procedureGet( String[] namespace, String name ) throws ProcedureException
+    {
+        statement.assertOpen();
+        return schemaRead().procedureGetBySignature( statement, new ProcedureSignature( namespace, name ) ).signature();
     }
 
     @Override

@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.compiler.v2_3.spi
 
 import org.neo4j.graphdb.{Relationship, PropertyContainer, Direction, Node}
 import org.neo4j.kernel.api.index.IndexDescriptor
+import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 class DelegatingQueryContext(inner: QueryContext) extends QueryContext {
 
@@ -78,6 +79,10 @@ class DelegatingQueryContext(inner: QueryContext) extends QueryContext {
   def addIndexRule(labelId: Int, propertyKeyId: Int) = singleDbHit(inner.addIndexRule(labelId, propertyKeyId))
 
   def dropIndexRule(labelId: Int, propertyKeyId: Int) = singleDbHit(inner.dropIndexRule(labelId, propertyKeyId))
+
+  def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String) = singleDbHit(inner.createProcedure(readOnly, signature, language, body))
+
+  def callProcedure(signature: ProcedureSignature, args: Seq[Any]) = singleDbHit(inner.callProcedure(signature, args))
 
   def indexSeek(index: IndexDescriptor, value: Any): Iterator[Node] = manyDbHits(inner.indexSeek(index, value))
 

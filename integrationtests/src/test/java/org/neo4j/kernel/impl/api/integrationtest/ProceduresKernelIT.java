@@ -1,14 +1,15 @@
 package org.neo4j.kernel.impl.api.integrationtest;
 
 import org.hamcrest.Matchers;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.DynamicLabel;
@@ -21,12 +22,13 @@ import org.neo4j.kernel.TopLevelTransaction;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.SchemaWriteOperations;
 import org.neo4j.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.store.Neo4jTypes;
 
 import static java.util.Arrays.asList;
-import static junit.framework.TestCase.assertEquals;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -41,14 +43,18 @@ public class ProceduresKernelIT extends KernelIntegrationTest
 {
     public static final Label PRODUCT = DynamicLabel.label( "PRODUCT" );
 
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
+
+    private final ProcedureSignature signature = procedureSignature( new String[]{"example"}, "exampleProc" )
+                                                .in( "name", NTText )
+                                                .out( "name", NTText ).build();
+
     @Test
     public void shouldCreateProcedure() throws Throwable
     {
         // Given
         SchemaWriteOperations ops = schemaWriteOperationsInNewTransaction();
-        ProcedureSignature signature = procedureSignature( new String[]{"neo4j"}, "exampleProc" )
-                .in( "name", NTText )
-                .out( "age", NTInteger ).build();
 
         // When
         ops.procedureCreate( signature, "javascript", "yield record(1);" );
@@ -66,14 +72,32 @@ public class ProceduresKernelIT extends KernelIntegrationTest
     }
 
     @Test
+    public void shouldGetProcedureByName() throws Throwable
+    {
+        // Given
+        shouldCreateProcedure();
+
+        // When
+        ProcedureSignature found = readOperationsInNewTransaction().procedureGet( new String[]{"example"}, "exampleProc" );
+
+        // Then
+        assertThat( found, equalTo( found ));
+    }
+
+    @Test
+    public void nonexistantProcedureShouldThrow() throws Throwable
+    {
+        // Expect
+        exception.expect( ProcedureException.class );
+
+        // When
+        readOperationsInNewTransaction().procedureGet( new String[]{"example"}, "exampleProc" );
+    }
+
+    @Test
     public void shouldBeAbleToInvokeSimpleProcedure() throws Throwable
     {
         // Given
-        ProcedureSignature signature = procedureSignature( new String[]{"neo4j"}, "exampleProc" )
-                .in( "name", NTText )
-                .out( "name", NTText ).build();
-
-        // Create a procedure
         {
             SchemaWriteOperations ops = schemaWriteOperationsInNewTransaction();
 
@@ -95,32 +119,9 @@ public class ProceduresKernelIT extends KernelIntegrationTest
     }
 
     @Test
-    public void shouldBeAbleToWork() throws KernelException
+    public void shouldBeAbleToCallProcedureFromProcedure() throws KernelException
     {
-/*
-        REPLACE PROCEDURE target.productPromotions(catEntryId: Integer):
-        (promotionId: Text, parentId: Text, relType: Text) USING js "{
-        var product = neo4j.db.findNodesByLabelAndProperty('PRODUCT', 'CATENTRY_ID', catEntryId).pop();
-
-        if(product == null){
-            log.warn("CATENTRY_ID value " + catEntryId + " not found");
-            error("CATENTRY_ID value not found.")
-        }
-
-        var chain = target.getChain(product.getId()).column("p");
-
-        for(var link in chain){
-        for(var promotedRel in link.getRelationships(neo4j.OUTGOING,
-                'APPLYPROMO', 'EXCLUDEPROMO')){
-            var promotion = promotedRel.getEndNode();
-            yield record( promotion.getProperty("PROMOTION_ID"),
-                    promotion.getProperty("PARENT"),
-                    promotedRel.getType().name());
-        }
-    }
-    }"
-*/
-
+        // TODO Cleanup
         // Given
         try ( Transaction tx = db.beginTx() )
         {
@@ -184,10 +185,10 @@ public class ProceduresKernelIT extends KernelIntegrationTest
             while (res.next())
             {
                 Object[] record = res.getRecord();
-                for ( int i = 0; i < exampleProc.getOutputSignature().size(); i++ )
+                for ( int i = 0; i < exampleProc.outputSignature().size(); i++ )
                 {
                     Pair<String,Neo4jTypes.AnyType> arg =
-                            exampleProc.getOutputSignature().get( i );
+                            exampleProc.outputSignature().get( i );
                     if (i > 0)
                         System.out.print(", ");
                     System.out.print(arg.first()+"="+record[i]);

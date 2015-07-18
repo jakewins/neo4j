@@ -44,7 +44,6 @@ import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.RecordCursor;
 
 import static org.mozilla.javascript.Context.exit;
-
 import static org.neo4j.kernel.impl.store.Neo4jTypes.AnyType;
 
 /**
@@ -107,7 +106,7 @@ public class JavaScriptLanguageHandler
         {
             ctx = Context.enter();
             ctx.setLanguageVersion( Context.VERSION_1_8 );
-            ctx.setOptimizationLevel( 9 );
+            ctx.setOptimizationLevel( 0 );
             return ctx;
         }
         else
@@ -122,10 +121,9 @@ public class JavaScriptLanguageHandler
     {
         StringBuilder header = new StringBuilder();
         header.append( "function procedure(" );
-        for ( int i = 0; i < signature.getInputSignature().size(); i++ )
+        for ( int i = 0; i < signature.inputSignature().size(); i++ )
         {
-            Pair<String,AnyType> arg =
-                    signature.getInputSignature().get( i );
+            Pair<String,AnyType> arg = signature.inputSignature().get( i );
             if ( i > 0 )
             { header.append( ',' ); }
             header.append( arg.first() );
@@ -150,16 +148,16 @@ public class JavaScriptLanguageHandler
                 ProcedureSignature proc = procedures.next();
 
                 StringBuilder name = new StringBuilder();
-                for ( String nameSpace : proc.getNamespace() )
+                for ( String nameSpace : proc.namespace() )
                 {
                     name.append( nameSpace ).append( '_' );
                 }
-                name.append( proc.getName() );
+                name.append( proc.name() );
 
                 proceduresScope.put( name.toString(), proceduresScope, new ProcedureFunction( proc ) );
             }
 
-            script = ctx().compileFunction( proceduresScope, code, signature.getName(), 0, null );
+            script = ctx().compileFunction( proceduresScope, code, signature.name(), 0, null );
         }
         catch ( EvaluatorException e )
         {
@@ -193,22 +191,6 @@ public class JavaScriptLanguageHandler
                 final RecordCursor cursor = statement.readOperations().procedureCall( signature, args );
 
                 return cx.newObject( scope, "CursorIterator", new Object[]{cursor, signature} );
-/*
-                return Cursors.iterator( cursor, new org.neo4j.function.Function<RecordCursor,Object>()
-                {
-                    @Override
-                    public Object apply( RecordCursor recordCursor )
-                    {
-                        final Scriptable result = cx.newObject( scope );
-                        for ( int i = 0; i < signature.getOutputSignature().size(); i++ )
-                        {
-                            Pair<String,AnyType> arg = signature.getOutputSignature().get( i );
-                            result.put( arg.first(), result, cx.javaToJS( cursor.getRecord()[i], scope ) );
-                        }
-                        return result;
-                    }
-                } );
-*/
             }
             catch ( ProcedureException e )
             {
@@ -219,7 +201,7 @@ public class JavaScriptLanguageHandler
         @Override
         public int getArity()
         {
-            return signature.getInputSignature().size();
+            return signature.inputSignature().size();
         }
     }
 

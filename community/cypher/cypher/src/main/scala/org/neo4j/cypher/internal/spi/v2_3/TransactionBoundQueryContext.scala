@@ -35,6 +35,7 @@ import org.neo4j.kernel.api._
 import org.neo4j.kernel.api.constraints.{MandatoryPropertyConstraint, UniquenessConstraint}
 import org.neo4j.kernel.api.exceptions.schema.{AlreadyConstrainedException, AlreadyIndexedException}
 import org.neo4j.kernel.api.index.{IndexDescriptor, InternalIndexState}
+import org.neo4j.kernel.api.procedure.{RecordCursor, ProcedureSignature}
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.kernel.impl.api.KernelStatement
 import org.neo4j.kernel.impl.core.{RelationshipProxy, ThreadToStatementContextBridge}
@@ -382,6 +383,35 @@ final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
 
   def dropIndexRule(labelId: Int, propertyKeyId: Int) =
     statement.schemaWriteOperations().indexDrop(new IndexDescriptor(labelId, propertyKeyId))
+
+  def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String) =
+    statement.schemaWriteOperations().procedureCreate(signature, language, body) // TODO readonly flag
+
+  def callProcedure(signature: ProcedureSignature, args: Seq[Any]) = {
+
+    // TODO: Remove all these 5000 translation and adaptor layers
+    val cursor: RecordCursor = statement.readOperations().procedureCall( signature, args.map(_.asInstanceOf[AnyRef]).toArray )
+
+    new Iterator[Seq[Any]]() {
+      var current:Seq[Any] = null
+      var end = false
+
+      override def hasNext: Boolean = {
+        val next1: Boolean = cursor.next
+        if(next1)
+        {
+          current = cursor.getRecord.toSeq
+        }
+        !end && (current != null || next1)
+      }
+
+      override def next(): Seq[Any] = {
+        val next = current
+        current = null
+        next
+      }
+    }
+  }
 
   def createUniqueConstraint(labelId: Int, propertyKeyId: Int): IdempotentResult[UniquenessConstraint] = try {
     IdempotentResult(statement.schemaWriteOperations().uniquePropertyConstraintCreate(labelId, propertyKeyId))

@@ -19,12 +19,11 @@
  */
 package org.neo4j.kernel.api.procedure;
 
-import java.io.InputStream;
-
 import org.neo4j.kernel.api.Statement;
 
 /**
- * TODO
+ * Used by the stored procedures service to compile procedures in arbitrary languages. Implement one of these and register
+ * it with the procedures service to make new languages available.
  */
 public interface LanguageHandler
 {

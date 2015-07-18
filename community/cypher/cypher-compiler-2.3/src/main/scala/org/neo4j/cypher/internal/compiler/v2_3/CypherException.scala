@@ -126,6 +126,10 @@ class LoadCsvStatusWrapCypherException(extraInfo: String, cause: CypherException
     mapper.loadCsvStatusWrapCypherException(extraInfo, cause)
 }
 
+class MissingProcedureException( namespace: Seq[String], name: String) extends CypherException {
+  def mapToPublic[T <: Throwable](mapper: MapToPublicExceptions[T]) = mapper.missingProcedureException(namespace, name, this)
+}
+
 class SyntaxException(message: String, val query: String, val offset: Option[Int]) extends CypherException(message) {
   def this(message: String, query: String, offset: Int) = this(message, query, Some(offset))
 

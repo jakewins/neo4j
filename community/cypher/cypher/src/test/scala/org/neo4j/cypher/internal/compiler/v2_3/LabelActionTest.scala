@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.spi.{IdempotentResult, LockingQue
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.kernel.api.constraints.{MandatoryPropertyConstraint, UniquenessConstraint}
 import org.neo4j.kernel.api.index.IndexDescriptor
+import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 class LabelActionTest extends GraphDatabaseFunSuite {
   val queryContext = new SnitchingQueryContext
@@ -140,6 +141,10 @@ class SnitchingQueryContext extends QueryContext {
   def createUniqueConstraint(labelId: Int, propertyKeyId: Int): IdempotentResult[UniquenessConstraint] = ???
 
   def dropUniqueConstraint(labelId: Int, propertyKeyId: Int) = ???
+
+  def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String): Unit = ???
+
+  def callProcedure(signature: ProcedureSignature, args: Seq[Any]): Iterator[Seq[Any]] = ???
 
   def createNodeMandatoryConstraint(labelId: Int, propertyKeyId: Int): IdempotentResult[MandatoryPropertyConstraint] = ???
 

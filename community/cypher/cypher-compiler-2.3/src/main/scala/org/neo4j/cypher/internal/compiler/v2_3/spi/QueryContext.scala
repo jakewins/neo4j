@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.InternalQueryStatistics
 import org.neo4j.graphdb._
 import org.neo4j.kernel.api.constraints.{MandatoryPropertyConstraint, UniquenessConstraint}
 import org.neo4j.kernel.api.index.IndexDescriptor
+import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 /*
  * Developer note: This is an attempt at an internal graph database API, which defines a clean cut between
@@ -68,6 +69,10 @@ trait QueryContext extends TokenContext {
   def addIndexRule(labelId: Int, propertyKeyId: Int): IdempotentResult[IndexDescriptor]
 
   def dropIndexRule(labelId: Int, propertyKeyId: Int)
+
+  def createProcedure( readOnly: Boolean, signature: ProcedureSignature, language: String, body: String )
+
+  def callProcedure( signature: ProcedureSignature, args: Seq[Any] ) : Iterator[Seq[Any]]
 
   def isOpen: Boolean
 
