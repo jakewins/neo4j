@@ -24,7 +24,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Iterables;
 
+import static java.util.Arrays.asList;
 import static org.neo4j.helpers.Pair.pair;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.AnyType;
 
@@ -96,7 +98,10 @@ public class ProcedureSignature
     @Override
     public String toString()
     {
-        return Arrays.toString( namespace ) + "." + name + "(" + (inputSignature == null ? "..." : Arrays.toString( typesOf(inputSignature) )) + ")";
+        String strNamespace = namespace.length > 0 ? Iterables.toString( asList( namespace ), "." ) + "." : "";
+        String strInSig = inputSignature == null ? "..." : Iterables.toString( typesOf( inputSignature ), ", " );
+        String strOutSig = outputSignature == null ? "..." : Iterables.toString( typesOf( outputSignature ), ", " );
+        return String.format( "%s%s(%s) : (%s)", strNamespace, name, strInSig, strOutSig );
     }
 
     public static class Builder
@@ -132,17 +137,24 @@ public class ProcedureSignature
         }
     }
 
+    public static Builder procedureSignature(String ... namespaceAndName)
+    {
+        String[] namespace = namespaceAndName.length > 1 ? Arrays.copyOf( namespaceAndName, namespaceAndName.length - 1 ) : new String[0];
+        String name = namespaceAndName[namespaceAndName.length - 1];
+        return procedureSignature( namespace, name );
+    }
+
     public static Builder procedureSignature(String[] namespace, String name)
     {
         return new Builder(namespace, name);
     }
 
-    private static AnyType[] typesOf( List<Pair<String,AnyType>> namedSig )
+    private static List<AnyType> typesOf( List<Pair<String,AnyType>> namedSig )
     {
-        AnyType[] out = new AnyType[namedSig.size()];
+        List<AnyType> out = new LinkedList<>();
         for ( int i = 0; i < namedSig.size(); i++ )
         {
-            out[i] = namedSig.get( i ).other();
+            out.add( namedSig.get( i ).other() );
         }
         return out;
     }

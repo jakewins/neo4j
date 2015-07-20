@@ -82,6 +82,9 @@
     <artifact id="tango" name="Tango Icons">
       <license>Public Domain - Tango</license>
     </artifact>
+    <artifact id="babel" name="BabelJS">
+      <license>MIT</license>
+    </artifact>
   </missing-artifacts>
 </licensing-requirements>
 

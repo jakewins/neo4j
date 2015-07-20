@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel;
 
-import org.mozilla.javascript.FunctionObject;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -1229,9 +1227,8 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
 
         procedureExecutor.addLanguageHandler( JavaScriptLanguageHandler.LANG_JS,
                 new JavaScriptLanguageHandler( new Neo4jRhinoStdLib().
-                        bind( "neo4j.db", gds ).
-                        bind( "neo4j.OUTGOING", Direction.OUTGOING ) ) );
-        procedureExecutor.addLanguageHandler( CypherLanguageHandler.CYPHER_JS, new CypherLanguageHandler( gds ) );
+                        bind( "neo4j.db", gds )) );
+        procedureExecutor.addLanguageHandler( CypherLanguageHandler.LANG_CYPHER, new CypherLanguageHandler( gds ) );
 
 
 

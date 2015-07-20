@@ -168,7 +168,7 @@ public class JavaScriptLanguageHandler
             exit();
         }
 
-        return new JavaScriptProcedure( signature, script, proceduresScope );
+        return new JavaScriptProcedure( script, proceduresScope );
     }
 
     private class ProcedureFunction
@@ -207,13 +207,11 @@ public class JavaScriptLanguageHandler
 
     private class JavaScriptProcedure implements Procedure
     {
-        private ProcedureSignature signature;
         private final Function function;
         private Scriptable proceduresScope;
 
-        public JavaScriptProcedure( ProcedureSignature signature, Function function, Scriptable proceduresScope )
+        public JavaScriptProcedure( Function function, Scriptable proceduresScope )
         {
-            this.signature = signature;
             this.function = function;
             this.proceduresScope = proceduresScope;
         }

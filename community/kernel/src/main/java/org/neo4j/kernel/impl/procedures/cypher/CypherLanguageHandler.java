@@ -39,7 +39,7 @@ import org.neo4j.kernel.impl.store.Neo4jTypes;
 public class CypherLanguageHandler
         implements LanguageHandler
 {
-    public static final String CYPHER_JS = "cypher";
+    public static final String LANG_CYPHER = "cypher";
 
     private GraphDatabaseService gds;
 

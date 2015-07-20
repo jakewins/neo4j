@@ -77,7 +77,9 @@ public interface Status
         // client
         Invalid( ClientError, "The client provided an invalid request." ),
         InvalidFormat( ClientError, "The client provided a request that was missing required fields, or had values " +
-                "that are not allowed." );
+                "that are not allowed." ),
+        ProcedureCallError( DatabaseError, "The database was unable to execute a requested procedure." );
+
         private final Code code;
 
         @Override

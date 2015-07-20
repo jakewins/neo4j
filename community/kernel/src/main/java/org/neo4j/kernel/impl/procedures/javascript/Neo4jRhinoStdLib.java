@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -96,6 +97,10 @@ public class Neo4jRhinoStdLib implements Visitor<Scriptable,RuntimeException>
                     return cx.newObject( scope, "NativeJavaIterator", new Object[]{result} );
                 }
             } );
+
+            bind( "neo4j.OUTGOING", Direction.OUTGOING );
+            bind( "neo4j.INCOMING", Direction.INCOMING );
+            bind( "neo4j.BOTH", Direction.BOTH );
 
             for ( Map.Entry<String,Object> binding : bindings.entrySet() )
             {

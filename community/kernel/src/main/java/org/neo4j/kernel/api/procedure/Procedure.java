@@ -20,12 +20,13 @@
 package org.neo4j.kernel.api.procedure;
 
 import org.neo4j.kernel.api.Statement;
-import org.neo4j.kernel.api.procedure.RecordCursor;
 
 /**
- * TODO
+ * Represents a callable stored procedure. Given a statement context, this can do awesome
+ * things!
  */
 public interface Procedure
 {
-    RecordCursor call(Statement statement, Object[] args);
+    // TODO: Likely swap RecordCursor for visitor?
+    RecordCursor call(Statement statement, Object[] args) throws ProcedureException;
 }
