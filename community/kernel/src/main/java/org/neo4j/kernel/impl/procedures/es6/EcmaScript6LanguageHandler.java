@@ -29,7 +29,7 @@ public class EcmaScript6LanguageHandler implements LanguageHandler
         {
             ScriptEngineManager em = new ScriptEngineManager();
             this.engine = em.getEngineByName( "nashorn" );
-            this.transpiler = new ES6Transpiler();
+            this.transpiler = ES6Transpiler.globalInstance();
         }
         catch( ScriptException e )
         {

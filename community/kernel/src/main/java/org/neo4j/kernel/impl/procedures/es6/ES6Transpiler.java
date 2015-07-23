@@ -1,6 +1,10 @@
 package org.neo4j.kernel.impl.procedures.es6;
 
 import java.io.InputStreamReader;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
@@ -9,6 +13,9 @@ import javax.script.ScriptException;
 import javax.script.SimpleScriptContext;
 
 import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.SimpleFuture;
+import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.store.Neo4jTypes;
 
@@ -17,34 +24,78 @@ import org.neo4j.kernel.impl.store.Neo4jTypes;
  */
 public class ES6Transpiler
 {
-    private final ScriptEngine engine;
-    private final Bindings globals;
+    private final SimpleFuture<ScriptEngine> engineFuture = new SimpleFuture<>();
+
     private static final String GENERATOR_TEMPLATE = "function *%s { %s }";
     private static final String FUNCTION_TEMPLATE = "function %s { %s }";
 
-    public ES6Transpiler() throws ScriptException
-    {
-        ScriptEngineManager em = new ScriptEngineManager();
-        this.engine = em.getEngineByName( "nashorn" );
-        this.globals = engine.getBindings( ScriptContext.ENGINE_SCOPE );
+    private static ES6Transpiler globalInstance;
 
-        // Load the traceur compiler
-        engine.eval( new InputStreamReader( getClass().getClassLoader().getResourceAsStream( "js/traceur.js" ) ) );
-        engine.eval( new InputStreamReader( getClass().getClassLoader().getResourceAsStream( "js/traceur-shim.js" ) ) );
+    public static ES6Transpiler globalInstance() throws ScriptException
+    {
+        return globalInstance( new Executor()
+        {
+            @Override
+            public void execute( Runnable command )
+            {
+                command.run();
+            }
+        });
     }
 
-    public String translate( ProcedureSignature signature, String es6Script ) throws ScriptException
+    /**
+     * Global singleton, as loading the compiler library is very, very slow, so we want to avoid doing this as long as possible.
+     * @see #ES6Transpiler(Executor)
+     */
+    public static synchronized ES6Transpiler globalInstance( Executor backgroundLoader ) throws ScriptException
+    {
+        if(globalInstance == null)
+        {
+            globalInstance = new ES6Transpiler(backgroundLoader);
+        }
+        return globalInstance;
+    }
+
+    /**
+     * @param backgroundLoader used once, to initialize the javascript transpiler in the background
+     */
+    public ES6Transpiler(Executor backgroundLoader)
+    {
+        // Load the traceur compiler in the background, otherwise we delay system startup with several seconds.
+        // This is preferred over lazilly initializing the runtime as well, since then we'd have the user take the initial load hit, and we'd have the
+        // same concurrency complexity with multiple requests wanting transpiling service at the same time.
+        backgroundLoader.execute( new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    ScriptEngineManager em = new ScriptEngineManager();
+                    ScriptEngine engine = em.getEngineByName( "nashorn" );
+                    engine.eval( new InputStreamReader( getClass().getClassLoader().getResourceAsStream( "js/traceur-shim.js" ) ) );
+                    engine.eval( new InputStreamReader( getClass().getClassLoader().getResourceAsStream( "js/traceur.js" ) ) );
+
+                    engineFuture.fulfill( engine );
+                }
+                catch ( Throwable e )
+                {
+                    engineFuture.fail( e );
+                }
+            }
+        } );
+    }
+
+    public synchronized String translate( ProcedureSignature signature, String es6Script ) throws ScriptException, ProcedureException
     {
         String jsSignature = jsSignature( signature );
         try
         {
-            String format = String.format( GENERATOR_TEMPLATE, jsSignature, es6Script );
-            System.out.println(format);
-            return compile( format );
+            return compile( String.format( GENERATOR_TEMPLATE, jsSignature, es6Script), signature );
         }
         catch( ScriptException e )
         {
-            return compile( String.format( FUNCTION_TEMPLATE, jsSignature, es6Script ) );
+            return compile( String.format( FUNCTION_TEMPLATE, jsSignature, es6Script ), signature );
         }
     }
 
@@ -60,11 +111,10 @@ public class ES6Transpiler
             out.append( String.format("var %1$s=%1$s || {};", ns.toString() ) );
             ns.append( "." );
         }
-//        out.append(ns.toString());
+        out.append( ns.toString() );
 
         // Method name
-//        out.append( signature.name() ).append( "( " );
-        out.append( "__procedure" ).append( "( " );
+        out.append( signature.name() ).append( "( " );
 
         // Argument signature
         boolean first = true;
@@ -77,24 +127,37 @@ public class ES6Transpiler
             first = false;
             out.append( sig.first() );
         }
-        out.append( ")" );
+        out.append( " )" );
 
         return out.toString();
     }
 
-    private String compile( String es6Script ) throws ScriptException
+    private String compile( String es6Script, ProcedureSignature signature ) throws ScriptException, ProcedureException
     {
-        return (String) engine.eval( "ES6ToES5(script, scriptName);", newCompilerScope( es6Script ) );
+        return (String) engine().eval( "traceur.Compiler.script(script);", newCompilerScope( es6Script, signature ) );
     }
 
-    private SimpleScriptContext newCompilerScope( String script )
+    private SimpleScriptContext newCompilerScope( String script, ProcedureSignature signature ) throws ProcedureException
     {
         SimpleScriptContext ctx = new SimpleScriptContext();
-        ctx.setBindings( globals, ScriptContext.GLOBAL_SCOPE);
+        ctx.setBindings( engine().getBindings( ScriptContext.ENGINE_SCOPE ), ScriptContext.GLOBAL_SCOPE);
         Bindings localScope = ctx.getBindings( ScriptContext.ENGINE_SCOPE );
 
         localScope.put( "script", script );
-        localScope.put( "scriptName", "procedure" ); // TODO
+        localScope.put( "scriptName", signature.name() );
+
         return ctx;
+    }
+
+    private ScriptEngine engine() throws ProcedureException
+    {
+        try
+        {
+            return engineFuture.get(280, TimeUnit.SECONDS);
+        }
+        catch ( RuntimeException | InterruptedException | ExecutionException | TimeoutException e )
+        {
+            throw new ProcedureException( Status.Schema.ProcedureInitializationError, e, "Failed to initialize ES6 compiler: %s", e.getMessage() );
+        }
     }
 }

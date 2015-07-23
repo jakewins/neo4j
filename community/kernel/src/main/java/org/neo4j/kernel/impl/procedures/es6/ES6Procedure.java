@@ -38,7 +38,7 @@ public class ES6Procedure implements Procedure
         {
             Context.setGlobal( NashornUtil.unwrap( (ScriptObjectMirror) ctx.getAttribute( NashornScriptEngine.NASHORN_GLOBAL ) ) );
 
-            ScriptObject generator = (ScriptObject) ScriptRuntime.apply( createGenerator, createGenerator );
+            ScriptObject generator = (ScriptObject) ScriptRuntime.apply( createGenerator, createGenerator, args );
             ScriptFunction nextFunction = (ScriptFunction) generator.get( "next" );
 
             return new ES6RecordCursor( generator, nextFunction, mapper, signature );

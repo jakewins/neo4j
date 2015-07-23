@@ -23,7 +23,6 @@ import static org.neo4j.kernel.impl.store.Neo4jTypes.NTInteger;
 
 public class ES6Test
 {
-    private final Statement statement = mock(Statement.class);
 
     @Test
     public void shouldCompileGeneratorSyntax() throws Throwable
@@ -31,8 +30,16 @@ public class ES6Test
         assertThat( exec( procedureSignature( "f" ).out( "number", NTInteger ).build(), "yield [1];" ), yields( record( 1l ) ) );
     }
 
-    private List<List<Object>> exec( ProcedureSignature sig, String script, Object ... args ) throws ProcedureException
+    @Test
+    public void shouldAcceptArguments() throws Throwable
     {
+        assertThat( exec( procedureSignature( "f" ).in("arg", NTInteger ).out( "number", NTInteger ).build(), "yield [arg];", 6l ), yields( record( 6l ) ) );
+    }
+
+    public static List<List<Object>> exec( ProcedureSignature sig, String script, Object ... args ) throws ProcedureException
+    {
+        Statement statement = mock(Statement.class);
+
         RecordCursor cursor = new EcmaScript6LanguageHandler().compile( null, sig, script ).call( statement, args );
         List<List<Object>> records = new LinkedList<>();
         while(cursor.next())
@@ -42,7 +49,7 @@ public class ES6Test
         return records;
     }
 
-    private Matcher<List<List<Object>>> yields( final Matcher<List<Object>>... records )
+    public static Matcher<List<List<Object>>> yields( final Matcher<List<Object>>... records )
     {
         return new TypeSafeMatcher<List<List<Object>>>()
         {
@@ -72,8 +79,10 @@ public class ES6Test
         };
     }
 
-    private Matcher<List<Object>> record( final Object ... expected )
+    public static Matcher<List<Object>> record( final Object ... expected )
     {
         return equalTo( asList( expected ) );
     }
+
+
 }
