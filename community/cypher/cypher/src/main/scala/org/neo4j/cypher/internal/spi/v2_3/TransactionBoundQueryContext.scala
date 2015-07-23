@@ -400,7 +400,7 @@ final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
         val next1: Boolean = cursor.next
         if(next1)
         {
-          current = cursor.getRecord.toSeq
+          current = cursor.record.toSeq
         }
         !end && (current != null || next1)
       }

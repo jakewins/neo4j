@@ -217,8 +217,9 @@ public interface Status
 
         ModifiedConcurrently( TransientError, "The database schema was modified while this transaction was running, the transaction should be retried." ),
 
-        ProcedureInitializationError( DatabaseError, "Failed to initialize the procedure subsystem" ),
-        ProcedureCompilationError( ClientError, "Could not compile the procedure" );
+        ProcedureInitializationError( DatabaseError, "Failed to initialize a procedure." ),
+        ProcedureSyntaxError( ClientError, "Could not compile the procedure" ),
+        ProcedureSemanticError( ClientError, "A procedure is semantically invalid, meaning it does not behave as the contract for procedures specifies." );
 
         private final Code code;
 

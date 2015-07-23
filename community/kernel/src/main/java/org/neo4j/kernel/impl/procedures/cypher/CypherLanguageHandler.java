@@ -85,7 +85,7 @@ public class CypherLanguageHandler
         }
 
         @Override
-        public Object[] getRecord()
+        public Object[] record()
         {
             return record;
         }

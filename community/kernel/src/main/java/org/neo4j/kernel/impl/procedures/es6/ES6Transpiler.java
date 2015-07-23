@@ -51,6 +51,8 @@ public class ES6Transpiler
     private String jsSignature( ProcedureSignature signature )
     {
         StringBuilder out = new StringBuilder( );
+
+        // Namespace
         StringBuilder ns = new StringBuilder();
         for ( String s : signature.namespace() )
         {
@@ -58,9 +60,13 @@ public class ES6Transpiler
             out.append( String.format("var %1$s=%1$s || {};", ns.toString() ) );
             ns.append( "." );
         }
-//        out.append(ns.toString()).append( signature.name() ).append( "( " );
+//        out.append(ns.toString());
 
-        out.append( "__procedure(" );
+        // Method name
+//        out.append( signature.name() ).append( "( " );
+        out.append( "__procedure" ).append( "( " );
+
+        // Argument signature
         boolean first = true;
         for ( Pair<String,Neo4jTypes.AnyType> sig : signature.inputSignature() )
         {

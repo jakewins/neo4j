@@ -1,38 +1,34 @@
 package org.neo4j.kernel.impl.procedures.es6;
 
+import jdk.nashorn.api.scripting.NashornScriptEngine;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
+import jdk.nashorn.internal.runtime.Context;
+import jdk.nashorn.internal.runtime.ScriptFunction;
+import jdk.nashorn.internal.runtime.ScriptObject;
+import jdk.nashorn.internal.runtime.ScriptRuntime;
 
-import java.util.List;
-import java.util.Map;
-import javax.script.Bindings;
-import javax.script.CompiledScript;
 import javax.script.ScriptContext;
-import javax.script.ScriptEngine;
-import javax.script.ScriptException;
-import javax.script.SimpleScriptContext;
 
-import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.RecordCursor;
-import org.neo4j.kernel.impl.store.Neo4jTypes;
 
 public class ES6Procedure implements Procedure
 {
-    private final CompiledScript compiled;
-    private final ScriptEngine engine;
+    private final ES6TypeMapper mapper;
     private final ProcedureSignature signature;
-    private final Bindings globals;
+    private final ScriptContext ctx;
+    private final ScriptFunction createGenerator;
 
-    public ES6Procedure( CompiledScript compiled, ScriptEngine engine, ProcedureSignature signature )
+    public ES6Procedure( ScriptContext ctx, ScriptFunction createGenerator, ES6TypeMapper mapper, ProcedureSignature signature )
     {
-        this.compiled = compiled;
-        this.engine = engine;
+        this.ctx = ctx;
+        this.createGenerator = createGenerator;
+        this.mapper = mapper;
         this.signature = signature;
-        this.globals = engine.getBindings( ScriptContext.ENGINE_SCOPE );
     }
 
     @Override
@@ -40,53 +36,62 @@ public class ES6Procedure implements Procedure
     {
         try
         {
-            ScriptObjectMirror rs = (ScriptObjectMirror) compiled.eval( createCallContext( args ) );
+            Context.setGlobal( NashornUtil.unwrap( (ScriptObjectMirror) ctx.getAttribute( NashornScriptEngine.NASHORN_GLOBAL ) ) );
 
-            for ( Map.Entry<String,Object> stringObjectEntry : rs.entrySet() )
-            {
-                System.out.println(stringObjectEntry.getKey());
-                System.out.println(stringObjectEntry.getValue().getClass());
-            }
+            ScriptObject generator = (ScriptObject) ScriptRuntime.apply( createGenerator, createGenerator );
+            ScriptFunction nextFunction = (ScriptFunction) generator.get( "next" );
 
-            System.out.println(rs);
-            System.out.println(rs.getClass());
+            return new ES6RecordCursor( generator, nextFunction, mapper, signature );
         }
-        catch ( ScriptException e )
+        catch ( Throwable e )
         {
             throw new ProcedureException( Status.Request.ProcedureCallError, e, "Failed to invoke `%s`: %s", signature, e.getMessage() );
         }
-
-        return new ES6RecordCursor();
-    }
-
-    private ScriptContext createCallContext( Object[] args )
-    {
-        Bindings locals = engine.createBindings();
-
-        List<Pair<String,Neo4jTypes.AnyType>> inputSig = signature.inputSignature();
-        for ( int i = 0; i < args.length; i++ )
-        {
-            locals.put( inputSig.get( i ).first(), args[i] );
-        }
-
-        SimpleScriptContext ctx = new SimpleScriptContext();
-        ctx.setBindings( globals, ScriptContext.GLOBAL_SCOPE );
-        ctx.setBindings( locals, ScriptContext.ENGINE_SCOPE );
-        return ctx;
     }
 
     private class ES6RecordCursor implements RecordCursor
     {
-        @Override
-        public Object[] getRecord()
+        private final ScriptObject generator;
+        private final ScriptFunction nextFunction;
+        private final ES6TypeMapper mapper;
+
+        private final Object[] record;
+
+        public ES6RecordCursor( ScriptObject generator, ScriptFunction nextFunction, ES6TypeMapper mapper, ProcedureSignature signature )
         {
-            return new Object[0];
+            this.generator = generator;
+            this.nextFunction = nextFunction;
+            this.mapper = mapper;
+            this.record = new Object[signature.outputSignature().size()];
+        }
+
+        @Override
+        public Object[] record()
+        {
+            return record;
         }
 
         @Override
         public boolean next()
         {
-            return false;
+            ScriptObject yielded = (ScriptObject) ScriptRuntime.apply( nextFunction, generator );
+
+            try
+            {
+                if( (Boolean)yielded.get( "done" ))
+                {
+                    return false;
+                }
+
+                mapper.translateRecord( yielded.get( "value" ), record );
+            }
+            catch ( ProcedureException e )
+            {
+                // TODO: Modify cursors to allow throwing exceptions
+                throw new RuntimeException( e );
+            }
+
+            return true;
         }
 
         @Override

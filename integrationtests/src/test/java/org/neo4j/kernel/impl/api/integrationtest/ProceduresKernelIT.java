@@ -112,7 +112,7 @@ public class ProceduresKernelIT extends KernelIntegrationTest
 
         // Then
         assertTrue( res.next() );
-        assertTrue( Arrays.equals( new Object[]{"hello"}, res.getRecord() ) );
+        assertTrue( Arrays.equals( new Object[]{"hello"}, res.record() ) );
         assertFalse( res.next() );
 
         res.close();
@@ -184,7 +184,7 @@ public class ProceduresKernelIT extends KernelIntegrationTest
             // Then
             while (res.next())
             {
-                Object[] record = res.getRecord();
+                Object[] record = res.record();
                 for ( int i = 0; i < exampleProc.outputSignature().size(); i++ )
                 {
                     Pair<String,Neo4jTypes.AnyType> arg =

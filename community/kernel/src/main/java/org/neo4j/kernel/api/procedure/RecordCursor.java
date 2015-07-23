@@ -23,5 +23,5 @@ import org.neo4j.cursor.Cursor;
 
 public interface RecordCursor extends Cursor
 {
-    Object[] getRecord();
+    Object[] record();
 }

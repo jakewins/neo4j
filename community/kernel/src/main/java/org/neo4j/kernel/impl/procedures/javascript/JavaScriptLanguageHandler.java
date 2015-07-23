@@ -161,7 +161,7 @@ public class JavaScriptLanguageHandler
         }
         catch ( EvaluatorException e )
         {
-            throw new ProcedureException( Status.Schema.ProcedureCompilationError, e, e.getMessage() );
+            throw new ProcedureException( Status.Schema.ProcedureSyntaxError, e, e.getMessage() );
         }
         finally
         {
@@ -252,7 +252,7 @@ public class JavaScriptLanguageHandler
         }
 
         @Override
-        public Object[] getRecord()
+        public Object[] record()
         {
             return nextRecord;
         }

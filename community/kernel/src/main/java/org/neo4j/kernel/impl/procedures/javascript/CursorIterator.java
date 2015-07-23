@@ -69,7 +69,7 @@ public class CursorIterator
         for ( int i = 0; i < signature.outputSignature().size(); i++ )
         {
             Pair<String,Neo4jTypes.AnyType> arg = signature.outputSignature().get( i );
-            result.put( arg.first(), result, Context.javaToJS( cursor.getRecord()[i], this ) );
+            result.put( arg.first(), result, Context.javaToJS( cursor.record()[i], this ) );
         }
         return result;
     }
