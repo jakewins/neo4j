@@ -1,8 +1,0 @@
-{
-  "name": "neo4j-procedures-js",
-  "version": "1.0.0",
-  "description": "Meta-package listing javascript dependencies for the Neo4j JS Procedures",
-  "dependencies": {
-    "babel-core": "5.7.2"
-  }
-}

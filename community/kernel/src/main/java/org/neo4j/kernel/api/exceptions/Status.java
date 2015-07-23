@@ -217,7 +217,8 @@ public interface Status
 
         ModifiedConcurrently( TransientError, "The database schema was modified while this transaction was running, the transaction should be retried." ),
 
-        ProcedureCompilationError (ClientError, "Could not compile the procedure");
+        ProcedureInitializationError( DatabaseError, "Failed to initialize the procedure subsystem" ),
+        ProcedureCompilationError( ClientError, "Could not compile the procedure" );
 
         private final Code code;
 

@@ -1,10 +1,15 @@
 package org.neo4j.kernel.impl.procedures.es6;
 
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
+
 import java.util.List;
+import java.util.Map;
 import javax.script.Bindings;
 import javax.script.CompiledScript;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
+import javax.script.SimpleScriptContext;
 
 import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.api.Statement;
@@ -20,12 +25,14 @@ public class ES6Procedure implements Procedure
     private final CompiledScript compiled;
     private final ScriptEngine engine;
     private final ProcedureSignature signature;
+    private final Bindings globals;
 
     public ES6Procedure( CompiledScript compiled, ScriptEngine engine, ProcedureSignature signature )
     {
         this.compiled = compiled;
         this.engine = engine;
         this.signature = signature;
+        this.globals = engine.getBindings( ScriptContext.ENGINE_SCOPE );
     }
 
     @Override
@@ -33,7 +40,14 @@ public class ES6Procedure implements Procedure
     {
         try
         {
-            Object rs = compiled.eval( createCallContext( args ) );
+            ScriptObjectMirror rs = (ScriptObjectMirror) compiled.eval( createCallContext( args ) );
+
+            for ( Map.Entry<String,Object> stringObjectEntry : rs.entrySet() )
+            {
+                System.out.println(stringObjectEntry.getKey());
+                System.out.println(stringObjectEntry.getValue().getClass());
+            }
+
             System.out.println(rs);
             System.out.println(rs.getClass());
         }
@@ -45,16 +59,20 @@ public class ES6Procedure implements Procedure
         return new ES6RecordCursor();
     }
 
-    private Bindings createCallContext( Object[] args )
+    private ScriptContext createCallContext( Object[] args )
     {
-        Bindings callBindings = engine.createBindings();
+        Bindings locals = engine.createBindings();
 
         List<Pair<String,Neo4jTypes.AnyType>> inputSig = signature.inputSignature();
         for ( int i = 0; i < args.length; i++ )
         {
-            callBindings.put( inputSig.get( i ).first(), args[i] );
+            locals.put( inputSig.get( i ).first(), args[i] );
         }
-        return callBindings;
+
+        SimpleScriptContext ctx = new SimpleScriptContext();
+        ctx.setBindings( globals, ScriptContext.GLOBAL_SCOPE );
+        ctx.setBindings( locals, ScriptContext.ENGINE_SCOPE );
+        return ctx;
     }
 
     private class ES6RecordCursor implements RecordCursor
