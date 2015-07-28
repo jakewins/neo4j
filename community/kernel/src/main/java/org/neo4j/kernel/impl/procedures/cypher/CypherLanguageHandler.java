@@ -116,4 +116,16 @@ public class CypherLanguageHandler
             result.close();
         }
     }
+
+    @Override
+    public LanguageHandler register( String nameAndNamespace, Object service )
+    {
+        return this;
+    }
+
+    @Override
+    public LanguageHandler unregister( String nameAndNamespace )
+    {
+        return this;
+    }
 }

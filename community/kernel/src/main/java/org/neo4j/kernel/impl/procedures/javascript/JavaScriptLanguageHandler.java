@@ -171,6 +171,18 @@ public class JavaScriptLanguageHandler
         return new JavaScriptProcedure( script, proceduresScope );
     }
 
+    @Override
+    public LanguageHandler register( String nameAndNamespace, Object service )
+    {
+        return this;
+    }
+
+    @Override
+    public LanguageHandler unregister( String nameAndNamespace )
+    {
+        return this;
+    }
+
     private class ProcedureFunction
             extends BaseFunction
     {

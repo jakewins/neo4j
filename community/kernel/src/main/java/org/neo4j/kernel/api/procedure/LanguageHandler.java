@@ -27,5 +27,30 @@ import org.neo4j.kernel.api.Statement;
  */
 public interface LanguageHandler
 {
+    /**
+     * Given source code and a signature, compile a procedure object that can later be invoked.
+     * @param statement the statement context this operation is executed in, may be used to perform data operations as part of compilation
+     * @param signature the procedure input/output signature, the compiled procedure *must* abide by this
+     * @param code the source code for the procedure, language handler specific
+     * @return a runnable procedure
+     * @throws ProcedureException
+     */
     Procedure compile(Statement statement, ProcedureSignature signature, String code) throws ProcedureException;
+
+    /**
+     * Register a service to be made available to procedures in this language handler. This operation is optional and how the service is exposed is
+     * language-handler specific.
+     * @param nameAndNamespace dot-separated namespace and name of the service
+     * @param service the service instance, any java object
+     * @return this language handler instance
+     */
+    LanguageHandler register( String nameAndNamespace, Object service );
+
+    /**
+     * Unregister a service.
+     * @see #register(String, Object)
+     * @param nameAndNamespace dot-separated namespace and name of the service
+     * @return this language handler instance
+     */
+    LanguageHandler unregister( String nameAndNamespace );
 }

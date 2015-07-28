@@ -22,11 +22,10 @@ package org.neo4j.kernel.api.procedure;
 import org.neo4j.kernel.api.Statement;
 
 /**
- * Represents a callable stored procedure. Given a statement context, this can do awesome
- * things!
+ * Represents a callable stored procedure. Instances of procedure must be thread safe, must abide by the {@link ProcedureSignature} they were compiled for and
+ * must never throw an exception other than {@link ProcedureException}.
  */
 public interface Procedure
 {
-    // TODO: Likely swap RecordCursor for visitor?
     RecordCursor call(Statement statement, Object[] args) throws ProcedureException;
 }

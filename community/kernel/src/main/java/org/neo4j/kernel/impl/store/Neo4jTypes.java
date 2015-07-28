@@ -134,17 +134,17 @@ public class Neo4jTypes
     public static class ListType extends AnyType
     {
         /** The type of values in this list */
-        private final AnyType valueType;
+        private final AnyType innerType;
 
-        public ListType(AnyType valueType)
+        public ListType(AnyType innerType )
         {
-            super( ORD_LIST, "List[" + valueType.toString() + "]" );
-            this.valueType = valueType;
+            super( ORD_LIST, "List[" + innerType.toString() + "]" );
+            this.innerType = innerType;
         }
 
         public AnyType innerType()
         {
-            return valueType;
+            return innerType;
         }
     }
 

@@ -90,4 +90,22 @@ public class SingleNodePath implements Path
     {
         return Arrays.<PropertyContainer>asList( node ).iterator();
     }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o ) { return true; }
+        if ( o == null || getClass() != o.getClass() ) { return false; }
+
+        SingleNodePath that = (SingleNodePath) o;
+
+        return node.equals( that.node );
+
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return node.hashCode();
+    }
 }

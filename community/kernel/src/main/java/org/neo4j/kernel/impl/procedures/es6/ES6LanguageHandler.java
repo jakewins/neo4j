@@ -18,13 +18,20 @@ import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 
-public class EcmaScript6LanguageHandler implements LanguageHandler
+public class ES6LanguageHandler implements LanguageHandler
 {
     private final ScriptEngine engine;
     private final ES6Transpiler transpiler;
+    private final ES6StdLib stdLib;
 
-    public EcmaScript6LanguageHandler() throws ProcedureException
+    public ES6LanguageHandler( ) throws NoSuchMethodException, IllegalAccessException, ProcedureException
     {
+        this(new ES6StdLib());
+    }
+
+    public ES6LanguageHandler( ES6StdLib stdLib ) throws ProcedureException
+    {
+        this.stdLib = stdLib;
         try
         {
             ScriptEngineManager em = new ScriptEngineManager();
@@ -48,6 +55,7 @@ public class EcmaScript6LanguageHandler implements LanguageHandler
             // Init procedure-local context
             ScriptContext ctx = new SimpleScriptContext();
             engine.eval( new InputStreamReader( runtimeAsStream() ), ctx );
+            stdLib.visit( ctx.getBindings( ScriptContext.ENGINE_SCOPE ) );
 
             // Compile the ES5 generator function
             ScriptFunction createGenerator = (ScriptFunction) NashornUtil.unwrap( (ScriptObjectMirror) engine.eval( translate, ctx ) );
@@ -58,6 +66,20 @@ public class EcmaScript6LanguageHandler implements LanguageHandler
         {
             throw new ProcedureException( Status.Schema.ProcedureSyntaxError, e, "Failed to compile javascript: '%s'", code );
         }
+    }
+
+    @Override
+    public LanguageHandler register( String nameAndNamespace, Object service )
+    {
+        stdLib.register( nameAndNamespace, service );
+        return this;
+    }
+
+    @Override
+    public LanguageHandler unregister( String nameAndNamespace )
+    {
+        stdLib.unregister( nameAndNamespace );
+        return null;
     }
 
     /**

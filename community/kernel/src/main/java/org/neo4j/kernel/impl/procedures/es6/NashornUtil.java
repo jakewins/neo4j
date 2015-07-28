@@ -1,5 +1,7 @@
 package org.neo4j.kernel.impl.procedures.es6;
 
+import jdk.nashorn.api.scripting.AbstractJSObject;
+import jdk.nashorn.api.scripting.JSObject;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import jdk.nashorn.internal.runtime.ScriptObject;
 
@@ -38,5 +40,31 @@ public class NashornUtil
         {
             throw new RuntimeException( e );
         }
+    }
+
+    /** Expose a method handle in a way nashorn understands */
+    public static JSObject asJSFunction( final MethodHandle method )
+    {
+        return new AbstractJSObject()
+        {
+            @Override
+            public boolean isFunction()
+            {
+                return true;
+            }
+
+            @Override
+            public Object call( Object thiz, Object... args )
+            {
+                try
+                {
+                    return method.invokeWithArguments( args );
+                }
+                catch ( Throwable throwable )
+                {
+                    throw new RuntimeException( throwable );
+                }
+            }
+        };
     }
 }
