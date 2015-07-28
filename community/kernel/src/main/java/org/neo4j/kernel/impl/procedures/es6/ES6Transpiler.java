@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2002-2015 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.procedures.es6;
 
 import java.io.InputStreamReader;
@@ -12,8 +31,8 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import javax.script.SimpleScriptContext;
 
+import org.neo4j.concurrent.CompletableFuture;
 import org.neo4j.helpers.Pair;
-import org.neo4j.helpers.SimpleFuture;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
@@ -24,7 +43,7 @@ import org.neo4j.kernel.impl.store.Neo4jTypes;
  */
 public class ES6Transpiler
 {
-    private final SimpleFuture<ScriptEngine> engineFuture = new SimpleFuture<>();
+    private final CompletableFuture<ScriptEngine> engineFuture = new CompletableFuture<>();
 
     private static final String GENERATOR_TEMPLATE = "function *%s { %s }";
     private static final String FUNCTION_TEMPLATE = "function %s { %s }";
@@ -76,11 +95,11 @@ public class ES6Transpiler
                     engine.eval( new InputStreamReader( getClass().getClassLoader().getResourceAsStream( "js/traceur-shim.js" ) ) );
                     engine.eval( new InputStreamReader( getClass().getClassLoader().getResourceAsStream( "js/traceur.js" ) ) );
 
-                    engineFuture.fulfill( engine );
+                    engineFuture.complete( engine );
                 }
                 catch ( Throwable e )
                 {
-                    engineFuture.fail( e );
+                    engineFuture.completeExceptionally( e );
                 }
             }
         } );

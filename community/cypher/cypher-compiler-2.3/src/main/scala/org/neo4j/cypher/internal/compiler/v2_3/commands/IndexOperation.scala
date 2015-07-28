@@ -82,8 +82,7 @@ final case class DropRelationshipMandatoryPropertyConstraint(id: String, relType
 }
 
 
-sealed abstract class ProcedureOperation extends AbstractQuery {
-}
+sealed abstract class ProcedureOperation extends AbstractQuery
 
 // TODO: This shouldn't be in 'IndexOperation'
 final case class CreateProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body:Expression, queryString: QueryString = QueryString.empty) extends ProcedureOperation {

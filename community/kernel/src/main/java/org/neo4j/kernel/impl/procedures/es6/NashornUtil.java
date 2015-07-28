@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2002-2015 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.procedures.es6;
 
 import jdk.nashorn.api.scripting.AbstractJSObject;
@@ -21,6 +40,10 @@ public class NashornUtil
      * However, Nashorn's internal representation of JavaScript objects has extensive support for reading primitives. This unwraps the protective
      * layer (which isn't good) and allows us efficient access to javascript objects (which is good). The safety of this is hinged on test coverage for
      * procedure output.
+     *
+     * JMH measurements show that this gives a baseline of 15% higher throughput. However, it then enables raw access to unboxed primitives (getInteger) etc,
+     * using those improves performance by one order of magnitude (yield 7M records/s per thread vs 500K/s per thread). Obviously we can't leverage that until
+     * Cypher internals allow us to move unboxed primitives around, but that day will come!
      */
     public static ScriptObject unwrap(ScriptObjectMirror mirror) throws Throwable
     {

@@ -66,7 +66,7 @@ trait MapToPublicExceptions[T <: Throwable] {
   def uniquePathNotUniqueException(message: String, cause: Throwable): T
 
   def entityNotFoundException(message: String, cause: Throwable): T
-  
+
   def missingProcedureException(namespace: Seq[String], name: String, cause: Throwable): T
 
   def cypherTypeException(message: String, cause: Throwable): T

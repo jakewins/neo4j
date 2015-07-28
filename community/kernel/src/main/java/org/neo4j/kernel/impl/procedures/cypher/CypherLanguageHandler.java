@@ -34,10 +34,9 @@ import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.store.Neo4jTypes;
 
 /**
- * TODO
+ * A language handler for cypher, allowing users to create cypher procedures.
  */
-public class CypherLanguageHandler
-        implements LanguageHandler
+public class CypherLanguageHandler implements LanguageHandler
 {
     public static final String LANG_CYPHER = "cypher";
 

@@ -1,8 +1,25 @@
+/*
+ * Copyright (c) 2002-2015 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.procedures.es6;
 
-import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeMatcher;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -19,6 +36,7 @@ import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.util.SingleNodePath;
 
 import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -48,34 +66,9 @@ public class ProcedureMatchers
         return records;
     }
 
-    public static Matcher<List<List<Object>>> yields( final Matcher<List<Object>>... records )
+    public static Matcher<Iterable<? extends List<Object>>> yields( final Matcher<List<Object>>... records )
     {
-        return new TypeSafeMatcher<List<List<Object>>>()
-        {
-            @Override
-            protected boolean matchesSafely( List<List<Object>> item )
-            {
-                int idx = 0;
-                for ( List<Object> record : item )
-                {
-                    if( idx >= records.length )
-                    {
-                        return false;
-                    }
-                    if( !records[idx++].matches( record ) )
-                    {
-                        return false;
-                    }
-                }
-                return idx == records.length;
-            }
-
-            @Override
-            public void describeTo( Description description )
-            {
-                description.appendList( "[", ",", "]", asList( records ) );
-            }
-        };
+        return contains( records );
     }
 
     public static Matcher<List<Object>> record( final Object ... expected )
