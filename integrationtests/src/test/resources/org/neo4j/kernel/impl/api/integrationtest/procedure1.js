@@ -17,16 +17,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-for (var product in neo4j.findNodes('PRODUCT', 'ID', id))
+const Product = label('Product'),
+      APPLY   = relType('APPLY'),
+      EXCLUDE = relType('EXCLUDE');
+
+for (let product of neo4j.db.findNodes(Product, 'ID', id))
 {
-    for (var row in procs_getChain(product.getId()))
+    print(procs.getChain);
+    for (let row of procs.getChain(product.id))
     {
-        for(var promotedRel in Iterator(row.link.getRelationships(neo4j.OUTGOING, [type('APPLY'), type('EXCLUDE')])))
+        for(let promotedRel of row.link.getRelationships(neo4j.OUTGOING, [APPLY, EXCLUDE]))
         {
-            var promotion = promotedRel.getEndNode();
-            yield record( promotion.getProperty("PROMOTION_ID"),
-                    promotion.getProperty("PARENT"),
-                    promotedRel.getType().name());
+            let promo = promotedRel.endNode;
+            yield record( promo.getProperty("PROMOTION_ID"), promo.getProperty("PARENT"), promotedRel.type );
         }
     }
 }

@@ -24,6 +24,7 @@ import org.hamcrest.Matcher;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -57,7 +58,15 @@ public class ProcedureMatchers
         when(gds.createNode()).thenReturn( node );
         when( node.createRelationshipTo( any( Node.class ), any( RelationshipType.class ) ) ).thenReturn( rel );
 
-        RecordCursor cursor = new ES6LanguageHandler( new ES6StdLib().register( "neo4j.db", gds )).compile( null, sig, script ).call( statement, args );
+        RecordCursor cursor = new ES6LanguageHandler( new ES6StdLib().register( "neo4j.db", gds ), new Executor()
+        {
+            @Override
+            public void execute( Runnable command )
+            {
+                command.run();
+            }
+        }).compile( null, sig, script ).call( statement, args );
+
         List<List<Object>> records = new LinkedList<>();
         while(cursor.next())
         {

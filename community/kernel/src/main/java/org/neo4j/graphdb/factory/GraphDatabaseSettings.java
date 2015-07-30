@@ -149,7 +149,8 @@ public abstract class GraphDatabaseSettings
             setting( "store.interval.log.rotation", DURATION, "10m" );
 
     @Description( "Minimum time (in seconds) after last rotation of the internal log before it may be rotated again." )
-    public static final Setting<Integer> store_internal_log_rotation_delay = setting("store.internal_log.rotation_threshold", INTEGER, "300", min(0), max( Integer.MAX_VALUE ) );
+    public static final Setting<Integer> store_internal_log_rotation_delay = setting("store.internal_log.rotation_threshold", INTEGER, "300", min(0), max(
+            Integer.MAX_VALUE ) );
 
     @Description( "Maximum number of history files for the internal log." )
     public static final Setting<Integer> store_internal_log_max_archives = setting("store.internal_log.max_archives", INTEGER, "7", min(1) );
@@ -400,7 +401,8 @@ public abstract class GraphDatabaseSettings
     @Description("An identifier that uniquely identifies this graph database instance within this JVM. " +
             "Defaults to an auto-generated number depending on how many instance are started in this JVM.")
     @Internal
-    public static final Setting<String> forced_kernel_id = setting("forced_kernel_id", STRING, NO_DEFAULT, illegalValueMessage("has to be a valid kernel identifier", matches("[a-zA-Z0-9]*")));
+    public static final Setting<String> forced_kernel_id = setting("forced_kernel_id", STRING, NO_DEFAULT, illegalValueMessage(
+            "has to be a valid kernel identifier", matches( "[a-zA-Z0-9]*" ) ));
 
     @Internal
     public static final Setting<Boolean> execution_guard_enabled = setting("execution_guard_enabled", BOOLEAN, FALSE );
@@ -437,4 +439,9 @@ public abstract class GraphDatabaseSettings
     @Internal
     public static final Setting<Integer> batch_inserter_batch_size = setting( "batch_inserter_batch_size", INTEGER,
             "10000" );
+
+    @Internal
+    @Description( "Feature toggle: Enable experimental support for stored procedures." )
+    public static final Setting<Boolean> feature_procedures_enabled = setting( "xx.dbms.procedures.enabled", BOOLEAN, Boolean.FALSE.toString() );
+
 }

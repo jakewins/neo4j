@@ -33,7 +33,6 @@ import java.util.concurrent.locks.LockSupport;
 
 import org.neo4j.function.Supplier;
 import org.neo4j.graphdb.DependencyResolver;
-import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
@@ -76,6 +75,7 @@ import org.neo4j.kernel.impl.api.index.IndexUpdatesValidator;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
+import org.neo4j.kernel.impl.api.operations.ProcedureExecutionOperations;
 import org.neo4j.kernel.impl.api.scan.LabelScanStoreProvider;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.store.CacheLayer;
@@ -95,10 +95,8 @@ import org.neo4j.kernel.impl.index.LegacyIndexStore;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ReentrantLockService;
+import org.neo4j.kernel.impl.procedures.DefaultProcedureLanguageLoader;
 import org.neo4j.kernel.impl.procedures.ProcedureExecutor;
-import org.neo4j.kernel.impl.procedures.cypher.CypherLanguageHandler;
-import org.neo4j.kernel.impl.procedures.javascript.JavaScriptLanguageHandler;
-import org.neo4j.kernel.impl.procedures.javascript.Neo4jRhinoStdLib;
 import org.neo4j.kernel.impl.store.NeoStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -510,8 +508,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
             this.kernelModule = kernelModule;
 
             dependencies.satisfyDependency( this );
-            satisfyDependencies( neoStoreModule, cacheModule, indexingModule, storeLayerModule, transactionLogModule,
-                    kernelModule );
+            satisfyDependencies( neoStoreModule, cacheModule, indexingModule, storeLayerModule, transactionLogModule, kernelModule );
         }
         catch ( Throwable e )
         {
@@ -970,8 +967,11 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
         final NeoStoreTransactionContextSupplier neoStoreTransactionContextSupplier =
                 new NeoStoreTransactionContextSupplier( neoStore );
 
+        ProcedureExecutor procedureExecutor = dependencies.satisfyDependency( new ProcedureExecutor());
+        life.add( new DefaultProcedureLanguageLoader( procedureExecutor, scheduler, gds ) );
+
         StatementOperationParts statementOperations = buildStatementOperations( storeLayer, legacyPropertyTrackers,
-                constraintIndexCreator, updateableSchemaState, guard, legacyIndexStore, gds );
+                constraintIndexCreator, updateableSchemaState, guard, legacyIndexStore, procedureExecutor );
 
         final TransactionHooks hooks = new TransactionHooks();
         final KernelTransactions kernelTransactions =
@@ -1018,7 +1018,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
     }
 
     // We do this last to ensure noone is cheating with dependency access
-    private void satisfyDependencies( Object... modules )
+    private void satisfyDependencies( Object... modules ) throws InvocationTargetException, IllegalAccessException
     {
         for ( Object module : modules )
         {
@@ -1026,14 +1026,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
             {
                 if ( !method.getDeclaringClass().equals( Object.class ) )
                 {
-                    try
-                    {
-                        dependencies.satisfyDependency( method.invoke( module ) );
-                    }
-                    catch ( IllegalAccessException | InvocationTargetException e )
-                    {
-                        throw new RuntimeException( e );
-                    }
+                    dependencies.satisfyDependency( method.invoke( module ) );
                 }
             }
         }
@@ -1207,7 +1200,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
     private StatementOperationParts buildStatementOperations(
             StoreReadLayer storeReadLayer, LegacyPropertyTrackers legacyPropertyTrackers,
             ConstraintIndexCreator constraintIndexCreator, UpdateableSchemaState updateableSchemaState,
-            Guard guard, LegacyIndexStore legacyIndexStore, GraphDatabaseService gds )
+            Guard guard, LegacyIndexStore legacyIndexStore, ProcedureExecutionOperations procedures )
     {
         // The passed in StoreReadLayer is the bottom most layer: Read-access to committed data.
         // To it we add:
@@ -1218,19 +1211,10 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
 
         SchemaStateConcern schemaStateOperations = new SchemaStateConcern( updateableSchemaState );
 
-        ProcedureExecutor procedureExecutor = new ProcedureExecutor( stateHandlingContext, schemaStateOperations);
-
         StatementOperationParts parts = new StatementOperationParts( stateHandlingContext, stateHandlingContext,
                 stateHandlingContext, stateHandlingContext, stateHandlingContext, stateHandlingContext,
                 schemaStateOperations, null, stateHandlingContext, stateHandlingContext,
-                stateHandlingContext, procedureExecutor );
-
-        procedureExecutor.addLanguageHandler( JavaScriptLanguageHandler.LANG_JS,
-                new JavaScriptLanguageHandler( new Neo4jRhinoStdLib().
-                        bind( "neo4j.db", gds )) );
-        procedureExecutor.addLanguageHandler( CypherLanguageHandler.LANG_CYPHER, new CypherLanguageHandler( gds ) );
-
-
+                stateHandlingContext, procedures );
 
         // + Constraints
         ConstraintEnforcingEntityOperations constraintEnforcingEntityOperations =
@@ -1239,7 +1223,7 @@ public class NeoStoreDataSource implements NeoStoreSupplier, Lifecycle, IndexPro
         // + Data integrity
         DataIntegrityValidatingStatementOperations dataIntegrityContext =
                 new DataIntegrityValidatingStatementOperations(
-                        parts.keyWriteOperations(), parts.schemaReadOperations(), constraintEnforcingEntityOperations );
+                        parts.keyWriteOperations(), parts.schemaReadOperations(), constraintEnforcingEntityOperations, procedures );
         parts = parts.override( null, dataIntegrityContext, constraintEnforcingEntityOperations,
                 constraintEnforcingEntityOperations, null, dataIntegrityContext, null, null, null, null, null, null );
         // + Locking

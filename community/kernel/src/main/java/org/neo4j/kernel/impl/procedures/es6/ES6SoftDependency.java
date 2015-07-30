@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.procedures.es6;
 
+import java.util.concurrent.Executor;
+
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 
 /**
@@ -26,6 +28,8 @@ import org.neo4j.kernel.api.procedure.LanguageHandler;
  */
 public class ES6SoftDependency
 {
+    public static final String LANG_JS = "javascript";
+
     public static boolean es6LanguageHandlerAvailable()
     {
         try
@@ -41,15 +45,27 @@ public class ES6SoftDependency
 
     public static LanguageHandler loadES6()
     {
+        return loadES6( new Executor()
+        {
+            @Override
+            public void execute( Runnable command )
+            {
+                command.run();
+            }
+        });
+    }
+
+    public static LanguageHandler loadES6( Executor executor )
+    {
         try
         {
             Class<LanguageHandler> handler = (Class<LanguageHandler>) Class.forName( "org.neo4j.kernel.impl.procedures.es6.ES6LanguageHandler" );
-            return handler.getDeclaredConstructor().newInstance();
+            return handler.getDeclaredConstructor( Executor.class ).newInstance( executor );
         }
         catch ( Exception e )
         {
             throw new IllegalStateException( "Cannot load ES6 procedure engine on this platform, Nashorn JavaScript engine is only available from JDK 8 " +
-                                             "and onwards." );
+                                             "and onwards.", e );
         }
     }
 

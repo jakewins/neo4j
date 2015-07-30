@@ -17,23 +17,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package org.neo4j.kernel.impl.procedures.es6;
 
-function ES6ToES5( script, name )
+public class WrappedECMAException extends RuntimeException
 {
-    try
-    {
-        var compiler = new NashornCompiler({script: true, sourceMaps:"memory"}, name);
-        var compiled = compiler.compile(script, name);
-        var sourceMapper = new traceur.outputgeneration.SourceMapConsumer(compiler.getSourceMap());
+    private final Object wrappee;
 
-        return { result: compiled, sourceMap: sourceMapper };
-    }
-    catch (e)
+    public WrappedECMAException( Object wrappee )
     {
-        if(e instanceof java.lang.Exception )
-        {
-            throw e;
-        }
-        return { errors: e }
+        super(wrappee.toString());
+        this.wrappee = wrappee;
+    }
+
+    public Object unwrap()
+    {
+        return wrappee;
     }
 }

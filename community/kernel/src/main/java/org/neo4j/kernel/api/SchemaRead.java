@@ -26,6 +26,7 @@ import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 
@@ -91,5 +92,8 @@ interface SchemaRead
     Iterator<ProcedureSignature> proceduresGetAll();
 
     /** Fetch a procedure signature given the namespace and procedure name, if one exists. */
-    ProcedureSignature procedureGet( String[] namespace, String name ) throws ProcedureException;
+    ProcedureSignature procedureGetSignature( String[] namespace, String name ) throws ProcedureException;
+
+    /** Fetch a procedure given its signature. */
+    ProcedureDescriptor procedureGet( ProcedureSignature signature ) throws ProcedureException;
 }

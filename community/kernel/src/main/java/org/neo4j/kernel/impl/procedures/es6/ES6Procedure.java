@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.procedures.es6;
 
+import jdk.nashorn.api.scripting.NashornException;
 import jdk.nashorn.api.scripting.NashornScriptEngine;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import jdk.nashorn.internal.runtime.Context;
@@ -93,10 +94,10 @@ public class ES6Procedure implements Procedure
         @Override
         public boolean next()
         {
-            ScriptObject yielded = (ScriptObject) ScriptRuntime.apply( nextFunction, generator );
-
             try
             {
+                ScriptObject yielded = (ScriptObject) ScriptRuntime.apply( nextFunction, generator );
+
                 if( (Boolean)yielded.get( "done" ))
                 {
                     return false;
@@ -104,11 +105,28 @@ public class ES6Procedure implements Procedure
 
                 mapper.translateRecord( yielded.get( "value" ), record );
             }
+            catch( RuntimeException e )
+            {
+                // TODO
+                if( e.getCause() instanceof WrappedECMAException )
+                {
+                    Object mystery = ((WrappedECMAException) e.getCause()).unwrap();
+                    System.out.println("Mystery: " + mystery.getClass());
+                    if( mystery instanceof NashornException )
+                    {
+                        NashornException original1 = (NashornException) mystery;
+                        System.out.println("UNWRAPPED: " + original1.getMessage());
+                        original1.printStackTrace();
+                    }
+                }
+                throw e;
+            }
             catch ( ProcedureException e )
             {
                 // TODO: Modify cursors to allow throwing exceptions
                 throw new RuntimeException( e );
             }
+
 
             return true;
         }

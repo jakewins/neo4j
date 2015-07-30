@@ -106,6 +106,9 @@ public interface JobScheduler extends Lifecycle
         /** Push transactions from master to slaves */
         public static final Group masterTransactionPushing = new Group( "TransactionPushing", POOLED );
 
+        /** Background loading of compiler for stored procedures, to not impact startup timez */
+        public static final Group loadProcedureCompiler = new Group( "LoadProcedureCompiler", POOLED );
+
         /**
          * Rolls back idle transactions on the server.
          */

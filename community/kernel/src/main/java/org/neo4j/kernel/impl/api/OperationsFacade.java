@@ -536,10 +536,17 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     }
 
     @Override
-    public ProcedureSignature procedureGet( String[] namespace, String name ) throws ProcedureException
+    public ProcedureSignature procedureGetSignature( String[] namespace, String name ) throws ProcedureException
     {
         statement.assertOpen();
         return schemaRead().procedureGetBySignature( statement, new ProcedureSignature( namespace, name ) ).signature();
+    }
+
+    @Override
+    public ProcedureDescriptor procedureGet( ProcedureSignature signature ) throws ProcedureException
+    {
+        statement.assertOpen();
+        return schemaRead().procedureGetBySignature( statement, signature );
     }
 
     @Override
@@ -862,7 +869,7 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     }
 
     @Override
-    public void procedureCreate( ProcedureSignature signature, String language, String body )
+    public void procedureCreate( ProcedureSignature signature, String language, String body ) throws ProcedureException
     {
         statement.assertOpen();
         schemaWrite().procedureCreate( statement, signature, language, body );

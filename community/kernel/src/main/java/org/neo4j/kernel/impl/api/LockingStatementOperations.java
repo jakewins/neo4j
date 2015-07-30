@@ -332,7 +332,7 @@ public class LockingStatementOperations implements
 
     @Override
     public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
-            String language, String body )
+            String language, String body ) throws ProcedureException
     {
         statement.locks().acquireExclusive( SCHEMA, schemaResource() );
         schemaWriteDelegate.procedureCreate( statement, signature, language, body );

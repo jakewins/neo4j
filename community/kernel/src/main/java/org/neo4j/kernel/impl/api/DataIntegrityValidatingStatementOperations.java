@@ -37,8 +37,10 @@ import org.neo4j.kernel.api.exceptions.schema.NoSuchIndexException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException.OperationContext;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.api.operations.KeyWriteOperations;
+import org.neo4j.kernel.impl.api.operations.ProcedureExecutionOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
 
@@ -51,15 +53,18 @@ public class DataIntegrityValidatingStatementOperations implements
     private final KeyWriteOperations keyWriteDelegate;
     private final SchemaReadOperations schemaReadDelegate;
     private final SchemaWriteOperations schemaWriteDelegate;
+    private final ProcedureExecutionOperations procedureOperations;
 
     public DataIntegrityValidatingStatementOperations(
             KeyWriteOperations keyWriteDelegate,
             SchemaReadOperations schemaReadDelegate,
-            SchemaWriteOperations schemaWriteDelegate )
+            SchemaWriteOperations schemaWriteDelegate,
+            ProcedureExecutionOperations procedureOperations )
     {
         this.keyWriteDelegate = keyWriteDelegate;
         this.schemaReadDelegate = schemaReadDelegate;
         this.schemaWriteDelegate = schemaWriteDelegate;
+        this.procedureOperations = procedureOperations;
     }
 
     @Override
@@ -195,9 +200,9 @@ public class DataIntegrityValidatingStatementOperations implements
 
     @Override
     public void procedureCreate( KernelStatement statement, ProcedureSignature signature,
-            String language, String body )
+            String language, String body ) throws ProcedureException
     {
-        // TODO: compile, verify that code is correct
+        procedureOperations.verify( statement, signature, language, body );
         schemaWriteDelegate.procedureCreate( statement, signature, language, body );
     }
 

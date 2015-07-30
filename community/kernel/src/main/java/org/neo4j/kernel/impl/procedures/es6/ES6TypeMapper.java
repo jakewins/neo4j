@@ -57,10 +57,9 @@ import static org.neo4j.kernel.impl.store.Neo4jTypes.NTText;
  */
 public class ES6TypeMapper
 {
-    /*
+    /* Future optimization;
      JMH benchmarks show that we can get roughly one order-of-magnitude higher performance from procedures if we used Nashorns primitive accessors
-     (ScriptObject#getInt and friends) rather than use boxed primitives. However, this requires that we then not box them further up the stack, which
-     remains to do.
+     (ScriptObject#getInt and friends) rather than use boxed primitives. However, this requires that we then not box them further up the stack.
      */
 
     /** Array of javascript->java converters, one converter per field in the output records */

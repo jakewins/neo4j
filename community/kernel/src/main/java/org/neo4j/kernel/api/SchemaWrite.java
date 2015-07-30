@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 
 interface SchemaWrite
@@ -61,7 +62,7 @@ interface SchemaWrite
      * @param language named procedure language, eg "js"
      * @param body the procedure code, format is language-handler specific
      */
-    void procedureCreate( ProcedureSignature signature, String language, String body );
+    void procedureCreate( ProcedureSignature signature, String language, String body ) throws ProcedureException;
 
     /**
      * @param procedure the procedure to drop

@@ -73,7 +73,7 @@ class TransactionBoundPlanContext(initialStatement: Statement, val gdb: GraphDat
   }
 
   def getProcedureSignature(namespace: Seq[String], name: String): Option[ProcedureSignature] = try {
-    Some(statement.readOperations().procedureGet(namespace.toArray, name))
+    Some(statement.readOperations().procedureGetSignature(namespace.toArray, name))
   } catch {
     case _: KernelException => None
   }

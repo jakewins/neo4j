@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.api.KernelStatement;
 
@@ -59,5 +60,5 @@ public interface SchemaWriteOperations
 
     void procedureDrop( KernelStatement statement, ProcedureSignature procedure );
 
-    void procedureCreate( KernelStatement statement, ProcedureSignature signature, String language, String body );
+    void procedureCreate( KernelStatement statement, ProcedureSignature signature, String language, String body ) throws ProcedureException;
 }

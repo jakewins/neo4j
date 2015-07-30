@@ -65,7 +65,7 @@ public class ProceduresKernelIT extends KernelIntegrationTest
     @Rule
     public ExpectedException exception = ExpectedException.none();
 
-    private final ProcedureSignature signature = procedureSignature( new String[]{"example"}, "exampleProc" )
+    private final ProcedureSignature signature = procedureSignature( "example", "exampleProc" )
                                                 .in( "name", NTText )
                                                 .out( "name", NTText ).build();
 
@@ -97,7 +97,7 @@ public class ProceduresKernelIT extends KernelIntegrationTest
         shouldCreateProcedure();
 
         // When
-        ProcedureSignature found = readOperationsInNewTransaction().procedureGet( new String[]{"example"}, "exampleProc" );
+        ProcedureSignature found = readOperationsInNewTransaction().procedureGetSignature( new String[]{"example"}, "exampleProc" );
 
         // Then
         assertThat( found, equalTo( found ));
@@ -110,7 +110,7 @@ public class ProceduresKernelIT extends KernelIntegrationTest
         exception.expect( ProcedureException.class );
 
         // When
-        readOperationsInNewTransaction().procedureGet( new String[]{"example"}, "exampleProc" );
+        readOperationsInNewTransaction().procedureGetSignature( new String[]{"example"}, "exampleProc" );
     }
 
     @Test
@@ -175,14 +175,13 @@ public class ProceduresKernelIT extends KernelIntegrationTest
         }
 
         // Create procedures
-        ProcedureSignature exampleProc = procedureSignature( new String[]{"neo4j"}, "exampleProc" )
+        ProcedureSignature exampleProc = procedureSignature( new String[]{"ex"}, "exampleProc" )
                 .in( "id", NTText )
                 .out( "id", NTText ).out( "parent", NTText ).out( "type", NTText ).build();
         {
             SchemaWriteOperations ops = schemaWriteOperationsInNewTransaction();
 
-            ops.procedureCreate( exampleProc, "javascript", readAsString( getClass().getResourceAsStream( "procedure1" +
-                                                                                                          ".js" ) ));
+            ops.procedureCreate( exampleProc, "javascript", readAsString( getClass().getResourceAsStream( "procedure1.js" ) ));
 
             ProcedureSignature chain = procedureSignature( new String[]{"procs"}, "getChain" )
                     .in( "id", NTInteger )

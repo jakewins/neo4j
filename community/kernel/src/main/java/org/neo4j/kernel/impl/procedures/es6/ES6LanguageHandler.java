@@ -24,6 +24,7 @@ import jdk.nashorn.internal.runtime.ScriptFunction;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.concurrent.Executor;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -43,19 +44,28 @@ public class ES6LanguageHandler implements LanguageHandler
     private final ES6Transpiler transpiler;
     private final ES6StdLib stdLib;
 
-    public ES6LanguageHandler( ) throws NoSuchMethodException, IllegalAccessException, ProcedureException
+    /**
+     * Used via reflection.
+     * @see ES6SoftDependency
+     */
+    public ES6LanguageHandler( Executor backgroundExecutor ) throws NoSuchMethodException, IllegalAccessException, ProcedureException
     {
-        this(new ES6StdLib());
+        this(new ES6StdLib(), backgroundExecutor);
     }
 
-    public ES6LanguageHandler( ES6StdLib stdLib ) throws ProcedureException
+    /**
+     * @param stdLib services made available to procedures
+     * @param backgroundExecutor used to load the heavy cross-compiler in the background so user doesn't have to wait
+     * @throws ProcedureException
+     */
+    public ES6LanguageHandler( ES6StdLib stdLib, Executor backgroundExecutor ) throws ProcedureException
     {
         this.stdLib = stdLib;
         try
         {
             ScriptEngineManager em = new ScriptEngineManager();
             this.engine = em.getEngineByName( "nashorn" );
-            this.transpiler = ES6Transpiler.globalInstance();
+            this.transpiler = ES6Transpiler.globalInstance( backgroundExecutor );
         }
         catch( ScriptException e )
         {
@@ -70,7 +80,6 @@ public class ES6LanguageHandler implements LanguageHandler
         {
             // Translate ES6 to ES5
             String translate = transpiler.translate( signature, code );
-
             // Init procedure-local context
             ScriptContext ctx = new SimpleScriptContext();
             engine.eval( new InputStreamReader( runtimeAsStream() ), ctx );
@@ -83,6 +92,7 @@ public class ES6LanguageHandler implements LanguageHandler
         }
         catch ( Throwable e )
         {
+            e.printStackTrace();
             throw new ProcedureException( Status.Schema.ProcedureSyntaxError, e, "Failed to compile javascript: '%s'", code );
         }
     }

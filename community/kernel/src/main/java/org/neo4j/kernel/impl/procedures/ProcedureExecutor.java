@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.function.Function;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.LanguageHandlers;
 import org.neo4j.kernel.api.procedure.Procedure;
@@ -32,25 +33,24 @@ import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.api.operations.ProcedureExecutionOperations;
-import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
-import org.neo4j.kernel.impl.api.operations.SchemaStateOperations;
 
 /**
- * TODO
+ * In charge of invoking procedures. Delegates to {@link LanguageHandler} to compile procedures and to schema components to load and cache procedures.
  */
 public class ProcedureExecutor
         implements LanguageHandlers, ProcedureExecutionOperations
 {
-    private Map<String,LanguageHandler> languageHandlers = new ConcurrentHashMap<>();
-
-    private SchemaReadOperations schemaReadOperations;
-    private SchemaStateOperations schemaStateOperations;
-
-    public ProcedureExecutor( SchemaReadOperations schemaReadOperations, SchemaStateOperations schemaStateOperations )
+    public static final Function<String,Map<ProcedureSignature,Procedure>>
+            NEW_CONCURRENT_HASHMAP = new Function<String,Map<ProcedureSignature,Procedure>>()
     {
-        this.schemaReadOperations = schemaReadOperations;
-        this.schemaStateOperations = schemaStateOperations;
-    }
+        @Override
+        public Map<ProcedureSignature,Procedure> apply( String s )
+        {
+            return new ConcurrentHashMap<>();
+        }
+    };
+
+    private Map<String,LanguageHandler> languageHandlers = new ConcurrentHashMap<>();
 
     @Override
     public void addLanguageHandler( String language, LanguageHandler handler )
@@ -64,41 +64,39 @@ public class ProcedureExecutor
     }
 
     @Override
-    public void removeLanguageHandler( String language )
+    public void verify( KernelStatement statement, ProcedureSignature signature, String language, String code ) throws ProcedureException
     {
-        languageHandlers.remove( language );
-    }
-
-    public void verify( KernelStatement statement, ProcedureSignature signature, String language, String code )
-            throws
-            ProcedureException
-    {
-        languageHandlers.get( language ).compile( statement, signature, code );
+        LanguageHandler handler = languageHandlers.get( language );
+        if( handler == null )
+        {
+            throw new ProcedureException( Status.Schema.ProcedureSyntaxError, "'%s' cannot be created, because `%s` is not a supported language. " +
+                                                                              "Supported languages are: %s. You can add custom languages by installing " +
+                                                                              "community built extensions to the database.", signature, language, languageHandlers.keySet() );
+        }
+        handler.compile( statement, signature, code );
     }
 
     @Override
     public RecordCursor call( KernelStatement statement, ProcedureSignature signature, Object[] args )
             throws ProcedureException
     {
-        Map<ProcedureSignature,Procedure> procedures = schemaStateOperations.schemaStateGetOrCreate(
-                statement, "procedures",
-                new Function<String,Map<ProcedureSignature,Procedure>>()
-                {
-                    @Override
-                    public Map<ProcedureSignature,Procedure> apply( String s )
-                    {
-                        return new ConcurrentHashMap<>();
-                    }
-                } );
+        Map<ProcedureSignature,Procedure> procedures = statement.readOperations().schemaStateGetOrCreate( "procedures", NEW_CONCURRENT_HASHMAP );
 
         Procedure procedure = procedures.get( signature );
         if ( procedure == null )
         {
-            ProcedureDescriptor procedureDescriptor = schemaReadOperations.procedureGetBySignature( statement, signature );
+            synchronized(this)
+            {
+                procedure = procedures.get( signature );
+                if( procedure == null )
+                {
+                    ProcedureDescriptor proc = statement.readOperations().procedureGet( signature );
 
-            LanguageHandler languageHandler = languageHandlers.get( procedureDescriptor.language() );
-            procedure = languageHandler.compile( statement, procedureDescriptor.signature(), procedureDescriptor.procedureBody() );
-            procedures.put( signature, procedure );
+                    LanguageHandler languageHandler = languageHandlers.get( proc.language() );
+                    procedure = languageHandler.compile( statement, proc.signature(), proc.procedureBody() );
+                    procedures.put( signature, procedure );
+                }
+            }
         }
 
         return procedure.call( statement, args );

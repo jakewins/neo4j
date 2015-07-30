@@ -19,11 +19,11 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import java.util.Iterator;
-
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.util.Iterator;
 
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyIndexedException;
@@ -32,10 +32,10 @@ import org.neo4j.kernel.api.exceptions.schema.IllegalTokenNameException;
 import org.neo4j.kernel.api.exceptions.schema.IndexBelongsToConstraintException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchIndexException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
+import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.operations.KeyWriteOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
-import org.neo4j.kernel.api.index.IndexDescriptor;
 
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertThat;
@@ -46,7 +46,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.helpers.collection.IteratorUtil.iterator;
 
 public class DataIntegrityValidatingStatementOperationsTest
@@ -60,7 +59,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
         SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
+                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite, null );
         when( innerRead.indexesGetForLabel( state, rule.getLabelId() ) ).thenAnswer( withIterator( rule ) );
 
         // WHEN
@@ -87,7 +86,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
         SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
+                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite, null );
         when( innerRead.indexesGetForLabel( state, rule.getLabelId() ) ).thenAnswer( withIterator(  ) );
         when( innerRead.uniqueIndexesGetForLabel( state, rule.getLabelId() ) ).thenAnswer( withIterator( rule ) );
 
@@ -115,7 +114,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
         SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
+                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite, null );
         when( innerRead.uniqueIndexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator(  ) );
         when( innerRead.indexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator( ) );
 
@@ -143,7 +142,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
         SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
+                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite, null );
         when( innerRead.uniqueIndexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer(
                 withIterator( indexDescriptor ) );
         when( innerRead.indexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator() );
@@ -172,7 +171,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
         SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
+                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite, null );
         when( innerRead.uniqueIndexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer(
                 withIterator( indexDescriptor ) );
         when( innerRead.indexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator() );
@@ -201,7 +200,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
         SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
+                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite, null );
         when( innerRead.uniqueIndexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer(
                 withIterator( indexDescriptor ) );
         when( innerRead.indexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator() );
@@ -226,7 +225,7 @@ public class DataIntegrityValidatingStatementOperationsTest
     {
         KeyWriteOperations inner = mock( KeyWriteOperations.class );
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( inner, null, null );
+                new DataIntegrityValidatingStatementOperations( inner, null, null, null );
 
         try
         {
@@ -252,7 +251,7 @@ public class DataIntegrityValidatingStatementOperationsTest
     {
         KeyWriteOperations inner = mock( KeyWriteOperations.class );
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( inner, null, null );
+                new DataIntegrityValidatingStatementOperations( inner, null, null, null );
 
         try
         {
@@ -278,7 +277,7 @@ public class DataIntegrityValidatingStatementOperationsTest
     {
         // Given
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, null, null );
+                new DataIntegrityValidatingStatementOperations( null, null, null, null );
 
         // When
         ctx.labelGetOrCreateForName( state, "" );
@@ -289,7 +288,7 @@ public class DataIntegrityValidatingStatementOperationsTest
     {
         // Given
         DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, null, null );
+                new DataIntegrityValidatingStatementOperations( null, null, null, null );
 
         // When
         ctx.labelGetOrCreateForName( state, null );

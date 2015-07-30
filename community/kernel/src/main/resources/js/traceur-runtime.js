@@ -1144,6 +1144,7 @@ System.registerModule("traceur-runtime@0.0.92/src/runtime/generators.js", [], fu
     handleException: function(ex) {
       this.GState = ST_CLOSED;
       this.state = END_STATE;
+      ex.printStackTrace();
       throw ex;
     },
     wrapYieldStar: function(iterator) {
@@ -1210,15 +1211,15 @@ System.registerModule("traceur-runtime@0.0.92/src/runtime/generators.js", [], fu
         ctx.action = action;
         ctx.sent = x;
         var value;
-        try {
+        //try {
           value = moveNext(ctx);
-        } catch (ex) {
-          if (ex === RETURN_SENTINEL) {
-            value = ctx;
-          } else {
-            throw ex;
-          }
-        }
+        //} catch (ex) {
+        //  if (ex === RETURN_SENTINEL) {
+        //    value = ctx;
+        //  } else {
+        //    throw ex;
+        //  }
+        //}
         var done = value === ctx;
         if (done)
           value = ctx.returnValue;

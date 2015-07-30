@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.script.Bindings;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.Label;
@@ -43,8 +44,10 @@ public class ES6StdLib implements Visitor<Bindings,ProcedureException>
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         register( "relType",
                 asJSFunction( lookup.findStatic( DynamicRelationshipType.class, "withName", methodType( DynamicRelationshipType.class, String.class ) )));
-        register( "label",
-                asJSFunction( lookup.findStatic( DynamicLabel.class, "label", methodType( Label.class, String.class ) )));
+        register( "label", asJSFunction( lookup.findStatic( DynamicLabel.class, "label", methodType( Label.class, String.class ) )));
+        register( "neo4j.OUTGOING", Direction.OUTGOING );
+        register( "neo4j.INCOMING", Direction.INCOMING );
+        register( "neo4j.BOTH", Direction.BOTH );
     }
 
 
