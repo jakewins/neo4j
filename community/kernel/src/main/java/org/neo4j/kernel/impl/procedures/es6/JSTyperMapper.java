@@ -55,7 +55,7 @@ import static org.neo4j.kernel.impl.store.Neo4jTypes.NTText;
 /**
  * Converts from Nashorn types to Neo4j types. Each mapper is built to suit one specific signature, so it's a fixed JS record -> Neo4j Record conversion
  */
-public class ES6TypeMapper
+public class JSTyperMapper
 {
     /* Future optimization;
      JMH benchmarks show that we can get roughly one order-of-magnitude higher performance from procedures if we used Nashorns primitive accessors
@@ -68,17 +68,15 @@ public class ES6TypeMapper
     /** Signature of the procedure this mapper is built for */
     private ProcedureSignature signature;
 
-    public ES6TypeMapper( ProcedureSignature signature ) throws ProcedureException
+    public JSTyperMapper( ProcedureSignature signature ) throws ProcedureException
     {
         this.signature = signature;
         this.fromJS = buildFromJSConverters( signature.outputSignature() );
     }
 
     /** Translate a yielded record array into a regular java object array */
-    void translateRecord( Object jsRecord, Object[] targetRecord ) throws ProcedureException
+    public void translateRecord( ScriptObject rec, Object[] targetRecord ) throws ProcedureException
     {
-        ScriptObject rec = (ScriptObject) jsRecord;
-
         if(((Number)rec.getLength()).intValue() != targetRecord.length)
         {
             throw new ProcedureException( Status.Schema.ProcedureSemanticError,

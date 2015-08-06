@@ -45,16 +45,16 @@ class ProcedureAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
       "\"MATCH (n)-[:PARENT*0..]->(link) WHERE id(n) = {id} RETURN link\"")
 
     execute("CREATE READ ONLY PROCEDURE retail.getPromos(id:Text): (id:Text, parent:Text, name:Text) USING javascript FROM SOURCE " +
-      "\"for (var product in neo4j.findNodes('Product', 'uuid', id))\n" +
+      "\"\n" +
+      "var Product = label('Product'), APPLY = relType('APPLY');\n" +
+      "\n" +
+      "for each ( var product in neo4j.findNodes(Product, 'uuid', id) )\n" +
       "{\n" +
-      "    for (var row in retail_getChain(product.getId()))\n" +
+      "    for each (var row in retail.getChain( product.id ) )\n" +
       "    {\n" +
-      "        for(var promotedRel in Iterator(row.link.getRelationships(neo4j.OUTGOING, [type('APPLY'), type('EXCLUDE')])))\n" +
+      "        for each (var promotedRel in row.link.getRelationships(neo4j.OUTGOING, APPLY))\n" +
       "        {\n" +
-      "            var promotion = promotedRel.getEndNode();\n" +
-      "            yield record( promotion.getProperty('pid'),\n" +
-      "                    promotion.getProperty('parent'),\n" +
-      "                    promotedRel.getType().name());\n" +
+      "            emit( promotedRel.endNode );\n" +
       "        }\n" +
       "    }\n" +
       "}\n\"")

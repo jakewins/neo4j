@@ -24,16 +24,16 @@ import org.hamcrest.Matcher;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Executor;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.Statement;
+import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
-import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.util.SingleNodePath;
 
 import static java.util.Arrays.asList;
@@ -58,20 +58,18 @@ public class ProcedureMatchers
         when(gds.createNode()).thenReturn( node );
         when( node.createRelationshipTo( any( Node.class ), any( RelationshipType.class ) ) ).thenReturn( rel );
 
-        RecordCursor cursor = new ES6LanguageHandler( new ES6StdLib().register( "neo4j.db", gds ), new Executor()
-        {
-            @Override
-            public void execute( Runnable command )
-            {
-                command.run();
-            }
-        }).compile( null, sig, script ).call( statement, args );
+        final List<List<Object>> records = new LinkedList<>();
+        new JSLanguageHandler( new JSStdLib().register( "neo4j.db", gds ) ).compile( null, sig, script ).call( statement, args,
+                new Visitor<Object[],ProcedureException>()
+                {
+                    @Override
+                    public boolean visit( Object[] element ) throws ProcedureException
+                    {
+                        records.add( Arrays.asList( element ));
+                        return true;
+                    }
+                } );
 
-        List<List<Object>> records = new LinkedList<>();
-        while(cursor.next())
-        {
-            records.add( Arrays.asList( cursor.record() ) );
-        }
         return records;
     }
 

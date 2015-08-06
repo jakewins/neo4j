@@ -34,11 +34,11 @@ import org.neo4j.kernel.api.procedure.ProcedureException;
 import static java.lang.invoke.MethodType.methodType;
 import static org.neo4j.kernel.impl.procedures.es6.NashornUtil.asJSFunction;
 
-public class ES6StdLib implements Visitor<Bindings,ProcedureException>
+public class JSStdLib implements Visitor<Bindings,ProcedureException>
 {
     private final Map<String,Object> services = new HashMap<>();
 
-    public ES6StdLib() throws NoSuchMethodException, IllegalAccessException
+    public JSStdLib() throws NoSuchMethodException, IllegalAccessException
     {
         // Always available
         MethodHandles.Lookup lookup = MethodHandles.lookup();
@@ -95,7 +95,7 @@ public class ES6StdLib implements Visitor<Bindings,ProcedureException>
      * Register a global service to be made available to ES6 procedures. You can use dots to separate namespaces in the name. The service object can be any
      * java object, it will be exposed as-is via Nashorns transparent java->javascript mapping mechanisms.
      */
-    public ES6StdLib register( String nameAndNamespace, Object service )
+    public JSStdLib register( String nameAndNamespace, Object service )
     {
         if(services.containsKey( nameAndNamespace ))
         {

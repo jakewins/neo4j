@@ -19,18 +19,16 @@
  */
 package org.neo4j.kernel.api;
 
-import java.util.Iterator;
-
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.IndexBrokenKernelException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
-import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
 
@@ -141,5 +139,5 @@ interface DataRead
             throws EntityNotFoundException, EXCEPTION;
 
     // This is likely not the place for this method, putting it here for now, refactor as we learn
-    RecordCursor procedureCall( ProcedureSignature signature, Object[] args ) throws ProcedureException;
+    void procedureCall( ProcedureSignature signature, Object[] args, Visitor<Object[], ProcedureException> visitor ) throws ProcedureException;
 }

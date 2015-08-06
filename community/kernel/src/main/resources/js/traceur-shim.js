@@ -22,11 +22,16 @@ function ES6ToES5( script, name )
 {
     try
     {
-        var compiler = new NashornCompiler({script: true, sourceMaps:"memory"}, name);
+        var compiler = new traceur.Compiler({script: true, sourceMaps:"memory"}, name);
         var compiled = compiler.compile(script, name);
         var sourceMapper = new traceur.outputgeneration.SourceMapConsumer(compiler.getSourceMap());
 
-        return { result: compiled, sourceMap: sourceMapper };
+        return {
+            result: compiled,
+            sourceMap: function(line, column) {
+                return sourceMapper.originalPositionFor({ line:line, column:column });
+            }
+        };
     }
     catch (e)
     {

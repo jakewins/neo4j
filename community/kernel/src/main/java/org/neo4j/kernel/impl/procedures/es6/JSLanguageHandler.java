@@ -24,11 +24,9 @@ import jdk.nashorn.internal.runtime.ScriptFunction;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.concurrent.Executor;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import javax.script.SimpleScriptContext;
 
 import org.neo4j.kernel.api.Statement;
@@ -38,39 +36,29 @@ import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
 
-public class ES6LanguageHandler implements LanguageHandler
+public class JSLanguageHandler implements LanguageHandler
 {
     private final ScriptEngine engine;
-    private final ES6Transpiler transpiler;
-    private final ES6StdLib stdLib;
+    private final JSStdLib stdLib;
+    private final JSProcedureBoilerplate procedureBoilerplate = new JSProcedureBoilerplate();
 
     /**
      * Used via reflection.
-     * @see ES6SoftDependency
+     * @see JSSoftDependency
      */
-    public ES6LanguageHandler( Executor backgroundExecutor ) throws NoSuchMethodException, IllegalAccessException, ProcedureException
+    public JSLanguageHandler() throws NoSuchMethodException, IllegalAccessException, ProcedureException
     {
-        this(new ES6StdLib(), backgroundExecutor);
+        this(new JSStdLib() );
     }
 
     /**
      * @param stdLib services made available to procedures
-     * @param backgroundExecutor used to load the heavy cross-compiler in the background so user doesn't have to wait
      * @throws ProcedureException
      */
-    public ES6LanguageHandler( ES6StdLib stdLib, Executor backgroundExecutor ) throws ProcedureException
+    public JSLanguageHandler( JSStdLib stdLib ) throws ProcedureException
     {
         this.stdLib = stdLib;
-        try
-        {
-            ScriptEngineManager em = new ScriptEngineManager();
-            this.engine = em.getEngineByName( "nashorn" );
-            this.transpiler = ES6Transpiler.globalInstance( backgroundExecutor );
-        }
-        catch( ScriptException e )
-        {
-            throw new ProcedureException( Status.Schema.ProcedureInitializationError, e, "Unable to initialize the ES6 procedure compiler: %s.", e.getMessage() );
-        }
+        this.engine = new ScriptEngineManager().getEngineByName( "nashorn" );
     }
 
     @Override
@@ -78,17 +66,19 @@ public class ES6LanguageHandler implements LanguageHandler
     {
         try
         {
-            // Translate ES6 to ES5
-            String translate = transpiler.translate( signature, code );
             // Init procedure-local context
             ScriptContext ctx = new SimpleScriptContext();
             engine.eval( new InputStreamReader( runtimeAsStream() ), ctx );
             stdLib.visit( ctx.getBindings( ScriptContext.ENGINE_SCOPE ) );
 
-            // Compile the ES5 generator function
-            ScriptFunction createGenerator = (ScriptFunction) NashornUtil.unwrap( (ScriptObjectMirror) engine.eval( translate, ctx ) );
+            // Wrap user code in boilerplate signature
+            code = procedureBoilerplate.wrapAsProcedureFunction( signature, code );
+            System.out.println(code);
 
-            return new ES6Procedure( ctx, createGenerator, new ES6TypeMapper(signature), signature );
+            // Compile the ES5 generator function
+            ScriptFunction procedureFunc = (ScriptFunction) NashornUtil.unwrap( (ScriptObjectMirror) engine.eval( code, ctx ) );
+
+            return new JSProcedure( ctx, procedureFunc, new JSTyperMapper(signature), signature );
         }
         catch ( Throwable e )
         {

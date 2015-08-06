@@ -23,7 +23,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.LanguageHandlers;
 import org.neo4j.kernel.impl.procedures.cypher.CypherLanguageHandler;
-import org.neo4j.kernel.impl.procedures.es6.ES6SoftDependency;
+import org.neo4j.kernel.impl.procedures.es6.JSSoftDependency;
 import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
@@ -47,11 +47,11 @@ public class DefaultProcedureLanguageLoader extends LifecycleAdapter
     public void start() throws Throwable
     {
         procedureExecutor.addLanguageHandler( CypherLanguageHandler.LANG_CYPHER, new CypherLanguageHandler( gds ) );
-        if( ES6SoftDependency.es6LanguageHandlerAvailable() )
+        if( JSSoftDependency.es6LanguageHandlerAvailable() )
         {
-            LanguageHandler es6 = ES6SoftDependency.loadES6( scheduler.executor( JobScheduler.Groups.loadProcedureCompiler ) );
+            LanguageHandler es6 = JSSoftDependency.loadES6( scheduler.executor( JobScheduler.Groups.loadProcedureCompiler ) );
             es6.register( "neo4j.db", gds );
-            procedureExecutor.addLanguageHandler( ES6SoftDependency.LANG_JS, es6 );
+            procedureExecutor.addLanguageHandler( JSSoftDependency.LANG_JS, es6 );
         }
     }
 }

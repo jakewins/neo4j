@@ -26,7 +26,7 @@ import org.neo4j.kernel.api.procedure.LanguageHandler;
 /**
  * Nashorn is only available on JDK8+, so we can't directly link in Nashorn classes on JDK7
  */
-public class ES6SoftDependency
+public class JSSoftDependency
 {
     public static final String LANG_JS = "javascript";
 
@@ -59,8 +59,8 @@ public class ES6SoftDependency
     {
         try
         {
-            Class<LanguageHandler> handler = (Class<LanguageHandler>) Class.forName( "org.neo4j.kernel.impl.procedures.es6.ES6LanguageHandler" );
-            return handler.getDeclaredConstructor( Executor.class ).newInstance( executor );
+            Class<LanguageHandler> handler = (Class<LanguageHandler>) Class.forName( "org.neo4j.kernel.impl.procedures.es6.JSLanguageHandler" );
+            return handler.getDeclaredConstructor().newInstance();
         }
         catch ( Exception e )
         {

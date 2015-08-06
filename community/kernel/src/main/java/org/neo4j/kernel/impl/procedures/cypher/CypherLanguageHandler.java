@@ -24,14 +24,12 @@ import java.util.Map;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
-import org.neo4j.kernel.api.procedure.RecordCursor;
-import org.neo4j.kernel.impl.store.Neo4jTypes;
 
 /**
  * A language handler for cypher, allowing users to create cypher procedures.
@@ -54,66 +52,30 @@ public class CypherLanguageHandler implements LanguageHandler
         return new Procedure()
         {
             @Override
-            public RecordCursor call( Statement statement, Object[] args )
+            public void call( Statement statement, Object[] args, final Visitor<Object[],ProcedureException> visitor ) throws ProcedureException
             {
                 Map<String,Object> params = new HashMap<>();
                 for ( int i = 0; i < signature.inputSignature().size(); i++ )
                 {
-                    Pair<String,Neo4jTypes.AnyType> arg =
-                            signature.inputSignature().get( i );
-                    params.put( arg.first(), args[i] );
+                    params.put( signature.inputSignature().get( i ).first(), args[i] );
                 }
 
-                Result result = gds.execute( code, params );
-                return new CypherRecordCursor( result, signature );
+                gds.execute( code, params ).accept( new Result.ResultVisitor<ProcedureException>()
+                {
+                    private Object[] record = new Object[signature.outputSignature().size()];
+
+                    @Override
+                    public boolean visit( Result.ResultRow row ) throws ProcedureException
+                    {
+                        for ( int i = 0; i < signature.outputSignature().size(); i++ )
+                        {
+                            record[i] = row.get( signature.outputSignature().get( i ).first() );
+                        }
+                        return visitor.visit( record );
+                    }
+                } );
             }
         };
-    }
-
-    private class CypherRecordCursor implements RecordCursor
-    {
-        private Result result;
-        private ProcedureSignature signature;
-        private Object[] record;
-
-        public CypherRecordCursor( Result result, ProcedureSignature signature )
-        {
-            this.result = result;
-            this.signature = signature;
-            record = new Object[signature.outputSignature().size()];
-        }
-
-        @Override
-        public Object[] record()
-        {
-            return record;
-        }
-
-        @Override
-        public boolean next()
-        {
-            if ( result.hasNext() )
-            {
-                Map<String,Object> row = result.next();
-                for ( int i = 0; i < signature.outputSignature().size(); i++ )
-                {
-                    Pair<String,Neo4jTypes.AnyType> arg =
-                            signature.outputSignature().get( i );
-                    record[i] = row.get( arg.first() );
-                }
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        @Override
-        public void close()
-        {
-            result.close();
-        }
     }
 
     @Override

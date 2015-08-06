@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.function.Function;
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.LanguageHandlers;
@@ -30,7 +31,6 @@ import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
-import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.api.operations.ProcedureExecutionOperations;
 
@@ -77,7 +77,7 @@ public class ProcedureExecutor
     }
 
     @Override
-    public RecordCursor call( KernelStatement statement, ProcedureSignature signature, Object[] args )
+    public void call( KernelStatement statement, ProcedureSignature signature, Object[] args, Visitor<Object[], ProcedureException> visitor )
             throws ProcedureException
     {
         Map<ProcedureSignature,Procedure> procedures = statement.readOperations().schemaStateGetOrCreate( "procedures", NEW_CONCURRENT_HASHMAP );
@@ -99,6 +99,6 @@ public class ProcedureExecutor
             }
         }
 
-        return procedure.call( statement, args );
+        procedure.call( statement, args, visitor );
     }
 }

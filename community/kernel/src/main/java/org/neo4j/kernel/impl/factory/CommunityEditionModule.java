@@ -132,7 +132,7 @@ public class CommunityEditionModule
             getClass().getClassLoader().loadClass( "org.neo4j.kernel.ha.HighlyAvailableGraphDatabase" );
             return UsageDataKeys.Edition.enterprise;
         }
-        catch ( ClassNotFoundException e )
+        catch ( ClassNotFoundException | NoClassDefFoundError e )
         {
             // Not Enterprise
         }
@@ -141,7 +141,7 @@ public class CommunityEditionModule
             getClass().getClassLoader().loadClass( "org.neo4j.management.Neo4jManager" );
             return UsageDataKeys.Edition.advanced;
         }
-        catch ( ClassNotFoundException e )
+        catch ( ClassNotFoundException | NoClassDefFoundError e )
         {
             // Not Advanced
         }

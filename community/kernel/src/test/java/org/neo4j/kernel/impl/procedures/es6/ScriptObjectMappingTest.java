@@ -22,12 +22,13 @@ package org.neo4j.kernel.impl.procedures.es6;
 import org.junit.Test;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.procedure.LanguageHandler;
 import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.api.procedure.ProcedureException;
-import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.store.Neo4jTypes;
 
 import static java.lang.String.format;
@@ -37,8 +38,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.api.procedure.ProcedureSignature.procedureSignature;
-import static org.neo4j.kernel.impl.procedures.es6.ES6SoftDependency.es6LanguageHandlerAvailable;
-import static org.neo4j.kernel.impl.procedures.es6.ES6SoftDependency.loadES6;
+import static org.neo4j.kernel.impl.procedures.es6.JSSoftDependency.es6LanguageHandlerAvailable;
+import static org.neo4j.kernel.impl.procedures.es6.JSSoftDependency.loadES6;
 
 public class ScriptObjectMappingTest
 {
@@ -84,8 +85,16 @@ public class ScriptObjectMappingTest
         Statement stmt = mock( Statement.class );
         Procedure proc = js.compile( stmt, procedureSignature( "p" ).out( "out", Neo4jTypes.NTMap ).build(), format( "yield [%s]", javascript ) );
 
-        RecordCursor out = proc.call( stmt, new Object[0] );
-        out.next();
-        return (Map<String,Object>) out.record()[0];
+        final AtomicReference<Object> out = new AtomicReference<>();
+        proc.call( stmt, new Object[0], new Visitor<Object[],ProcedureException>()
+        {
+            @Override
+            public boolean visit( Object[] element ) throws ProcedureException
+            {
+                out.set( element[0] );
+                return true;
+            }
+        } );
+        return (Map<String,Object>) out.get();
     }
 }

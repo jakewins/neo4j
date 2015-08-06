@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.api.procedure;
 
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.Statement;
 
 /**
@@ -27,5 +28,5 @@ import org.neo4j.kernel.api.Statement;
  */
 public interface Procedure
 {
-    RecordCursor call(Statement statement, Object[] args) throws ProcedureException;
+    void call(Statement statement, Object[] args, Visitor<Object[], ProcedureException> visitor) throws ProcedureException;
 }

@@ -27,6 +27,7 @@ import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.function.Function;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.DataWriteOperations;
 import org.neo4j.kernel.api.LegacyIndexHits;
 import org.neo4j.kernel.api.ReadOperations;
@@ -58,7 +59,6 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
-import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.operations.CountsOperations;
@@ -369,10 +369,10 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     }
 
     @Override
-    public RecordCursor procedureCall( ProcedureSignature signature, Object[] args ) throws ProcedureException
+    public void procedureCall( ProcedureSignature signature, Object[] args, Visitor<Object[], ProcedureException> visitor ) throws ProcedureException
     {
         statement.assertOpen();
-        return procedures().call( statement, signature, args );
+        procedures().call( statement, signature, args, visitor );
     }
 
     // </DataRead>

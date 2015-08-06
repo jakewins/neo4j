@@ -32,7 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assume.assumeTrue;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.procedure.ProcedureSignature.procedureSignature;
-import static org.neo4j.kernel.impl.procedures.es6.ES6SoftDependency.es6LanguageHandlerAvailable;
+import static org.neo4j.kernel.impl.procedures.es6.JSSoftDependency.es6LanguageHandlerAvailable;
 import static org.neo4j.kernel.impl.procedures.es6.ProcedureMatchers.exec;
 import static org.neo4j.kernel.impl.procedures.es6.ProcedureMatchers.node;
 import static org.neo4j.kernel.impl.procedures.es6.ProcedureMatchers.path;

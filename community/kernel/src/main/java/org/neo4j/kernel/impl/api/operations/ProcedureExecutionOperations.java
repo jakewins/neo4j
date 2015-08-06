@@ -19,12 +19,9 @@
  */
 package org.neo4j.kernel.impl.api.operations;
 
-import java.io.InputStream;
-import java.util.Iterator;
-
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
-import org.neo4j.kernel.api.procedure.RecordCursor;
 import org.neo4j.kernel.impl.api.KernelStatement;
 
 /**
@@ -35,6 +32,6 @@ public interface ProcedureExecutionOperations
     void verify( KernelStatement statement, ProcedureSignature signature, String language, String code ) throws
             ProcedureException;
 
-    RecordCursor call( KernelStatement statement, ProcedureSignature signature, Object[] args )
+    void call( KernelStatement statement, ProcedureSignature signature, Object[] args, Visitor<Object[], ProcedureException> visitor )
             throws ProcedureException;
 }
