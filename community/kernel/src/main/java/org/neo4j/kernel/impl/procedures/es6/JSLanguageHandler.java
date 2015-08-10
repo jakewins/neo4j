@@ -22,8 +22,6 @@ package org.neo4j.kernel.impl.procedures.es6;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import jdk.nashorn.internal.runtime.ScriptFunction;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -68,7 +66,6 @@ public class JSLanguageHandler implements LanguageHandler
         {
             // Init procedure-local context
             ScriptContext ctx = new SimpleScriptContext();
-            engine.eval( new InputStreamReader( runtimeAsStream() ), ctx );
             stdLib.visit( ctx.getBindings( ScriptContext.ENGINE_SCOPE ) );
 
             // Wrap user code in boilerplate signature
@@ -82,7 +79,6 @@ public class JSLanguageHandler implements LanguageHandler
         }
         catch ( Throwable e )
         {
-            e.printStackTrace();
             throw new ProcedureException( Status.Schema.ProcedureSyntaxError, e, "Failed to compile javascript: '%s'", code );
         }
     }
@@ -99,13 +95,5 @@ public class JSLanguageHandler implements LanguageHandler
     {
         stdLib.unregister( nameAndNamespace );
         return null;
-    }
-
-    /**
-     * The ES6->ES5 compiler we use requires a little runtime library, which is available as a stream through here.
-     */
-    private InputStream runtimeAsStream()
-    {
-        return getClass().getClassLoader().getResourceAsStream( "js/traceur-runtime.js" );
     }
 }

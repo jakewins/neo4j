@@ -85,18 +85,12 @@ public class ProcedureExecutor
         Procedure procedure = procedures.get( signature );
         if ( procedure == null )
         {
-            synchronized(this)
-            {
-                procedure = procedures.get( signature );
-                if( procedure == null )
-                {
-                    ProcedureDescriptor proc = statement.readOperations().procedureGet( signature );
+            ProcedureDescriptor proc = statement.readOperations().procedureGet( signature );
 
-                    LanguageHandler languageHandler = languageHandlers.get( proc.language() );
-                    procedure = languageHandler.compile( statement, proc.signature(), proc.procedureBody() );
-                    procedures.put( signature, procedure );
-                }
-            }
+            LanguageHandler languageHandler = languageHandlers.get( proc.language() );
+            // TODO: Language handler may have been removed here, give user helpful error if no such language handler
+            procedure = languageHandler.compile( statement, proc.signature(), proc.procedureBody() );
+            procedures.put( signature, procedure );
         }
 
         procedure.call( statement, args, visitor );

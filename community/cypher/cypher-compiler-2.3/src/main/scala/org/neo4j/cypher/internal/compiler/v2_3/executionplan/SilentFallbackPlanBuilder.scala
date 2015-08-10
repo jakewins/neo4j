@@ -19,61 +19,50 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.executionplan
 
-import org.neo4j.cypher.internal.compiler.v2_3.{CompilationPhaseTracer, PreparedQuery}
+import org.neo4j.cypher.internal.compiler.v2_3.{InvalidArgumentException, CompilationPhaseTracer, PreparedQuery}
 import org.neo4j.cypher.internal.compiler.v2_3.ast._
 import org.neo4j.cypher.internal.compiler.v2_3.notification.PlannerUnsupportedNotification
 import org.neo4j.cypher.internal.compiler.v2_3.planner.CantHandleQueryException
 import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
 
+/**
+ * Given a prioritized list of builders, returns the output of the first one that is capable of handling the query.
+ */
 trait FallbackBuilder extends ExecutablePlanBuilder {
 
   def producePlan(inputQuery: PreparedQuery, planContext: PlanContext,
                   tracer: CompilationPhaseTracer): Either[CompiledPlan, PipeInfo] = {
     val queryText = inputQuery.queryText
     val statement = inputQuery.statement
-    try {
+
+    for( builder <- builders ) try {
       monitor.newQuerySeen(queryText, statement)
-
-      // Temporary measure, to save time compiling update queries
-      if (containsUpdateClause(statement)) {
-        throw new CantHandleQueryException("Ronja does not handle update queries yet.")
-      }
-
-      newBuilder.producePlan(inputQuery, planContext, tracer)
+      return builder.producePlan(inputQuery, planContext, tracer)
     } catch {
       case e: CantHandleQueryException =>
         monitor.unableToHandleQuery(queryText, statement, e)
         warn(inputQuery)
-        oldBuilder.producePlan(inputQuery, planContext, tracer)
     }
+
+    throw new CantHandleQueryException( "No planner available to handle input query." )
   }
 
-  private def containsUpdateClause(s: Statement) = s.exists {
-    case _: UpdateClause => true
-  }
-
-  def oldBuilder: ExecutablePlanBuilder
-
-  def newBuilder: ExecutablePlanBuilder
+  def builders: Seq[ExecutablePlanBuilder]
 
   def monitor: NewLogicalPlanSuccessRateMonitor
 
   def warn(preparedQuery: PreparedQuery): Unit
-
 }
 
-case class SilentFallbackPlanBuilder(oldBuilder: ExecutablePlanBuilder,
-                                     newBuilder: ExecutablePlanBuilder,
+case class SilentFallbackPlanBuilder(builders: Seq[ExecutablePlanBuilder],
                                      monitor: NewLogicalPlanSuccessRateMonitor) extends FallbackBuilder {
 
   override def warn(preparedQuery: PreparedQuery): Unit = {}
 }
 
-case class WarningFallbackPlanBuilder(oldBuilder: ExecutablePlanBuilder,
-                                      newBuilder: ExecutablePlanBuilder,
+case class WarningFallbackPlanBuilder(builders: Seq[ExecutablePlanBuilder],
                                       monitor: NewLogicalPlanSuccessRateMonitor) extends FallbackBuilder {
 
   override def warn(preparedQuery: PreparedQuery): Unit = preparedQuery.notificationLogger
     .log(PlannerUnsupportedNotification)
 }
-

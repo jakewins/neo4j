@@ -300,7 +300,7 @@ class CompilerComparisonTest extends ExecutionEngineFunSuite with QueryStatistic
       semanticChecker = checker,
       useErrorsOverWarnings = false
     )
-    val pipeBuilder = new SilentFallbackPlanBuilder(new LegacyExecutablePlanBuilder(monitors, rewriterSequencer), planner,
+    val pipeBuilder = new SilentFallbackPlanBuilder(Seq(planner, new LegacyExecutablePlanBuilder(monitors, rewriterSequencer)),
                                                     planBuilderMonitor)
     val execPlanBuilder = new ExecutionPlanBuilder(graph, statsDivergenceThreshold, queryPlanTTL, clock, pipeBuilder)
     val planCacheFactory = () => new LRUCache[Statement, ExecutionPlan](100)

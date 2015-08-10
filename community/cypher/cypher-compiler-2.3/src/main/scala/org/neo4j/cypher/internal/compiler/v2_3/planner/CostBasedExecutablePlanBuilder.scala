@@ -48,6 +48,12 @@ case class CostBasedExecutablePlanBuilder(monitors: Monitors,
   extends ExecutablePlanBuilder {
 
   def producePlan(inputQuery: PreparedQuery, planContext: PlanContext, tracer: CompilationPhaseTracer) = {
+
+    // Temporary measure, to save time compiling update queries
+    if (containsUpdateClause(inputQuery.statement)) {
+      throw new CantHandleQueryException("Ronja does not handle update queries yet.")
+    }
+
     val statement =
       CostBasedExecutablePlanBuilder.rewriteStatement(
         statement = inputQuery.statement,
@@ -86,6 +92,10 @@ case class CostBasedExecutablePlanBuilder(monitors: Monitors,
     val pipeBuildContext = PipeExecutionBuilderContext(metrics.cardinality, semanticTable, plannerName)
 
     (plan, pipeBuildContext)
+  }
+
+  private def containsUpdateClause(s: Statement) = s.exists {
+    case _: UpdateClause => true
   }
 }
 

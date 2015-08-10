@@ -89,9 +89,9 @@ object ExecutablePlanBuilder {
   def create(plannerName: Option[PlannerName], rulePlanProducer: ExecutablePlanBuilder,
              costPlanProducer: ExecutablePlanBuilder, planBuilderMonitor: NewLogicalPlanSuccessRateMonitor,
              useErrorsOverWarnings: Boolean) = plannerName match {
-    case None => new SilentFallbackPlanBuilder(rulePlanProducer, costPlanProducer, planBuilderMonitor)
-    case Some(_) if useErrorsOverWarnings => new ErrorReportingExecutablePlanBuilder(costPlanProducer)
-    case Some(_) => new WarningFallbackPlanBuilder(rulePlanProducer, costPlanProducer, planBuilderMonitor)
+    case None => new SilentFallbackPlanBuilder(Seq(costPlanProducer, rulePlanProducer), planBuilderMonitor)
+    case Some(_) if useErrorsOverWarnings => new ErrorReportingExecutablePlanBuilder(new SilentFallbackPlanBuilder(Seq(costPlanProducer), planBuilderMonitor))
+    case Some(_) => new WarningFallbackPlanBuilder(Seq(costPlanProducer, rulePlanProducer), planBuilderMonitor)
   }
 }
 
