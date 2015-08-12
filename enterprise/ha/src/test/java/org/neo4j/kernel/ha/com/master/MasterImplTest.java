@@ -279,7 +279,7 @@ public class MasterImplTest
         master.commit( ctx, tx );
 
         // Then
-        verify(spi).applyPreparedTransaction( tx );
+        verify(spi).applyPreparedTransaction( tx, locks );
     }
 
     @Test

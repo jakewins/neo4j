@@ -27,8 +27,8 @@ import org.neo4j.com.TxChecksumVerifier;
 import org.neo4j.com.monitor.RequestMonitor;
 import org.neo4j.kernel.ha.HaRequestType210;
 import org.neo4j.kernel.ha.MasterClient214;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.kernel.monitoring.ByteCounterMonitor;
+import org.neo4j.logging.LogProvider;
 
 import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
 

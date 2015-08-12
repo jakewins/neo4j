@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.ha.com.master;
 
+import java.util.Collections;
 import java.util.Set;
 
 import org.neo4j.com.RequestContext;
@@ -32,6 +33,7 @@ import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.impl.util.collection.ConcurrentAccessException;
 import org.neo4j.kernel.impl.util.collection.NoSuchEntryException;
 import org.neo4j.kernel.impl.util.collection.TimedRepository;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static org.neo4j.kernel.impl.util.JobScheduler.Groups.slaveLocksTimeout;
 
@@ -41,12 +43,13 @@ import static org.neo4j.kernel.impl.util.JobScheduler.Groups.slaveLocksTimeout;
  *
  * Used for keeping and monitoring clients {@link Conversation} on master side.
  */
-public class ConversationManager
+public class ConversationManager extends LifecycleAdapter
 {
-    private static final int TX_TIMEOUT_ADDITION = 5 * 1000;
+    private static final int DEFAULT_LOCK_TIMEOUT_ADDITION = 5 * 1000;
     private static final int UNFINISHED_CONVERSATION_CLEANUP_DELAY = 1_000;
 
     private final int activityCheckIntervalMillis;
+    private final int lockTimeoutAddition;
     private final Config config;
     private final ConversationSPI spi;
     private final Factory<Conversation> conversationFactory =  new Factory<Conversation>()
@@ -63,16 +66,22 @@ public class ConversationManager
 
     public ConversationManager( ConversationSPI spi, Config config )
     {
-        this( spi, config, UNFINISHED_CONVERSATION_CLEANUP_DELAY );
+        this( spi, config, UNFINISHED_CONVERSATION_CLEANUP_DELAY, DEFAULT_LOCK_TIMEOUT_ADDITION );
     }
 
-    public ConversationManager( ConversationSPI spi, Config config, int activityCheckIntervalMillis )
+    /**
+     * @param activityCheckIntervalMillis interval to check for stale conversations
+     * @param lockTimeoutAddition number of milliseconds added on top of ha.lock_read_timeout
+     */
+    public ConversationManager( ConversationSPI spi, Config config, int activityCheckIntervalMillis, int lockTimeoutAddition )
     {
         this.spi = spi;
         this.config = config;
         this.activityCheckIntervalMillis = activityCheckIntervalMillis;
+        this.lockTimeoutAddition = lockTimeoutAddition;
     }
 
+    @Override
     public void start()
     {
         conversations = createConversationStore();
@@ -82,6 +91,7 @@ public class ConversationManager
                 conversations );
     }
 
+    @Override
     public void stop()
     {
         staleReaperJob.cancel( false );
@@ -110,7 +120,7 @@ public class ConversationManager
 
     public Set<RequestContext> getActiveContexts()
     {
-        return conversations.keys();
+        return conversations != null ? conversations.keys() : Collections.<RequestContext>emptySet();
     }
 
     public void remove( RequestContext context )
@@ -132,6 +142,6 @@ public class ConversationManager
             {
                 conversation.close();
             }
-        }, config.get( HaSettings.lock_read_timeout ) + TX_TIMEOUT_ADDITION, Clock.SYSTEM_CLOCK );
+        }, config.get( HaSettings.lock_read_timeout ) + lockTimeoutAddition, Clock.SYSTEM_CLOCK );
     }
 }

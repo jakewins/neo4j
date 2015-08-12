@@ -129,7 +129,7 @@ public class ConversationManagerTest
 
     private ConversationManager getConversationManager()
     {
-        return new ConversationManager( conversationSPI, config, 1000 );
+        return new ConversationManager( conversationSPI, config );
     }
 
 }

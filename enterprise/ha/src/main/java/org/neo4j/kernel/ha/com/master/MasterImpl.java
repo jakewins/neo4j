@@ -72,7 +72,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
 
         StoreId storeId();
 
-        long applyPreparedTransaction( TransactionRepresentation preparedTransaction )
+        long applyPreparedTransaction( TransactionRepresentation preparedTransaction, Locks.Client locks )
                 throws IOException, org.neo4j.kernel.api.exceptions.TransactionFailureException;
 
         Integer createRelationshipType( String name );
@@ -203,7 +203,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
     {
         if ( locks.trySharedLock( ResourceTypes.SCHEMA, ResourceTypes.schemaResource() ) )
         {
-            long txId = spi.applyPreparedTransaction( preparedTransaction );
+            long txId = spi.applyPreparedTransaction( preparedTransaction, locks );
             return spi.packTransactionObligationResponse( context, txId );
         }
         else
