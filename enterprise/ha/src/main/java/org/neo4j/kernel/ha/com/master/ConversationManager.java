@@ -125,7 +125,11 @@ public class ConversationManager extends LifecycleAdapter
 
     public void remove( RequestContext context )
     {
-        conversations.remove( context );
+        Conversation conversation = conversations.end( context );
+        if(!conversation.active())
+        {
+            conversation.interrupt();
+        }
     }
 
     public Conversation acquire()

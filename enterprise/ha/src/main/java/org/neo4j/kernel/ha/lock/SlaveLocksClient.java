@@ -195,7 +195,7 @@ class SlaveLocksClient implements Locks.Client
         {
             try ( Response<Void> ignored = master.endLockSession( newRequestContextFor( client ), true ) )
             {
-                // Lock session is closed on master at this point
+                // Lock session is open on master at this point
             }
             initialized = false;
         }
@@ -211,7 +211,7 @@ class SlaveLocksClient implements Locks.Client
         {
             try ( Response<Void> ignored = master.endLockSession( newRequestContextFor( client ), true ) )
             {
-                // Lock session is closed on master at this point
+                // Lock session is open on master at this point
             }
         }
         client.close();

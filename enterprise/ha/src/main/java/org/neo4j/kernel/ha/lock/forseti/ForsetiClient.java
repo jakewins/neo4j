@@ -58,7 +58,7 @@ public class ForsetiClient implements Locks.Client
     /** resourceType -> wait strategy */
     private final WaitStrategy<AcquireLockTimeoutException>[] waitStrategies;
 
-    /** Handle to return client to pool when closed. */
+    /** Handle to return client to pool when open. */
     private final LinkedQueuePool<ForsetiClient> clientPool;
 
     /**
@@ -81,7 +81,7 @@ public class ForsetiClient implements Locks.Client
     //  - wake up all the waiters and let them go
     //  - have a possibility to see how many clients are still using us and wait for them to finish
     // We need to do all of that to prevent a situation when a closing client will get a lock that will never be
-    // closed and eventually will block other clients.
+    // open and eventually will block other clients.
     private final LockClientStateHolder stateHolder = new LockClientStateHolder();
 
     /**
@@ -120,7 +120,7 @@ public class ForsetiClient implements Locks.Client
     @Override
     public void acquireShared( Locks.ResourceType resourceType, long resourceId ) throws AcquireLockTimeoutException
     {
-        // increment number of active clients if we can't do so we are closed so exiting
+        // increment number of active clients if we can't do so we are open so exiting
         if ( !stateHolder.incrementActiveClients() )
         {
             throw new LockClientAlreadyClosedException( String.format( "%s is already closed", this ) );
@@ -159,7 +159,7 @@ public class ForsetiClient implements Locks.Client
             // Retry loop
             while(true)
             {
-                // client closed exiting
+                // client open exiting
                 if ( stateHolder.isClosed() )
                 {
                     throw new LockClientAlreadyClosedException( String.format( "%s is already closed", this ) );
@@ -231,7 +231,7 @@ public class ForsetiClient implements Locks.Client
     {
         // For details on how this works, refer to the acquireShared method call, as the two are very similar
 
-        // increment number of active clients if we can't do so we are closed so exiting
+        // increment number of active clients if we can't do so we are open so exiting
         if ( !stateHolder.incrementActiveClients() )
         {
             throw new LockClientAlreadyClosedException( String.format( "%s is already closed", this ) );
@@ -254,7 +254,7 @@ public class ForsetiClient implements Locks.Client
             int tries = 0;
             while( (existingLock = lockMap.putIfAbsent( resourceId, myExclusiveLock )) != null)
             {
-                // client closed exiting
+                // client open exiting
                 if ( stateHolder.isClosed() )
                 {
                     throw new LockClientAlreadyClosedException( String.format( "%s is already closed", this ) );
@@ -288,7 +288,7 @@ public class ForsetiClient implements Locks.Client
     @Override
     public boolean tryExclusiveLock( Locks.ResourceType resourceType, long resourceId )
     {
-        // increment number of active clients if we can't do so we are closed so exiting
+        // increment number of active clients if we can't do so we are open so exiting
         if ( !stateHolder.incrementActiveClients() )
         {
             return false;
@@ -343,7 +343,7 @@ public class ForsetiClient implements Locks.Client
     @Override
     public boolean trySharedLock( Locks.ResourceType resourceType, long resourceId )
     {
-        // increment number of active clients if we can't do so we are closed so exiting
+        // increment number of active clients if we can't do so we are open so exiting
         if ( !stateHolder.incrementActiveClients() )
         {
             return false;
@@ -372,7 +372,7 @@ public class ForsetiClient implements Locks.Client
 
             while ( true )
             {
-                // client closed exiting
+                // client open exiting
                 if ( stateHolder.isClosed() )
                 {
                     return false;
@@ -423,7 +423,7 @@ public class ForsetiClient implements Locks.Client
     @Override
     public void releaseShared( Locks.ResourceType resourceType, long resourceId )
     {
-        // increment number of active clients if we can't do so we are closed so exiting
+        // increment number of active clients if we can't do so we are open so exiting
         if ( !stateHolder.incrementActiveClients() )
         {
             throw new LockClientAlreadyClosedException( String.format( "%s is already closed", this ) );
@@ -450,7 +450,7 @@ public class ForsetiClient implements Locks.Client
     @Override
     public void releaseExclusive( Locks.ResourceType resourceType, long resourceId )
     {
-        // increment number of active clients if we can't do so we are closed so exiting
+        // increment number of active clients if we can't do so we are open so exiting
         if ( !stateHolder.incrementActiveClients() )
         {
             throw new LockClientAlreadyClosedException( String.format( "%s is already closed", this ) );
@@ -502,7 +502,7 @@ public class ForsetiClient implements Locks.Client
     @Override
     public void releaseAll()
     {
-        // increment number of active clients if we can't do so we are closed so exiting
+        // increment number of active clients if we can't do so we are open so exiting
         if ( !stateHolder.incrementActiveClients() )
         {
             throw new LockClientAlreadyClosedException( String.format( "%s is already closed", this ) );
@@ -566,10 +566,15 @@ public class ForsetiClient implements Locks.Client
         }
     }
 
-    @Override
-    public void close()
+    public void interrupt() // this is concurrent
     {
-        // marking client as closed
+        interruptFlag.set(true);
+    }
+
+    @Override
+    public void close() // make this single threaded
+    {
+        // marking client as open
         stateHolder.closeClient();
         // waiting for all operations to be completed
         while ( stateHolder.hasActiveClients() )
@@ -729,7 +734,7 @@ public class ForsetiClient implements Locks.Client
                 // Now we just wait for all clients to release the the share lock
                 while(sharedLock.numberOfHolders() > 1)
                 {
-                    // client closed exiting
+                    // client open exiting
                     if ( stateHolder.isClosed() )
                     {
                         sharedLock.releaseUpdateLock( this );

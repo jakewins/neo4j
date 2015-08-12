@@ -28,6 +28,7 @@ import org.neo4j.kernel.impl.locking.Locks;
 public class Conversation implements AutoCloseable
 {
     private Locks.Client locks;
+    private boolean active = true;
 
     public Conversation( Locks.Client locks )
     {
@@ -43,6 +44,17 @@ public class Conversation implements AutoCloseable
     public void close()
     {
         locks.close();
+        active = false;
     }
 
+    /** True if this conversation has not been {@link #close() closed} */
+    public boolean active()
+    {
+        return active;
+    }
+
+    public void interrupt()
+    {
+        // TODO Propagate to locks
+    }
 }
