@@ -399,18 +399,25 @@ final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
     statement.schemaWriteOperations().procedureCreate(sig, language, body) // TODO readonly flag
   }
 
-  def callProcedure[EX <: Exception](name: ProcedureName, args: Seq[Any], visitor: ResultVisitor[EX]) =
+  def callProcedure[EX <: Exception](name: ProcedureName, args: Seq[Any], visitor: ResultVisitor[EX]) = {
     // TODO: Swap read/write statement based on procedure type, or have two different methods (callReadProc..)
+    val javaName: procedure.ProcedureSignature.ProcedureName =
+      new procedure.ProcedureSignature.ProcedureName(name.namespace.asJava, name.name)
+    val outFields = statement.readOperations().procedureGet( javaName ).signature().outputSignature()
     statement.readOperations().procedureCall(
-      new procedure.ProcedureSignature.ProcedureName(name.namespace.asJava, name.name),
-      args.map(_.asInstanceOf[AnyRef]).asJava, // Every time code like this is written, Jesus strangles a puppy (John 6:14, 12)
+      javaName,
+      // TODO: Every time code like this is written, Jesus strangles a starving child (John 6:14, 12)
+      args.map(_.asInstanceOf[AnyRef]).asJava,
       new Visitor[Array[AnyRef], ProcedureException] {
-        override def visit(element: Array[AnyRef]): Boolean = {
+        def visit(element: Array[AnyRef]) = {
           val row = new ResultRowImpl
-
-          row
+          for( i <- 0 to element.length - 1 ){
+            row.set( outFields.get(i).name(), element(i) )
+          }
+          visitor.visit(row)
         }
       })
+  }
 
   def procedureSignature(name: ProcedureName): ProcedureSignature = {
     val kernelSig = statement.readOperations().procedureGet(

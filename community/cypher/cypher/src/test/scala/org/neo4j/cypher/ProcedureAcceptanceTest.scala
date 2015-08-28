@@ -19,13 +19,6 @@
  */
 package org.neo4j.cypher
 
-import org.neo4j.kernel.api.exceptions.schema.{NoSuchIndexException, DropIndexFailureException}
-import java.util.concurrent.TimeUnit
-import java.io.{FileOutputStream, File}
-import org.neo4j.graphdb.factory.GraphDatabaseFactory
-import org.neo4j.graphdb.GraphDatabaseService
-import org.neo4j.test.TestGraphDatabaseFactory
-
 class ProcedureAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport {
 
   test("create procedure") {
@@ -46,8 +39,7 @@ class ProcedureAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
       USING javascript FROM SOURCE "emit(input);"
       """)
 
-    // WHEN
+    // WHEN & THEN
     execute("CALL example.myProc( 'hello' )").toList should equal (List(Map("output" -> "hello")))
   }
-
 }

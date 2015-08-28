@@ -19,6 +19,11 @@
  */
 package org.neo4j.kernel.impl.api.state;
 
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,14 +32,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.api.LegacyPropertyTrackers;
@@ -43,6 +45,7 @@ import org.neo4j.kernel.impl.api.StatementOperationsTestHelper;
 import org.neo4j.kernel.impl.api.store.StoreReadLayer;
 import org.neo4j.kernel.impl.api.store.StoreStatement;
 import org.neo4j.kernel.impl.index.LegacyIndexStore;
+import org.neo4j.kernel.impl.store.Neo4jTypes;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -51,11 +54,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.helpers.Exceptions.launderedException;
 import static org.neo4j.helpers.collection.Iterables.option;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.helpers.collection.IteratorUtil.emptySetOf;
+import static org.neo4j.kernel.api.procedure.ProcedureSignature.procedureSignature;
 
 public class SchemaTransactionStateTest
 {
@@ -123,7 +126,7 @@ public class SchemaTransactionStateTest
         IndexDescriptor rule = txContext.indexCreate( state, labelId1, key1 );
 
         // THEN
-        assertEquals( InternalIndexState.POPULATING, txContext.indexGetState(state, rule) );
+        assertEquals( InternalIndexState.POPULATING, txContext.indexGetState( state, rule ) );
     }
 
     @Test
@@ -169,7 +172,7 @@ public class SchemaTransactionStateTest
         // GIVEN
         // -- the store already have an index on the label and a different property
         IndexDescriptor existingRule1 = new IndexDescriptor( labelId1, key1 );
-        when( store.indexesGetForLabelAndPropertyKey(labelId1, key1) ).thenReturn( existingRule1 );
+        when( store.indexesGetForLabelAndPropertyKey( labelId1, key1 ) ).thenReturn( existingRule1 );
         // -- the store already have an index on a different label with the same property
         IndexDescriptor existingRule2 = new IndexDescriptor( labelId2, key2 );
         when( store.indexesGetForLabelAndPropertyKey( labelId2, key2 ) ).thenReturn( existingRule2 );
@@ -201,6 +204,21 @@ public class SchemaTransactionStateTest
 
         // THEN
         assertEquals( emptySetOf( IndexDescriptor.class ), asSet( rulesByLabel ) );
+    }
+
+    @Test
+    public void shouldGetProcedureInCurrentTx() throws Throwable
+    {
+        // Given
+        ProcedureSignature signature = procedureSignature( "myproc" ).out( "field1", Neo4jTypes.NTInteger ).build();
+        txContext.procedureCreate( state, signature, "javascript", "emit(1);" );
+
+        // When
+        ProcedureDescriptor desc = txContext.procedureGet( state, signature.name() );
+
+        // Then
+        assertEquals( desc.language(), "javascript" );
+        assertEquals( desc.procedureBody(), "emit(1);" );
     }
 
     private interface ExceptionExpectingFunction<E extends Exception>

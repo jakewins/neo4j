@@ -19,7 +19,6 @@
  */
 package org.neo4j.kernel.api.txstate;
 
-import java.io.InputStream;
 import java.util.Map;
 
 import org.neo4j.kernel.api.constraints.MandatoryPropertyConstraint;
@@ -109,4 +108,5 @@ public interface TransactionState extends ReadableTxState
     void procedureDoDrop( ProcedureSignature procedure );
 
     void procedureDoAdd( ProcedureSignature signature, String language, String body );
+
 }

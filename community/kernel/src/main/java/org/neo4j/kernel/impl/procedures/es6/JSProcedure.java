@@ -76,32 +76,53 @@ public class JSProcedure implements Procedure
 
     private Object[] procedureArguments( Object[] args, final Visitor<Object[],ProcedureException> visitor )
     {
-        final Object[] argsPlusEmit = new Object[args.length + 1];
+        final Object[] argsPlusCtx = new Object[args.length + 1];
         final Object[] outputRecord = new Object[signature.outputSignature().size()];
-        argsPlusEmit[0] = new EmitHandler() {
-            @Override
-            public void apply( Object record ) throws ProcedureException
-            {
-                if( record instanceof ScriptObject )
-                {
-                    mapper.translateRecord( (ScriptObject) record, outputRecord );
-                    visitor.visit( outputRecord );
-                }
-                else
-                {
-                    throw new IllegalArgumentException( "Unable to emit " + record + ", unknown type `" + record.getClass() + "`." );
-                }
-            }
-        };
-        for ( int i = 1; i < argsPlusEmit.length; i++ )
+        argsPlusCtx[0] = new EmitHandler( outputRecord, visitor );
+        for ( int i = 1; i < argsPlusCtx.length; i++ )
         {
-            argsPlusEmit[i] = args[i-1];
+            argsPlusCtx[i] = args[i-1];
         }
-        return argsPlusEmit;
+        return argsPlusCtx;
     }
 
-    public interface EmitHandler
+    public class EmitHandler
     {
-        void apply( Object record ) throws ProcedureException;
+        private final Object[] outputRecord;
+        private final Visitor<Object[],ProcedureException> visitor;
+
+        public EmitHandler( Object[] outputRecord, Visitor<Object[],ProcedureException> visitor )
+        {
+            this.outputRecord = outputRecord;
+            this.visitor = visitor;
+        }
+
+        public void apply( Object record ) throws ProcedureException
+        {
+            if( record instanceof ScriptObject )
+            {
+                mapper.translateRecord( (ScriptObject) record, outputRecord );
+                visitor.visit( outputRecord );
+            }
+            else
+            {
+                throw new IllegalArgumentException( "Unable to emit " + record + ", unknown type `" + record.getClass() + "`." );
+            }
+        }
+    }
+
+    private class CallContext
+    {
+        private final EmitHandler emitHandler;
+        private final JSStdLib stdLib;
+
+        public CallContext( EmitHandler emitHandler, JSStdLib stdLib )
+        {
+            this.emitHandler = emitHandler;
+            this.stdLib = stdLib;
+        }
+
+        public EmitHandler getEmitHandler() { return emitHandler; }
+        public JSStdLib getStdLib() { return stdLib; }
     }
 }

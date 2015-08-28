@@ -19,27 +19,18 @@
  */
 package org.neo4j.kernel.impl.api.store;
 
-import java.util.Iterator;
-
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
-import org.neo4j.function.Function;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.kernel.api.cursor.LabelCursor;
 import org.neo4j.kernel.api.cursor.NodeCursor;
 import org.neo4j.kernel.api.cursor.PropertyCursor;
 import org.neo4j.kernel.api.cursor.RelationshipCursor;
-import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
-import org.neo4j.kernel.api.procedure.ProcedureException;
-import org.neo4j.kernel.api.procedure.ProcedureSignature.ProcedureName;
 import org.neo4j.kernel.impl.store.NeoStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
-import org.neo4j.kernel.impl.store.record.ProcedureRule;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.util.InstanceCache;
-
-import static org.neo4j.helpers.collection.Iterables.map;
 
 /**
  * Statement for store layer. This allows for acquisition of cursors on the store data.
@@ -180,28 +171,8 @@ public class StoreStatement
         return iteratorRelationshipCursor.get().init( iterator );
     }
 
-    public Iterator<ProcedureDescriptor> proceduresGetAll()
-    {
-        neoStore.assertOpen();
-        return map( new Function<ProcedureRule, ProcedureDescriptor>()
-        {
-            @Override
-            public ProcedureDescriptor apply( ProcedureRule o )
-            {
-                return o.descriptor();
-            }
-        }, schema.allProcedures() );
-    }
-
-    public ProcedureDescriptor procedureGetBySignature( ProcedureName signature ) throws ProcedureException
-    {
-        neoStore.assertOpen();
-        return schema.procedure( signature ).descriptor();
-    }
-
     @Override
     public void close()
     {
     }
-
 }

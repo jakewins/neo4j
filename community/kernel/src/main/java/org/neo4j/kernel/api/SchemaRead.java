@@ -92,9 +92,6 @@ interface SchemaRead
     /** Get all procedures defined in the system */
     Iterator<ProcedureSignature> proceduresGetAll();
 
-    /** Fetch a procedure signature given the namespace and procedure name, if one exists. */
-    ProcedureSignature procedureGetSignature( String[] namespace, String name ) throws ProcedureException;
-
     /** Fetch a procedure given its signature. */
     ProcedureDescriptor procedureGet( ProcedureName name ) throws ProcedureException;
 }

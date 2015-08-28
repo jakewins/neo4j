@@ -70,7 +70,6 @@ public class JSLanguageHandler implements LanguageHandler
 
             // Wrap user code in boilerplate signature
             code = procedureBoilerplate.wrapAsProcedureFunction( signature, code );
-            System.out.println(code);
 
             // Compile the ES5 generator function
             ScriptFunction procedureFunc = (ScriptFunction) NashornUtil.unwrap( (ScriptObjectMirror) engine.eval( code, ctx ) );

@@ -51,6 +51,8 @@ import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
 import org.neo4j.kernel.impl.api.CountsAccessor;
@@ -869,6 +871,18 @@ public class DiskLayer implements StoreReadLayer
     {
         return storeStatement.acquireIteratorRelationshipCursor(
                 new AllStoreIdIterator( neoStore.getRelationshipStore() ) );
+    }
+
+    @Override
+    public ProcedureDescriptor procedureGet( ProcedureSignature.ProcedureName signature )
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Iterator<ProcedureDescriptor> procedures()
+    {
+        throw new UnsupportedOperationException();
     }
 
     @Override

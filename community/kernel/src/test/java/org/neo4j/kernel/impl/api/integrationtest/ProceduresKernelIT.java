@@ -30,7 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.kernel.api.ReadOperations;
+import org.neo4j.kernel.api.DataWriteOperations;
 import org.neo4j.kernel.api.SchemaWriteOperations;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
@@ -80,7 +80,9 @@ public class ProceduresKernelIT extends KernelIntegrationTest
         shouldCreateProcedure();
 
         // When
-        ProcedureSignature found = readOperationsInNewTransaction().procedureGetSignature( new String[]{"example"}, "exampleProc" );
+        ProcedureSignature found = readOperationsInNewTransaction()
+                .procedureGet( new ProcedureSignature.ProcedureName( new String[]{"example"}, "exampleProc" ) )
+                .signature();
 
         // Then
         assertThat( found, equalTo( found ) );
@@ -93,7 +95,9 @@ public class ProceduresKernelIT extends KernelIntegrationTest
         exception.expect( ProcedureException.class );
 
         // When
-        readOperationsInNewTransaction().procedureGetSignature( new String[]{"example"}, "exampleProc" );
+        readOperationsInNewTransaction()
+                .procedureGet( new ProcedureSignature.ProcedureName(new String[]{"example"}, "exampleProc" ))
+                .signature();
     }
 
     @Test
@@ -107,11 +111,11 @@ public class ProceduresKernelIT extends KernelIntegrationTest
             commit();
         }
 
-        ReadOperations ops = readOperationsInNewTransaction();
+        DataWriteOperations ops = dataWriteOperationsInNewTransaction();
 
         // When
         final List<List<Object>> records = new LinkedList<>();
-        ops.procedureCall( signature.name(), new Object[]{"hello"}, new Visitor<Object[],ProcedureException>()
+        ops.procedureCall( signature.name(), asList((Object)"hello"), new Visitor<Object[],ProcedureException>()
         {
             @Override
             public boolean visit( Object[] record ) throws ProcedureException

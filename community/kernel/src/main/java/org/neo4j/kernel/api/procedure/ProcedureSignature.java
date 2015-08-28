@@ -66,6 +66,28 @@ public class ProcedureSignature
             String strNamespace = namespace.length > 0 ? Iterables.toString( asList( namespace ), "." ) + "." : "";
             return String.format("%s%s", strNamespace, name);
         }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o ) { return true; }
+            if ( o == null || getClass() != o.getClass() ) { return false; }
+
+            ProcedureName that = (ProcedureName) o;
+
+            // Probably incorrect - comparing Object[] arrays with Arrays.equals
+            if ( !Arrays.equals( namespace, that.namespace ) ) { return false; }
+            return name.equals( that.name );
+
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = Arrays.hashCode( namespace );
+            result = 31 * result + name.hashCode();
+            return result;
+        }
     }
 
     public static class Argument

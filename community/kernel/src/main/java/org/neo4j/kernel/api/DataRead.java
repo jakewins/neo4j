@@ -140,6 +140,7 @@ interface DataRead
     <EXCEPTION extends Exception> void relationshipVisit( long relId, RelationshipVisitor<EXCEPTION> visitor )
             throws EntityNotFoundException, EXCEPTION;
 
+
     // Implementation notes;
     // This is here in the spirit of iterative development - I'm not actually sure this is the right place in the stack for this
     // primitive. Another alternative would be to have the kernel only handle storage of procedures, and introduce a new service

@@ -37,6 +37,8 @@ import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.impl.api.DegreeVisitor;
 import org.neo4j.kernel.impl.api.KernelStatement;
@@ -178,4 +180,8 @@ public interface StoreReadLayer
     NodeCursor nodesGetAllCursor( StoreStatement statement );
 
     RelationshipCursor relationshipsGetAllCursor( StoreStatement storeStatement );
+
+    ProcedureDescriptor procedureGet( ProcedureSignature.ProcedureName signature );
+
+    Iterator<ProcedureDescriptor> procedures();
 }

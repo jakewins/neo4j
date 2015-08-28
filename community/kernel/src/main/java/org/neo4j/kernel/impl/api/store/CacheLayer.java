@@ -58,6 +58,8 @@ import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.impl.api.DegreeVisitor;
 import org.neo4j.kernel.impl.api.KernelStatement;
@@ -136,6 +138,18 @@ public class CacheLayer implements StoreReadLayer
     public Iterator<IndexDescriptor> uniqueIndexesGetAll()
     {
         return toIndexDescriptors( schemaCache.schemaRules(), SchemaRule.Kind.CONSTRAINT_INDEX_RULE );
+    }
+
+    @Override
+    public ProcedureDescriptor procedureGet( ProcedureSignature.ProcedureName signature )
+    {
+        return schemaCache.procedureGet( signature );
+    }
+
+    @Override
+    public Iterator<ProcedureDescriptor> procedures()
+    {
+        return schemaCache.procedures();
     }
 
     private static Iterator<IndexDescriptor> toIndexDescriptors( Iterable<SchemaRule> rules,

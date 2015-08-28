@@ -136,7 +136,9 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
     private DiffSets<IndexDescriptor> indexChanges;
     private DiffSets<IndexDescriptor> constraintIndexChanges;
     private DiffSets<PropertyConstraint> constraintsChanges;
+
     private DiffSets<ProcedureDescriptor> procedureChanges;
+    private Map<ProcedureSignature.ProcedureName, ProcedureDescriptor> addedProcedures;
 
     private PropertyChanges propertyChangesForNodes;
 
@@ -872,10 +874,16 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
         return procedureChanges == null ? procedureChanges = new DiffSets<>() : procedureChanges;
     }
 
+    private Map<ProcedureSignature.ProcedureName, ProcedureDescriptor> addedProcedures()
+    {
+        return addedProcedures == null ? addedProcedures = new HashMap<>() : addedProcedures;
+    }
+
     @Override
     public void procedureDoDrop( ProcedureSignature procedure )
     {
         procedureChanges().remove( new ProcedureDescriptor( procedure, null, null, null ) );
+        addedProcedures().remove( procedure.name() );
         hasChanges = true;
     }
 
@@ -883,8 +891,16 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
     public void procedureDoAdd( ProcedureSignature signature, String language, String body )
     {
         // TODO: Mode
-        procedureChanges().add( new ProcedureDescriptor( signature, language, ProcedureDescriptor.Mode.READ_ONLY, body ) );
+        ProcedureDescriptor descriptor = new ProcedureDescriptor( signature, language, ProcedureDescriptor.Mode.READ_ONLY, body );
+        procedureChanges().add( descriptor );
+        addedProcedures().put( signature.name(), descriptor );
         hasChanges = true;
+    }
+
+    @Override
+    public ProcedureDescriptor getProcedure( ProcedureSignature.ProcedureName name )
+    {
+        return addedProcedures == null ? null : addedProcedures.get( name );
     }
 
     @Override

@@ -32,6 +32,8 @@ import org.neo4j.helpers.collection.NestingIterable;
 import org.neo4j.kernel.api.constraints.PropertyConstraint;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
+import org.neo4j.kernel.api.procedure.ProcedureSignature;
 import org.neo4j.kernel.impl.store.PropertyConstraintRule;
 import org.neo4j.kernel.impl.store.record.IndexRule;
 import org.neo4j.kernel.impl.store.record.SchemaRule;
@@ -55,6 +57,7 @@ public class SchemaCache
 
     private final Collection<PropertyConstraint> constraints = new HashSet<>();
     private final Map<Integer, Map<Integer, CommittedIndexDescriptor>> indexDescriptors = new HashMap<>();
+    private final Map<ProcedureSignature.ProcedureName, ProcedureDescriptor> procedures = new HashMap<>();
 
     public SchemaCache( Iterable<SchemaRule> initialRules )
     {
@@ -150,6 +153,11 @@ public class SchemaCache
             byLabel.put( indexRule.getPropertyKey(), new CommittedIndexDescriptor( indexRule.getLabel(),
                     indexRule.getPropertyKey(), indexRule.getId() ) );
         }
+        else if( rule instanceof ProcedureDescriptor )
+        {
+            ProcedureDescriptor proc = (ProcedureDescriptor) rule;
+            procedures.put( proc.signature().name(), proc );
+        }
     }
 
     public void clear()
@@ -158,6 +166,7 @@ public class SchemaCache
         rulesByIdMap.clear();
         constraints.clear();
         indexDescriptors.clear();
+        procedures.clear();
     }
 
     public void load( Iterator<SchemaRule> schemaRuleIterator )
@@ -167,6 +176,16 @@ public class SchemaCache
         {
             addSchemaRule( schemaRule );
         }
+    }
+
+    public ProcedureDescriptor procedureGet( ProcedureSignature.ProcedureName name )
+    {
+        return procedures.get( name );
+    }
+
+    public Iterator<ProcedureDescriptor> procedures()
+    {
+        return procedures.values().iterator();
     }
 
     // We could have had this class extend IndexDescriptor instead. That way we could have gotten the id

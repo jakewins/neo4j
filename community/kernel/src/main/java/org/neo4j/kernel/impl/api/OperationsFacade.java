@@ -538,13 +538,6 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     }
 
     @Override
-    public ProcedureSignature procedureGetSignature( String[] namespace, String name ) throws ProcedureException
-    {
-        statement.assertOpen();
-        return procedureGet( new ProcedureName( namespace, name ) ).signature();
-    }
-
-    @Override
     public ProcedureDescriptor procedureGet( ProcedureName signature ) throws ProcedureException
     {
         statement.assertOpen();
