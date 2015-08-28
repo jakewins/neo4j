@@ -980,7 +980,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
             try
             {
                 clearSchemaState = true;
-                recordState.dropSchemaRule( schemaStorage.procedure( signature ) );
+                recordState.dropSchemaRule( schemaStorage.procedure( signature.name() ) );
             }
             catch ( ProcedureException e )
             {

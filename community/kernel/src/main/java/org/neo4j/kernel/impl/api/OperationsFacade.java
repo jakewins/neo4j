@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.api;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
@@ -59,6 +60,7 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.ProcedureName;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.operations.CountsOperations;
@@ -369,10 +371,10 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     }
 
     @Override
-    public void procedureCall( ProcedureSignature signature, Object[] args, Visitor<Object[], ProcedureException> visitor ) throws ProcedureException
+    public void procedureCall( ProcedureName signature, List<Object> args, Visitor<Object[], ProcedureException> visitor ) throws ProcedureException
     {
         statement.assertOpen();
-        procedures().call( statement, signature, args, visitor );
+        procedures().call( statement, signature, args.toArray(), visitor );
     }
 
     // </DataRead>
@@ -539,14 +541,14 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     public ProcedureSignature procedureGetSignature( String[] namespace, String name ) throws ProcedureException
     {
         statement.assertOpen();
-        return schemaRead().procedureGetBySignature( statement, new ProcedureSignature( namespace, name ) ).signature();
+        return procedureGet( new ProcedureName( namespace, name ) ).signature();
     }
 
     @Override
-    public ProcedureDescriptor procedureGet( ProcedureSignature signature ) throws ProcedureException
+    public ProcedureDescriptor procedureGet( ProcedureName signature ) throws ProcedureException
     {
         statement.assertOpen();
-        return schemaRead().procedureGetBySignature( statement, signature );
+        return schemaRead().procedureGet( statement, signature );
     }
 
     @Override

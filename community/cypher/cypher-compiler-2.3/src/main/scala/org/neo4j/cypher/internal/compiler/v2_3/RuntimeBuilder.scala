@@ -20,15 +20,26 @@
 package org.neo4j.cypher.internal.compiler.v2_3
 
 import org.neo4j.cypher.internal.compiler.v2_3.CompilationPhaseTracer.CompilationPhase._
-import org.neo4j.cypher.internal.compiler.v2_3.codegen.{CodeStructure, CodeGenerator}
-import org.neo4j.cypher.internal.compiler.v2_3.executionplan.{GeneratedQuery, CompiledPlan, NewRuntimeSuccessRateMonitor, PipeInfo}
+import org.neo4j.cypher.internal.compiler.v2_3.CompiledPlanBuilder.createTracer
+import org.neo4j.cypher.internal.compiler.v2_3.codegen.profiling.ProfilingTracer
+import org.neo4j.cypher.internal.compiler.v2_3.codegen.{QueryExecutionTracer, CodeStructure, CodeGenerator}
+import org.neo4j.cypher.internal.compiler.v2_3.executionplan.InterpretedExecutionPlanBuilder.interpretedToExecutionPlan
+import org.neo4j.cypher.internal.compiler.v2_3.executionplan._
 import org.neo4j.cypher.internal.compiler.v2_3.helpers._
 import org.neo4j.cypher.internal.compiler.v2_3.notification.RuntimeUnsupportedNotification
+import org.neo4j.cypher.internal.compiler.v2_3.planDescription.InternalPlanDescription
+import org.neo4j.cypher.internal.compiler.v2_3.planDescription.InternalPlanDescription.Arguments
 import org.neo4j.cypher.internal.compiler.v2_3.planner.execution.{PipeExecutionBuilderContext, PipeExecutionPlanBuilder}
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.compiler.v2_3.planner.{CantCompileQueryException, SemanticTable}
-import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
+import org.neo4j.cypher.internal.compiler.v2_3.spi.{QueryContext, GraphStatistics, PlanContext}
+import org.neo4j.function.Supplier
+import org.neo4j.function.Suppliers._
+import org.neo4j.graphdb.QueryExecutionType.QueryType
 import org.neo4j.helpers.Clock
+import org.neo4j.kernel.api.Statement
+import org.neo4j.kernel.impl.core.NodeManager
+import org.neo4j.kernel.api
 
 object RuntimeBuilder {
   def create(runtimeName: Option[RuntimeName], interpretedProducer: InterpretedPlanBuilder,
@@ -44,14 +55,16 @@ trait RuntimeBuilder {
   def apply(logicalPlan: LogicalPlan, pipeBuildContext: PipeExecutionBuilderContext, planContext: PlanContext,
             tracer: CompilationPhaseTracer, semanticTable: SemanticTable,
             monitor: NewRuntimeSuccessRateMonitor, plannerName: PlannerName,
-            preparedQuery: PreparedQuery): Either[CompiledPlan, PipeInfo] = {
+            preparedQuery: PreparedQuery, nodeManager:NodeManager,
+            createFingerprintReference:Option[PlanFingerprint]=>PlanFingerprintReference): ExecutionPlan = {
     try {
-      Left(compiledProducer(logicalPlan, semanticTable, planContext, monitor, tracer, plannerName))
+      compiledProducer(logicalPlan, semanticTable, planContext, monitor, tracer, plannerName, preparedQuery,
+                       nodeManager, createFingerprintReference)
     } catch {
       case e: CantCompileQueryException =>
         monitor.unableToHandlePlan(logicalPlan, e)
         fallback(preparedQuery)
-        Right(interpretedProducer(logicalPlan, pipeBuildContext, planContext, tracer))
+        interpretedProducer(logicalPlan, pipeBuildContext, planContext, tracer, preparedQuery, createFingerprintReference )
     }
   }
 
@@ -80,9 +93,9 @@ case class InterpretedRuntimeBuilder(interpretedProducer: InterpretedPlanBuilder
   override def apply(logicalPlan: LogicalPlan, pipeBuildContext: PipeExecutionBuilderContext, planContext: PlanContext,
                      tracer: CompilationPhaseTracer, semanticTable: SemanticTable,
                      monitor: NewRuntimeSuccessRateMonitor, plannerName: PlannerName,
-                     preparedQuery: PreparedQuery): Either[CompiledPlan, PipeInfo] = {
-    Right(interpretedProducer.apply(logicalPlan, pipeBuildContext, planContext, tracer))
-  }
+                     preparedQuery: PreparedQuery, nodeManager:NodeManager,
+                     createFingerprintReference:Option[PlanFingerprint]=>PlanFingerprintReference): ExecutionPlan =
+    interpretedProducer.apply(logicalPlan, pipeBuildContext, planContext, tracer, preparedQuery, createFingerprintReference)
 
   override def compiledProducer = throw new InternalException("This should never be called")
 
@@ -100,9 +113,10 @@ case class ErrorReportingRuntimeBuilder(compiledProducer: CompiledPlanBuilder) e
 case class InterpretedPlanBuilder(clock: Clock, monitors: Monitors) {
 
   def apply(logicalPlan: LogicalPlan, pipeBuildContext: PipeExecutionBuilderContext,
-            planContext: PlanContext, tracer: CompilationPhaseTracer) =
+            planContext: PlanContext, tracer: CompilationPhaseTracer, inputQuery:PreparedQuery,
+            createFingerprintReference:Option[PlanFingerprint]=>PlanFingerprintReference) =
     closing(tracer.beginPhase(PIPE_BUILDING)) {
-      new PipeExecutionPlanBuilder(clock, monitors).build(logicalPlan)(pipeBuildContext, planContext)
+      interpretedToExecutionPlan( new PipeExecutionPlanBuilder(clock, monitors).build(logicalPlan)(pipeBuildContext, planContext), planContext, inputQuery, createFingerprintReference)
     }
 }
 
@@ -112,10 +126,63 @@ case class CompiledPlanBuilder(clock: Clock, structure:CodeStructure[GeneratedQu
 
   def apply(logicalPlan: LogicalPlan, semanticTable: SemanticTable, planContext: PlanContext,
             monitor: NewRuntimeSuccessRateMonitor, tracer: CompilationPhaseTracer,
-            plannerName: PlannerName) = {
+            plannerName: PlannerName, inputQuery:PreparedQuery, nodeManager:NodeManager,
+            createFingerprintReference:Option[PlanFingerprint]=>PlanFingerprintReference): ExecutionPlan = {
     monitor.newPlanSeen(logicalPlan)
     closing(tracer.beginPhase(CODE_GENERATION)) {
-      codeGen.generate(logicalPlan, planContext, clock, semanticTable, plannerName)
+      val compiled = codeGen.generate(logicalPlan, planContext, clock, semanticTable, plannerName)
+
+      new ExecutionPlan {
+        val fingerprint = createFingerprintReference(compiled.fingerprint)
+
+        def isStale(lastTxId: () => Long, statistics: GraphStatistics) = fingerprint.isStale(lastTxId, statistics)
+
+        def run(queryContext: QueryContext, kernelStatement: api.Statement,
+                executionMode: ExecutionMode, params: Map[String, Any]): InternalExecutionResult = {
+          val taskCloser = new TaskCloser
+          taskCloser.addTask(queryContext.close)
+          try {
+            if (executionMode == ExplainMode) {
+              //close all statements
+              taskCloser.close(success = true)
+              new ExplainExecutionResult(compiled.columns.toList,
+                compiled.planDescription, QueryType.READ_ONLY, inputQuery.notificationLogger.notifications)
+            } else
+              compiled.executionResultBuilder(kernelStatement, nodeManager, executionMode, createTracer(executionMode), params, taskCloser)
+          } catch {
+            case (t: Throwable) =>
+              taskCloser.close(success = false)
+              throw t
+          }
+        }
+
+        def plannerUsed: PlannerName = compiled.plannerUsed
+
+        def isPeriodicCommit: Boolean = compiled.periodicCommit.isDefined
+
+        def runtimeUsed = CompiledRuntimeName
+      }
     }
+  }
+}
+
+object CompiledPlanBuilder {
+  type DescriptionProvider = (InternalPlanDescription => (Supplier[InternalPlanDescription], Option[QueryExecutionTracer]))
+
+  def createTracer( mode: ExecutionMode ) : DescriptionProvider = mode match {
+    case ProfileMode =>
+      val tracer = new ProfilingTracer()
+      (description: InternalPlanDescription) => (new Supplier[InternalPlanDescription] {
+
+        override def get(): InternalPlanDescription = description.map {
+          plan: InternalPlanDescription =>
+            val data = tracer.get(plan.id)
+            plan.
+              addArgument(Arguments.DbHits(data.dbHits())).
+              addArgument(Arguments.Rows(data.rows())).
+              addArgument(Arguments.Time(data.time()))
+        }
+      }, Some(tracer))
+    case _ => (description: InternalPlanDescription) => (singleton(description), None)
   }
 }

@@ -76,7 +76,7 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery]) {
             val (supplier, tracer) = descriptionProvider(description)
             val execution: GeneratedQueryExecution = query.execute(closer, statement, nodeManager, execMode,
               supplier, tracer.getOrElse(QueryExecutionTracer.NONE), asJavaHashMap(params))
-            new CompiledExecutionResult(closer, statement, execution, supplier)
+            new CompiledExecutionResult(closer, statement, execution)
           }
         }
 

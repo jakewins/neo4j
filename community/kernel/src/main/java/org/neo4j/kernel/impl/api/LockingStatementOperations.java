@@ -40,6 +40,7 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.ProcedureName;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.operations.EntityReadOperations;
@@ -345,10 +346,10 @@ public class LockingStatementOperations implements
     }
 
     @Override
-    public ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature )
+    public ProcedureDescriptor procedureGet( KernelStatement statement, ProcedureName signature )
             throws ProcedureException
     {
-        return schemaReadDelegate.procedureGetBySignature( statement, signature );
+        return schemaReadDelegate.procedureGet( statement, signature );
     }
 
     @Override

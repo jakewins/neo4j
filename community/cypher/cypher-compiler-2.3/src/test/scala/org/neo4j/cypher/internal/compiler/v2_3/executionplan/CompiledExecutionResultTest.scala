@@ -151,7 +151,7 @@ class CompiledExecutionResultTest extends CypherFunSuite {
       override def executionPlanDescription(): InternalPlanDescription = ???
     }
 
-    new CompiledExecutionResult(taskCloser, null, noCompiledCode, null)
+    new CompiledExecutionResult(taskCloser, null, noCompiledCode)
   }
 
   private def javaList[T](elements: T*): util.List[T] = elements.toList.asJava

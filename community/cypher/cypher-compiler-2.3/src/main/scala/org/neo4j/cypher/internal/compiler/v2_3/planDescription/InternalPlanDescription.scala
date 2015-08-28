@@ -90,6 +90,7 @@ object InternalPlanDescription {
     case class KeyExpressions(expressions: Seq[commands.expressions.Expression]) extends Argument
     case class EntityByIdRhs(value: PipeEntityByIdRhs) extends Argument
     case class EstimatedRows(value: Double) extends Argument
+    case class Procedure(value: String) extends Argument
     case class Version(value: String) extends Argument {
       override def name = "version"
     }

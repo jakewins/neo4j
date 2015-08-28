@@ -40,6 +40,7 @@ import org.neo4j.graphdb.{GraphDatabaseService, InputPosition, QueryExecutionTyp
 import org.neo4j.helpers.Clock
 import org.neo4j.kernel.GraphDatabaseAPI
 import org.neo4j.kernel.api.{KernelAPI, Statement}
+import org.neo4j.kernel.impl.core.NodeManager
 import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, QuerySession}
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 import org.neo4j.logging.Log
@@ -248,7 +249,9 @@ case class ExecutionResultWrapperFor2_3(inner: InternalExecutionResult, planner:
       indexesAdded = i.indexesAdded,
       indexesRemoved = i.indexesRemoved,
       constraintsAdded = i.uniqueConstraintsAdded + i.mandatoryConstraintsAdded,
-      constraintsRemoved = i.uniqueConstraintsRemoved + i.mandatoryConstraintsRemoved
+      constraintsRemoved = i.uniqueConstraintsRemoved + i.mandatoryConstraintsRemoved,
+      proceduresAdded = i.proceduresAdded,
+      proceduresRemoved = i.proceduresRemoved
     )
   }
 
@@ -395,8 +398,10 @@ case class CompatibilityFor2_3Cost(graph: GraphDatabaseService,
       case CypherRuntime.compiled => Some(CompiledRuntimeName)
     }
 
+    val nodeManager = graph.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[NodeManager])
+
     CypherCompilerFactory.costBasedCompiler(
-      graph, queryCacheSize, statsDivergenceThreshold, queryPlanTTL, clock, GeneratedQueryStructure, new WrappedMonitors2_3( kernelMonitors ),
+      nodeManager, queryCacheSize, statsDivergenceThreshold, queryPlanTTL, clock, GeneratedQueryStructure, new WrappedMonitors2_3( kernelMonitors ),
       new StringInfoLogger2_3( log ), rewriterSequencer, plannerName, runtimeName, useErrorsOverWarnings
     )
   }

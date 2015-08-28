@@ -29,7 +29,7 @@ import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
-import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.ProcedureName;
 import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 
@@ -114,5 +114,5 @@ public interface SchemaReadOperations
     Iterator<ProcedureDescriptor> proceduresGetAll( KernelStatement kernelStatement );
 
     /** Load a procedure description given a signature */
-    ProcedureDescriptor procedureGetBySignature( KernelStatement statement, ProcedureSignature signature ) throws ProcedureException;
+    ProcedureDescriptor procedureGet( KernelStatement statement, ProcedureName signature ) throws ProcedureException;
 }

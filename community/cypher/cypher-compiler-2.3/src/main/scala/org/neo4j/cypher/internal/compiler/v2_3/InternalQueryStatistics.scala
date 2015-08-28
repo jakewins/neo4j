@@ -31,7 +31,9 @@ case class InternalQueryStatistics(nodesCreated: Int = 0,
                            uniqueConstraintsAdded: Int = 0,
                            uniqueConstraintsRemoved: Int = 0,
                            mandatoryConstraintsAdded: Int = 0,
-                           mandatoryConstraintsRemoved: Int = 0) {
+                           mandatoryConstraintsRemoved: Int = 0,
+                           proceduresAdded: Int = 0,
+                           proceduresRemoved: Int = 0) {
   def containsUpdates =
     nodesCreated > 0 ||
       relationshipsCreated > 0 ||
@@ -45,7 +47,9 @@ case class InternalQueryStatistics(nodesCreated: Int = 0,
       uniqueConstraintsAdded > 0 ||
       uniqueConstraintsRemoved > 0||
       mandatoryConstraintsAdded > 0 ||
-      mandatoryConstraintsRemoved > 0
+      mandatoryConstraintsRemoved > 0 ||
+      proceduresAdded > 0 ||
+      proceduresRemoved > 0
 
   override def toString = {
     val builder = new StringBuilder
@@ -63,6 +67,8 @@ case class InternalQueryStatistics(nodesCreated: Int = 0,
     includeIfNonZero(builder, "Unique constraints removed: ", uniqueConstraintsRemoved)
     includeIfNonZero(builder, "Mandatory property constraints added: ", mandatoryConstraintsAdded)
     includeIfNonZero(builder, "Mandatory property constraints removed: ", mandatoryConstraintsRemoved)
+    includeIfNonZero(builder, "Procedures added: ", proceduresAdded)
+    includeIfNonZero(builder, "Procedures removed: ", proceduresRemoved)
 
     val result = builder.toString()
 

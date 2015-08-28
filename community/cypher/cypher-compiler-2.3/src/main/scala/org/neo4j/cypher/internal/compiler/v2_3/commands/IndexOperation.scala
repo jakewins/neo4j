@@ -19,10 +19,8 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.commands
 
-import org.neo4j.cypher.internal.compiler.v2_3.ast.FunctionInvocation
 import org.neo4j.cypher.internal.compiler.v2_3.commands.expressions.Expression
-import org.neo4j.kernel.api.procedure.ProcedureSignature
-import org.neo4j.kernel.impl.store.Neo4jTypes.AnyType
+import org.neo4j.cypher.internal.compiler.v2_3.spi.{ProcedureName, ProcedureSignature}
 
 sealed abstract class IndexOperation extends AbstractQuery {
   val label: String
@@ -89,7 +87,7 @@ final case class CreateProcedure(readOnly: Boolean, signature: ProcedureSignatur
   def setQueryText(t: String): CreateProcedure = copy(queryString = QueryString(t))
 }
 
-final case class CallProcedure(namespace: Seq[String], name:String, args: IndexedSeq[Expression], queryString: QueryString = QueryString.empty) extends ProcedureOperation {
+final case class CallProcedure(name: ProcedureName, args: IndexedSeq[Expression], queryString: QueryString = QueryString.empty) extends ProcedureOperation {
 
   def setQueryText(t: String): CallProcedure = copy(queryString = QueryString(t))
 }

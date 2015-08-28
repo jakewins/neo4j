@@ -111,7 +111,7 @@ public class ProceduresKernelIT extends KernelIntegrationTest
 
         // When
         final List<List<Object>> records = new LinkedList<>();
-        ops.procedureCall( signature, new Object[]{"hello"}, new Visitor<Object[],ProcedureException>()
+        ops.procedureCall( signature.name(), new Object[]{"hello"}, new Visitor<Object[],ProcedureException>()
         {
             @Override
             public boolean visit( Object[] record ) throws ProcedureException

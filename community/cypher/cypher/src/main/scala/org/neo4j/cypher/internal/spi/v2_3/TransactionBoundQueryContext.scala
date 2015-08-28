@@ -19,26 +19,33 @@
  */
 package org.neo4j.cypher.internal.spi.v2_3
 
+import java.lang
+
 import org.neo4j.collection.primitive.PrimitiveLongIterator
 import org.neo4j.cypher.InternalException
+import org.neo4j.cypher.internal.compiler.v2_3._
+import org.neo4j.cypher.internal.compiler.v2_3.codegen.ResultRowImpl
 import org.neo4j.cypher.internal.compiler.v2_3.helpers.JavaConversionSupport._
 import org.neo4j.cypher.internal.compiler.v2_3.helpers.{BeansAPIRelationshipIterator, JavaConversionSupport}
-import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v2_3.spi._
-import org.neo4j.cypher.internal.compiler.v2_3._
+import org.neo4j.cypher.internal.compiler.v2_3.symbols._
 import org.neo4j.graphdb.DynamicRelationshipType._
+import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.helpers.ThisShouldNotHappenError
+import org.neo4j.helpers.collection.Visitor
 import org.neo4j.kernel.GraphDatabaseAPI
 import org.neo4j.kernel.api._
 import org.neo4j.kernel.api.constraints.{MandatoryPropertyConstraint, UniquenessConstraint}
 import org.neo4j.kernel.api.exceptions.schema.{AlreadyConstrainedException, AlreadyIndexedException}
 import org.neo4j.kernel.api.index.{IndexDescriptor, InternalIndexState}
-import org.neo4j.kernel.api.procedure.{RecordCursor, ProcedureSignature}
+import org.neo4j.kernel.api.procedure.ProcedureException
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.kernel.impl.api.KernelStatement
 import org.neo4j.kernel.impl.core.{RelationshipProxy, ThreadToStatementContextBridge}
+import org.neo4j.kernel.impl.store.Neo4jTypes
+import org.neo4j.kernel.impl.store.Neo4jTypes.AnyType
 import org.neo4j.tooling.GlobalGraphOperations
 
 import scala.collection.JavaConverters._
@@ -384,10 +391,34 @@ final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
   def dropIndexRule(labelId: Int, propertyKeyId: Int) =
     statement.schemaWriteOperations().indexDrop(new IndexDescriptor(labelId, propertyKeyId))
 
-  def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String) =
-    statement.schemaWriteOperations().procedureCreate(signature, language, body) // TODO readonly flag
+  def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String) = {
+    val sig = new procedure.ProcedureSignature(
+      new procedure.ProcedureSignature.ProcedureName(signature.name.namespace.asJava, signature.name.name),
+      signature.inputs.map((a) => new procedure.ProcedureSignature.Argument( a.name, kernelType(a.typ) )).asJava,
+      signature.outputs.map((a) => new procedure.ProcedureSignature.Argument( a.name, kernelType(a.typ) )).asJava)
+    statement.schemaWriteOperations().procedureCreate(sig, language, body) // TODO readonly flag
+  }
 
-  def callProcedure(signature: ProcedureSignature, args: Seq[Any]) = ???
+  def callProcedure[EX <: Exception](name: ProcedureName, args: Seq[Any], visitor: ResultVisitor[EX]) =
+    // TODO: Swap read/write statement based on procedure type, or have two different methods (callReadProc..)
+    statement.readOperations().procedureCall(
+      new procedure.ProcedureSignature.ProcedureName(name.namespace.asJava, name.name),
+      args.map(_.asInstanceOf[AnyRef]).asJava, // Every time code like this is written, Jesus strangles a puppy (John 6:14, 12)
+      new Visitor[Array[AnyRef], ProcedureException] {
+        override def visit(element: Array[AnyRef]): Boolean = {
+          val row = new ResultRowImpl
+
+          row
+        }
+      })
+
+  def procedureSignature(name: ProcedureName): ProcedureSignature = {
+    val kernelSig = statement.readOperations().procedureGet(
+      new procedure.ProcedureSignature.ProcedureName(name.namespace.asJava, name.name)).signature()
+    new ProcedureSignature(name,
+      kernelSig.inputSignature().asScala.map( (a) => new Argument(a.name(), cypherType(a.neo4jType())) ),
+      kernelSig.outputSignature().asScala.map( (a) => new Argument(a.name(), cypherType(a.neo4jType())) ))
+  }
 
   def createUniqueConstraint(labelId: Int, propertyKeyId: Int): IdempotentResult[UniquenessConstraint] = try {
     IdempotentResult(statement.schemaWriteOperations().uniquePropertyConstraintCreate(labelId, propertyKeyId))
@@ -433,5 +464,35 @@ final class TransactionBoundQueryContext(graph: GraphDatabaseAPI,
 
     tx = graph.beginTx()
     statement = txBridge.get()
+  }
+
+  /** Map from the 2.3 compiler type system to the Neo4j type system */
+  def kernelType(typ: CypherType): AnyType = typ match {
+    case _:symbols.IntegerType => Neo4jTypes.NTInteger
+    case _:symbols.FloatType => Neo4jTypes.NTFloat
+    case _:symbols.NumberType => Neo4jTypes.NTNumber
+    case _:symbols.BooleanType => Neo4jTypes.NTBoolean
+    case _:symbols.StringType => Neo4jTypes.NTText
+    case _:symbols.MapType => Neo4jTypes.NTMap
+    case _:symbols.NodeType => Neo4jTypes.NTNode
+    case _:symbols.RelationshipType => Neo4jTypes.NTRelationship
+    case _:symbols.PathType => Neo4jTypes.NTPath
+    case c:symbols.CollectionType => Neo4jTypes.NTCollection(kernelType(c.innerType))
+    case _:symbols.AnyType => Neo4jTypes.NTAny
+  }
+
+  /** Map from the Neo4j type system to the 2.3 compiler type system */
+  def cypherType(typ: AnyType): CypherType = typ match {
+    case _:Neo4jTypes.NumberType => symbols.IntegerType.instance
+    case _:Neo4jTypes.FloatType => symbols.FloatType.instance
+    case _:Neo4jTypes.NumberType => symbols.NumberType.instance
+    case _:Neo4jTypes.BooleanType => symbols.BooleanType.instance
+    case _:Neo4jTypes.TextType => symbols.StringType.instance
+    case _:Neo4jTypes.MapType => symbols.MapType.instance
+    case _:Neo4jTypes.NodeType => symbols.NodeType.instance
+    case _:Neo4jTypes.RelationshipType => symbols.RelationshipType.instance
+    case _:Neo4jTypes.PathType => symbols.PathType.instance
+    case c:Neo4jTypes.CollectionType => symbols.CollectionType(cypherType( c.innerType() ))
+    case _:Neo4jTypes.AnyType => symbols.AnyType.instance
   }
 }

@@ -32,19 +32,18 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.Argument;
 import org.neo4j.kernel.impl.store.Neo4jTypes;
 import org.neo4j.kernel.impl.store.Neo4jTypes.AnyType;
-import org.neo4j.kernel.impl.store.Neo4jTypes.ListType;
 
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTAny;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTBoolean;
+import static org.neo4j.kernel.impl.store.Neo4jTypes.NTCollection;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTFloat;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTInteger;
-import static org.neo4j.kernel.impl.store.Neo4jTypes.NTList;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTMap;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTNode;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTNumber;
@@ -108,13 +107,13 @@ public class JSTyperMapper
         AnyType type() { return type; }
     }
 
-    private FromJS[] buildFromJSConverters( List<Pair<String,AnyType>> signature ) throws ProcedureException
+    private FromJS[] buildFromJSConverters( List<Argument> signature ) throws ProcedureException
     {
         FromJS[] converters = new FromJS[signature.size()];
         // For each field in the output records
         for ( int i = 0; i < signature.size(); i++ )
         {
-            AnyType type = signature.get( i ).other();
+            AnyType type = signature.get( i ).neo4jType();
             converters[i] = converterFor( type );
         }
         return converters;
@@ -162,9 +161,9 @@ public class JSTyperMapper
         {
             return anyFromJS;
         }
-        else if( type instanceof ListType )
+        else if( type instanceof Neo4jTypes.CollectionType )
         {
-            return new ListFromJS( converterFor( ((ListType) type).innerType() ) );
+            return new ListFromJS( converterFor( ((Neo4jTypes.CollectionType) type).innerType() ) );
         }
         else
         {
@@ -360,7 +359,7 @@ public class JSTyperMapper
 
         private ListFromJS( FromJS<?> innerType )
         {
-            super( NTList( innerType.type ) );
+            super( NTCollection( innerType.type ) );
             this.innerType = innerType;
         }
 

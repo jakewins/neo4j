@@ -29,6 +29,7 @@ import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.ProcedureName;
 
 interface SchemaRead
 {
@@ -95,5 +96,5 @@ interface SchemaRead
     ProcedureSignature procedureGetSignature( String[] namespace, String name ) throws ProcedureException;
 
     /** Fetch a procedure given its signature. */
-    ProcedureDescriptor procedureGet( ProcedureSignature signature ) throws ProcedureException;
+    ProcedureDescriptor procedureGet( ProcedureName name ) throws ProcedureException;
 }

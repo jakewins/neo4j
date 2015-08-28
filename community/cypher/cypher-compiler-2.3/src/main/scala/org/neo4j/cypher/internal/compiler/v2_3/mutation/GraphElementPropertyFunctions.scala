@@ -55,7 +55,7 @@ trait GraphElementPropertyFunctions extends CollectionSupport {
     v match {
       case _: collection.Map[_, _] => v.asInstanceOf[collection.Map[String, Any]].toMap
       case _: JavaMap[_, _]        => v.asInstanceOf[JavaMap[String, Any]].asScala.toMap
-      case _                       => throw new CypherTypeException(s"Don't know how to extract parameters from this type: ${v.getClass.getName}")
+      case _                       => throw new CypherTypeException(s"Don't know how to extract parameters from this neo4jType: ${v.getClass.getName}")
     }
   }
 

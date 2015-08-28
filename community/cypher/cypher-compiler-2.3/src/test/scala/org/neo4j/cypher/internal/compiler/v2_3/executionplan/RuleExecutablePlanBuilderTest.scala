@@ -27,7 +27,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.planner.SemanticTable
 import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v2_3.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.RewriterStepSequencer
-import org.neo4j.cypher.internal.compiler.v2_3.{Monitors, PreparedQuery, Scope, devNullLogger}
+import org.neo4j.cypher.internal.compiler.v2_3._
 import org.neo4j.kernel.api.index.IndexDescriptor
 
 class RuleExecutablePlanBuilderTest extends CypherFunSuite {
@@ -97,16 +97,16 @@ class RuleExecutablePlanBuilderTest extends CypherFunSuite {
   }
 
   def assertPipeExists[T](pipe: Pipe, klass: Class[T]) {
-    assert(pipe.exists(_.getClass == klass), s"Expected to contain a pipe of type $klass. Got: $pipe")
+    assert(pipe.exists(_.getClass == klass), s"Expected to contain a pipe of neo4jType $klass. Got: $pipe")
   }
 
   def assertPipeDoesNotExist[T](pipe: Pipe, klass: Class[T]) {
-    assert(!pipe.exists(_.getClass == klass), s"Expected not to contain a pipe of type $klass. Got: $pipe")
+    assert(!pipe.exists(_.getClass == klass), s"Expected not to contain a pipe of neo4jType $klass. Got: $pipe")
   }
 
   private def buildExecutionPipe(q: String): Pipe = {
     val statement = parser.parse(q)
     val parsedQ = PreparedQuery(statement, q, Map.empty)(mock[SemanticTable], Set.empty, mock[Scope], devNullLogger)
-    planBuilder.producePlan(parsedQ, planContext).right.toOption.get.pipe
+    planBuilder.producePipePlan(parsedQ, planContext, mock[CompilationPhaseTracer] ).pipe
   }
 }

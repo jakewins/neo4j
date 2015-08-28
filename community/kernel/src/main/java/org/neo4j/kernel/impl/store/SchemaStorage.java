@@ -31,7 +31,7 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.schema.MalformedSchemaRuleException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.procedure.ProcedureException;
-import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.ProcedureName;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.IndexRule;
 import org.neo4j.kernel.impl.store.record.ProcedureRule;
@@ -42,7 +42,7 @@ import static org.neo4j.helpers.collection.Iterables.map;
 
 public class SchemaStorage implements SchemaRuleAccess
 {
-    public static enum IndexRuleKind
+    public enum IndexRuleKind
     {
         INDEX
                 {
@@ -259,14 +259,14 @@ public class SchemaStorage implements SchemaRuleAccess
         return propertyConstraint( UniquePropertyConstraintRule.class, labelId, propertyKeyId );
     }
 
-    public ProcedureRule procedure( final ProcedureSignature signature ) throws ProcedureException
+    public ProcedureRule procedure( final ProcedureName signature ) throws ProcedureException
     {
         Iterator<ProcedureRule> rules = schemaRules( ProcedureRule.class, 0, new Predicate<ProcedureRule>()
         {
             @Override
             public boolean test( ProcedureRule item )
             {
-                return item.descriptor().signature().equals( signature );
+                return item.descriptor().signature().name().equals( signature );
             }
         } );
 

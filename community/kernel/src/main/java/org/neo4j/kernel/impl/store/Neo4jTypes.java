@@ -38,7 +38,7 @@ public class Neo4jTypes
     public static final NodeType NTNode = new NodeType();
     public static final RelationshipType NTRelationship = new RelationshipType();
     public static final PathType NTPath = new PathType();
-    public static ListType NTList(AnyType valueType) { return new ListType( valueType ); }
+    public static CollectionType NTCollection( AnyType innerType ) { return new CollectionType( innerType ); }
 
     public static final int ORD_ANY = 0;
     public static final int ORD_TEXT = 1;
@@ -46,7 +46,7 @@ public class Neo4jTypes
     public static final int ORD_INTEGER = 3;
     public static final int ORD_FLOAT = 4;
     public static final int ORD_BOOLEAN = 5;
-    public static final int ORD_LIST = 6;
+    public static final int ORD_COLLECTION = 6;
     public static final int ORD_MAP = 7;
     public static final int ORD_NODE = 8;
     public static final int ORD_RELATIONSHIP = 9;
@@ -131,14 +131,14 @@ public class Neo4jTypes
         }
     }
 
-    public static class ListType extends AnyType
+    public static class CollectionType extends AnyType
     {
-        /** The type of values in this list */
+        /** The type of values in this collection */
         private final AnyType innerType;
 
-        public ListType(AnyType innerType )
+        public CollectionType( AnyType innerType )
         {
-            super( ORD_LIST, "List[" + innerType.toString() + "]" );
+            super( ORD_COLLECTION, "Collection[" + innerType.toString() + "]" );
             this.innerType = innerType;
         }
 

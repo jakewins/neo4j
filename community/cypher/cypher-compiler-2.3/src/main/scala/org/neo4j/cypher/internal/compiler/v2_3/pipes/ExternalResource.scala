@@ -21,6 +21,12 @@ package org.neo4j.cypher.internal.compiler.v2_3.pipes
 
 import java.net.URL
 
+import org.neo4j.cypher.internal.compiler.v2_3.InternalException
+
 trait ExternalResource {
   def getCsvIterator(url: URL, fieldTerminator: Option[String] = None): Iterator[Array[String]]
+}
+
+object NoExternalResource extends ExternalResource {
+  override def getCsvIterator(url: URL, fieldTerminator: Option[String]): Iterator[Array[String]] = ??? // TODO
 }

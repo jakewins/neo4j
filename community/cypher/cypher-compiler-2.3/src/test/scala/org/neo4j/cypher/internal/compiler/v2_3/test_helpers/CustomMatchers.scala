@@ -26,8 +26,8 @@ trait CustomMatchers {
 
     def apply(left: Any) = MatchResult(
       clazz.isAssignableFrom(left.getClass),
-      s"expected $left to have type $clazz but it was ${left.getClass}",
-      s"$left has type $clazz")
+      s"expected $left to have neo4jType $clazz but it was ${left.getClass}",
+      s"$left has neo4jType $clazz")
   }
 
   def haveType[T](implicit manifest: Manifest[T]) = new IsTypeOf(manifest.runtimeClass)

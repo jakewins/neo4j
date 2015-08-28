@@ -27,13 +27,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.Argument;
 import org.neo4j.kernel.impl.store.Neo4jTypes;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 
-import static org.neo4j.helpers.Pair.pair;
 import static org.neo4j.helpers.UTF8.getDecodedStringFrom;
 import static org.neo4j.helpers.UTF8.putEncodedStringInto;
 import static org.neo4j.kernel.api.procedure.ProcedureDescriptor.Mode.READ_ONLY;
@@ -64,13 +63,13 @@ public class ProcedureRule extends AbstractSchemaRule
         String name = getDecodedStringFrom( buffer );
         String lang = getDecodedStringFrom( buffer );
 
-        List<Pair<String,AnyType>> inArgs = readFieldList(buffer);
-        List<Pair<String,AnyType>> outArgs = readFieldList(buffer);
+        List<Argument> inArgs = readFieldList(buffer);
+        List<Argument> outArgs = readFieldList(buffer);
 
         String body = getDecodedStringFrom( buffer );
 
         return new ProcedureRule( id, new ProcedureDescriptor(
-                new ProcedureSignature( nameSpaces, name, inArgs, outArgs ), lang, mode, body ));
+                new ProcedureSignature( new ProcedureSignature.ProcedureName( nameSpaces, name ), inArgs, outArgs ), lang, mode, body ));
     }
 
     public ProcedureDescriptor descriptor()
@@ -104,8 +103,8 @@ public class ProcedureRule extends AbstractSchemaRule
             // Flags
             out.writeByte( descriptor.mode() == UPDATE ? MODE : 0 );
 
-            writeStringArray( out, descriptor.signature().namespace() );
-            putEncodedStringInto( descriptor.signature().name(), out );
+            writeStringArray( out, descriptor.signature().name().namespace() );
+            putEncodedStringInto( descriptor.signature().name().name(), out );
             putEncodedStringInto( descriptor.language(), out );
 
             writeFieldList( descriptor.signature().inputSignature(), out );
@@ -121,22 +120,22 @@ public class ProcedureRule extends AbstractSchemaRule
         }
     }
 
-    private void writeFieldList( List<Pair<String,AnyType>> fields, DataOutput out ) throws IOException
+    private void writeFieldList( List<Argument> fields, DataOutput out ) throws IOException
     {
         out.writeShort( fields.size() );
-        for ( Pair<String,AnyType> field : fields )
+        for ( Argument field : fields )
         {
-            putEncodedStringInto( field.first(), out );
-            writeType( field.other(), out );
+            putEncodedStringInto( field.name(), out );
+            writeType( field.neo4jType(), out );
         }
     }
 
     private void writeType( AnyType type, DataOutput out ) throws IOException
     {
         out.writeByte( type.ordinal() );
-        if( type.ordinal() ==  Neo4jTypes.ORD_LIST)
+        if( type.ordinal() ==  Neo4jTypes.ORD_COLLECTION )
         {
-            writeType( ((Neo4jTypes.ListType)type).innerType(), out );
+            writeType( ((Neo4jTypes.CollectionType)type).innerType(), out );
         }
     }
 
@@ -187,16 +186,16 @@ public class ProcedureRule extends AbstractSchemaRule
         return ", descriptor=" + descriptor;
     }
 
-    private static List<Pair<String,AnyType>> readFieldList( ByteBuffer buffer )
+    private static List<Argument> readFieldList( ByteBuffer buffer )
     {
         int fieldCount = buffer.getShort() & 0xffff;
 
-        List<Pair<String, AnyType>> fields = new ArrayList<>( fieldCount );
+        List<Argument> fields = new ArrayList<>( fieldCount );
         for ( int i = 0; i < fieldCount; i++ )
         {
             String fieldName = getDecodedStringFrom( buffer );
             AnyType type = readType( buffer );
-            fields.add( pair( fieldName, type ) );
+            fields.add( new Argument( fieldName, type ) );
         }
         return fields;
     }
@@ -212,9 +211,9 @@ public class ProcedureRule extends AbstractSchemaRule
         case Neo4jTypes.ORD_INTEGER: return Neo4jTypes.NTInteger;
         case Neo4jTypes.ORD_FLOAT: return Neo4jTypes.NTFloat;
         case Neo4jTypes.ORD_BOOLEAN: return Neo4jTypes.NTBoolean;
-        case Neo4jTypes.ORD_LIST:
+        case Neo4jTypes.ORD_COLLECTION:
             AnyType subType = readType( buffer );
-            return Neo4jTypes.NTList( subType );
+            return Neo4jTypes.NTCollection( subType );
         case Neo4jTypes.ORD_MAP: return Neo4jTypes.NTMap;
         case Neo4jTypes.ORD_NODE: return Neo4jTypes.NTNode;
         case Neo4jTypes.ORD_RELATIONSHIP: return Neo4jTypes.NTRelationship;

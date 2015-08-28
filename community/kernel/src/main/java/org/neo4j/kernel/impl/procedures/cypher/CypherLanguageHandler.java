@@ -57,7 +57,7 @@ public class CypherLanguageHandler implements LanguageHandler
                 Map<String,Object> params = new HashMap<>();
                 for ( int i = 0; i < signature.inputSignature().size(); i++ )
                 {
-                    params.put( signature.inputSignature().get( i ).first(), args[i] );
+                    params.put( signature.inputSignature().get( i ).name(), args[i] );
                 }
 
                 gds.execute( code, params ).accept( new Result.ResultVisitor<ProcedureException>()
@@ -69,7 +69,7 @@ public class CypherLanguageHandler implements LanguageHandler
                     {
                         for ( int i = 0; i < signature.outputSignature().size(); i++ )
                         {
-                            record[i] = row.get( signature.outputSignature().get( i ).first() );
+                            record[i] = row.get( signature.outputSignature().get( i ).name() );
                         }
                         return visitor.visit( record );
                     }

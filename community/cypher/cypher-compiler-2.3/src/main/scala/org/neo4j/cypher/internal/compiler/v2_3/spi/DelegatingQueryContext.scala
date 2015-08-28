@@ -19,9 +19,9 @@
  */
 package org.neo4j.cypher.internal.compiler.v2_3.spi
 
+import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.{Relationship, PropertyContainer, Direction, Node}
 import org.neo4j.kernel.api.index.IndexDescriptor
-import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 class DelegatingQueryContext(inner: QueryContext) extends QueryContext {
 
@@ -82,7 +82,9 @@ class DelegatingQueryContext(inner: QueryContext) extends QueryContext {
 
   def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String) = singleDbHit(inner.createProcedure(readOnly, signature, language, body))
 
-  def callProcedure(signature: ProcedureSignature, args: Seq[Any]) = singleDbHit(inner.callProcedure(signature, args))
+  def callProcedure[EX <: Exception](name: ProcedureName, args: Seq[Any], visitor: ResultVisitor[EX]) = inner.callProcedure( name, args, visitor )
+
+  def procedureSignature(name: ProcedureName): ProcedureSignature = inner.procedureSignature( name )
 
   def indexSeek(index: IndexDescriptor, value: Any): Iterator[Node] = manyDbHits(inner.indexSeek(index, value))
 

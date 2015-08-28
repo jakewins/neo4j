@@ -45,6 +45,16 @@ case object RulePlannerName extends PlannerName {
 }
 
 /**
+ * Special planner that handles procedure operations (create/drop/call procedure). This is intended as a potential
+ * place of expansion where schema commands, currently handled by the rule planner, can move once the rule planner
+ * is removed.
+ */
+case object ProcedurePlannerName extends PlannerName {
+  val name = "PROCEDURE"
+  override def toTextOutput = name
+}
+
+/**
  * Cost based query planner uses statistics from the running database to find good
  * query execution plans using greedy search.
  */

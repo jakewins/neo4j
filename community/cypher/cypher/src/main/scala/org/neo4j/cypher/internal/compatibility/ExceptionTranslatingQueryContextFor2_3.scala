@@ -22,11 +22,11 @@ package org.neo4j.cypher.internal.compatibility
 import org.neo4j.cypher.internal.compiler.v2_3.spi
 import org.neo4j.cypher.internal.compiler.v2_3.spi._
 import org.neo4j.cypher.{ConstraintValidationException, CypherExecutionException}
+import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.{ConstraintViolationException => KernelConstraintViolationException, Direction, Node, PropertyContainer, Relationship}
 import org.neo4j.kernel.api.TokenNameLookup
 import org.neo4j.kernel.api.exceptions.KernelException
 import org.neo4j.kernel.api.index.IndexDescriptor
-import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 class ExceptionTranslatingQueryContextFor2_3(inner: QueryContext) extends DelegatingQueryContext(inner) {
   override def setLabelsOnNode(node: Long, labelIds: Iterator[Int]): Int =
@@ -92,8 +92,10 @@ class ExceptionTranslatingQueryContextFor2_3(inner: QueryContext) extends Delega
   override def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String) =
     translateException(super.createProcedure(readOnly, signature, language, body))
 
-  override def callProcedure(signature: ProcedureSignature, args: Seq[Any]) =
-    translateException(super.callProcedure(signature, args))
+  override def callProcedure[EX <: Exception](name: ProcedureName, args: Seq[Any], visitor: ResultVisitor[EX]) =
+    translateException(super.callProcedure(name, args, visitor))
+
+  override def procedureSignature(name: ProcedureName): ProcedureSignature = super.procedureSignature(name)
 
   override def indexSeek(index: IndexDescriptor, value: Any): Iterator[Node] =
     translateException(super.indexSeek(index, value))

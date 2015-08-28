@@ -53,7 +53,9 @@ case class QueryStatistics(nodesCreated: Int = 0,
                            indexesAdded: Int = 0,
                            indexesRemoved: Int = 0,
                            constraintsAdded: Int = 0,
-                           constraintsRemoved: Int = 0
+                           constraintsRemoved: Int = 0,
+                           proceduresAdded: Int = 0,
+                           proceduresRemoved: Int = 0
                             ) {
   def containsUpdates =
     nodesCreated > 0 ||
@@ -66,6 +68,8 @@ case class QueryStatistics(nodesCreated: Int = 0,
       indexesAdded > 0 ||
       indexesRemoved > 0 ||
       constraintsAdded > 0 ||
-      constraintsRemoved > 0
+      constraintsRemoved > 0 ||
+      proceduresAdded > 0 ||
+      proceduresRemoved > 0
 }
 

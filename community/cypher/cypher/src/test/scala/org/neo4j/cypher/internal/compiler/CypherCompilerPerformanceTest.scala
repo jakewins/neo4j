@@ -169,7 +169,7 @@ class CypherCompilerPerformanceTest extends GraphDatabaseFunSuite {
 
   def createCurrentCompiler = {
     CypherCompilerFactory.costBasedCompiler(
-      graph = graph,
+      nodeManager = nodeManager,
       queryCacheSize = 1,
       statsDivergenceThreshold = DEFAULT_STATISTICS_DIVERGENCE_THRESHOLD,
       queryPlanTTL = DEFAULT_QUERY_PLAN_TTL,

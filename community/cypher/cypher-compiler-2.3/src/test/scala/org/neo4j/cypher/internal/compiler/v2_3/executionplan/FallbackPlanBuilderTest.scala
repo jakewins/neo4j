@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.{RecordingNotificationLogger, Com
 import org.neo4j.cypher.internal.compiler.v2_3.parser.CypherParser
 import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v2_3.test_helpers.CypherFunSuite
+import org.neo4j.kernel.impl.core.NodeManager
 
 class FallbackPlanBuilderTest extends CypherFunSuite {
 
@@ -33,21 +34,21 @@ class FallbackPlanBuilderTest extends CypherFunSuite {
 
   test("should delegate var length to old pipe builder") {
     new uses("MATCH ()-[r*]->() RETURN r") {
-      result should equal(pipeInfo)
+      result should equal(executionPlan)
       assertUsed(newBuilder)
     }
   }
 
   test("should delegate plain shortest path to new pipe builder") {
     new uses("MATCH shortestPath(()-[r*]->()) RETURN r") {
-      result should equal(pipeInfo)
+      result should equal(executionPlan)
       assertUsed(newBuilder)
     }
   }
 
   test("should delegate shortest path with var length expressions to old pipe builder") {
     new uses("MATCH shortestPath(()-[r*]->({x: ()-[:T*]->()})) RETURN r") {
-      result should equal(pipeInfo)
+      result should equal(executionPlan)
       assertUsed(newBuilder)
     }
   }
@@ -55,9 +56,9 @@ class FallbackPlanBuilderTest extends CypherFunSuite {
   test("should warn if falling back from a specified plan") {
     val preparedQuery = new PreparedQuery(null, null, null)(null, null, null, new RecordingNotificationLogger)
     val builder = mock[ExecutablePlanBuilder]
-    when(builder.producePlan(preparedQuery, null, null)).thenThrow(classOf[CantHandleQueryException])
+    when(builder.producePlan(preparedQuery, null, null, null)).thenThrow(classOf[CantHandleQueryException])
     WarningFallbackPlanBuilder(Seq(builder, mock[ExecutablePlanBuilder]), mock[NewLogicalPlanSuccessRateMonitor])
-      .producePlan(preparedQuery, null, null)
+          .producePlan(preparedQuery, null, null, null)
 
     preparedQuery.notificationLogger.notifications should contain(PlannerUnsupportedNotification)
   }
@@ -65,9 +66,9 @@ class FallbackPlanBuilderTest extends CypherFunSuite {
   test("should not warn if falling back from fallback plan") {
     val preparedQuery = new PreparedQuery(null, null, null)(null, null, null, new RecordingNotificationLogger)
     val builder = mock[ExecutablePlanBuilder]
-    when(builder.producePlan(preparedQuery, null, null)).thenThrow(classOf[CantHandleQueryException])
+    when(builder.producePlan(preparedQuery, null, null, null)).thenThrow(classOf[CantHandleQueryException])
     SilentFallbackPlanBuilder(Seq(builder, mock[ExecutablePlanBuilder]), mock[NewLogicalPlanSuccessRateMonitor])
-      .producePlan(preparedQuery, null, null)
+          .producePlan(preparedQuery, null, null, null)
 
     preparedQuery.notificationLogger.notifications should not contain(PlannerUnsupportedNotification)
 
@@ -76,22 +77,23 @@ class FallbackPlanBuilderTest extends CypherFunSuite {
   class uses(queryText: String) {
     // given
     val planContext = mock[PlanContext]
+    val nodeManager = mock[NodeManager]
+    val createFingerprintReference: (Option[PlanFingerprint]) => PlanFingerprintReference = (fp) => mock[PlanFingerprintReference]
     val oldBuilder = mock[ExecutablePlanBuilder]
     val newBuilder = mock[ExecutablePlanBuilder]
     val pipeBuilder = new SilentFallbackPlanBuilder(Seq(newBuilder, oldBuilder), mock[NewLogicalPlanSuccessRateMonitor])
     val preparedQuery = PreparedQuery(parser.parse(queryText), queryText, Map.empty)(null, Set.empty, null, null)
-    val pipeInfo = mock[PipeInfo]
-    when( oldBuilder.producePlan(preparedQuery, planContext, CompilationPhaseTracer.NO_TRACING ) ).thenReturn(Right(pipeInfo))
-    when( newBuilder.producePlan(preparedQuery, planContext, CompilationPhaseTracer.NO_TRACING ) ).thenReturn(Right(pipeInfo))
+    val executionPlan = mock[ExecutionPlan]
+    when( oldBuilder.producePlan(preparedQuery, planContext, CompilationPhaseTracer.NO_TRACING, createFingerprintReference) ).thenReturn(executionPlan)
+    when( newBuilder.producePlan(preparedQuery, planContext, CompilationPhaseTracer.NO_TRACING, createFingerprintReference) ).thenReturn(executionPlan)
 
     def result = {
-      val plan = pipeBuilder.producePlan(preparedQuery, planContext)
-      plan.right.toOption.get
+      pipeBuilder.producePlan(preparedQuery, planContext, CompilationPhaseTracer.NO_TRACING, createFingerprintReference)
     }
 
     def assertUsed(used: ExecutablePlanBuilder) = {
       val notUsed = if (used == oldBuilder) newBuilder else oldBuilder
-      verify( used ).producePlan(preparedQuery, planContext, CompilationPhaseTracer.NO_TRACING)
+      verify( used ).producePlan(preparedQuery, planContext, CompilationPhaseTracer.NO_TRACING, createFingerprintReference)
       verifyNoMoreInteractions( used )
       verifyZeroInteractions( notUsed )
     }

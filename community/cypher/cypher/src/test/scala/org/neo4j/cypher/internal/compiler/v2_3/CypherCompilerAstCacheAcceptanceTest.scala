@@ -37,7 +37,7 @@ class CypherCompilerAstCacheAcceptanceTest extends CypherFunSuite with GraphData
   def createCompiler(queryCacheSize: Int = 128, statsDivergenceThreshold: Double = 0.5, queryPlanTTL: Long = 1000,
                      clock: Clock = Clock.SYSTEM_CLOCK, log: Log = NullLog.getInstance) =
     CypherCompilerFactory.costBasedCompiler(
-      graph, queryCacheSize, statsDivergenceThreshold, queryPlanTTL, clock, GeneratedQueryStructure,
+      nodeManager, queryCacheSize, statsDivergenceThreshold, queryPlanTTL, clock, GeneratedQueryStructure,
       new WrappedMonitors2_3(kernelMonitors),
       new StringInfoLogger2_3(log),
       plannerName = Some(GreedyPlannerName),

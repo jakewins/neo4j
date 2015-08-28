@@ -26,7 +26,7 @@ import org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.kernel.api.{DataWriteOperations, KernelAPI}
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
+import org.neo4j.kernel.impl.core.{NodeManager, ThreadToStatementContextBridge}
 import org.neo4j.kernel.{GraphDatabaseAPI, monitoring}
 import org.neo4j.test.ImpermanentGraphDatabase
 import org.neo4j.tooling.GlobalGraphOperations
@@ -39,6 +39,7 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
 
   var graph: GraphDatabaseAPI with Snitch = null
   var nodes: List[Node] = null
+  var nodeManager: NodeManager = null
 
   def databaseConfig(): Map[String,String] = Map()
 
@@ -46,6 +47,7 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
     super.initTest()
     val config: Map[String, String] = databaseConfig() + (GraphDatabaseSettings.pagecache_memory.name -> "8M")
     graph = new ImpermanentGraphDatabase(config.asJava) with Snitch
+    nodeManager = graph.getDependencyResolver.resolveDependency(classOf[NodeManager])
   }
 
   override protected def stopTest() {

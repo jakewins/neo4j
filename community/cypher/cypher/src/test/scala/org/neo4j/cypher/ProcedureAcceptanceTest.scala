@@ -28,13 +28,26 @@ import org.neo4j.test.TestGraphDatabaseFactory
 
 class ProcedureAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport {
 
-  test("createAndCallProcedure") {
+  test("create procedure") {
     // WHEN
-    execute("CREATE READ ONLY PROCEDURE example.myProc(input:Text): (output:Text) USING javascript FROM SOURCE " +
-            "\"emit(input);\n\"")
+    val res = execute(
+      """CREATE READ ONLY PROCEDURE example.myProc(input:Text): (output:Text)
+      USING javascript FROM SOURCE "emit(input);"
+      """)
 
     // THEN
-    assert(execute("CALL example.myProc( 'hello' )").toList === List(Map("line" -> Seq("hello"))))
+    assertStats( res, procedureAdded = 1 )
+  }
+  
+  test("call procedure") {
+    // GIVEN
+    execute(
+      """CREATE READ ONLY PROCEDURE example.myProc(input:Text): (output:Text)
+      USING javascript FROM SOURCE "emit(input);"
+      """)
+
+    // WHEN
+    execute("CALL example.myProc( 'hello' )").toList should equal (List(Map("output" -> "hello")))
   }
 
 }

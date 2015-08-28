@@ -21,8 +21,7 @@ package org.neo4j.cypher.internal.compiler.v2_3.ast
 
 import org.neo4j.cypher.internal.compiler.v2_3.planner.SemanticTable
 import org.neo4j.cypher.internal.compiler.v2_3._
-import org.neo4j.kernel.impl.store.Neo4jTypes
-import org.neo4j.kernel.impl.store.Neo4jTypes.AnyType
+import org.neo4j.cypher.internal.compiler.v2_3.symbols._
 
 trait SymbolicName extends ASTNode with ASTParticle {
   def name: String
@@ -48,18 +47,18 @@ case class RelTypeName(name: String)(val position: InputPosition) extends Symbol
 // An actual type literal, eg. 'Text', 'Node', 'Integer', 'Number'..
 // TODO: Should this be expressed as a SymbolicName, is that right?
 case class Type(name: String, genericType: Type = null)(val position: InputPosition) extends SymbolicName {
-  def asType : AnyType = name match {
-    case "Any" => Neo4jTypes.NTAny
-    case "Text" => Neo4jTypes.NTText
-    case "Number" => Neo4jTypes.NTNumber
-    case "Integer" => Neo4jTypes.NTInteger
-    case "Float" => Neo4jTypes.NTFloat
-    case "Boolean" => Neo4jTypes.NTBoolean
-    case "Map" => Neo4jTypes.NTMap
-    case "Node" => Neo4jTypes.NTNode
-    case "Relationship" => Neo4jTypes.NTRelationship
-    case "Path" => Neo4jTypes.NTPath
-    case "List" => Neo4jTypes.NTList( genericType.asType )
+  def asType : CypherType = name match {
+    case "Any" => AnyType.instance
+    case "Text" => StringType.instance
+    case "Number" => NumberType.instance
+    case "Integer" => IntegerType.instance
+    case "Float" => FloatType.instance
+    case "Boolean" => BooleanType.instance
+    case "Map" => MapType.instance
+    case "Node" => NodeType.instance
+    case "Relationship" => RelationshipType.instance
+    case "Path" => PathType.instance
+    case "Collection" => CollectionType( genericType.asType )
     case _ => throw new RuntimeException( name + " is not a valid type name." ) // TODO not sure where this check should go, parser?
   }
 }

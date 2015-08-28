@@ -23,11 +23,9 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.Iterables;
 
 import static java.util.Arrays.asList;
-import static org.neo4j.helpers.Pair.pair;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.AnyType;
 
 /**
@@ -36,42 +34,89 @@ import static org.neo4j.kernel.impl.store.Neo4jTypes.AnyType;
  */
 public class ProcedureSignature
 {
-    private final String[] namespace;
-    private final String name;
-    private final List<Pair<String,AnyType>> inputSignature;
-    private final List<Pair<String,AnyType>> outputSignature;
-
-    public ProcedureSignature( String[] namespace, String name,
-            List<Pair<String,AnyType>> inputSignature,
-            List<Pair<String,AnyType>> outputSignature )
+    public static class ProcedureName
     {
-        this.namespace = namespace;
+        private final String[] namespace;
+        private final String name;
+
+        public ProcedureName( List<String> namespace, String name )
+        {
+            this(namespace.toArray( new String[namespace.size()] ), name);
+        }
+
+        public ProcedureName( String[] namespace, String name )
+        {
+            this.namespace = namespace;
+            this.name = name;
+        }
+
+        public String[] namespace()
+        {
+            return namespace;
+        }
+
+        public String name()
+        {
+            return name;
+        }
+
+        @Override
+        public String toString()
+        {
+            String strNamespace = namespace.length > 0 ? Iterables.toString( asList( namespace ), "." ) + "." : "";
+            return String.format("%s%s", strNamespace, name);
+        }
+    }
+
+    public static class Argument
+    {
+        private final String name;
+        private final AnyType type;
+
+        public Argument( String name, AnyType type )
+        {
+            this.name = name;
+            this.type = type;
+        }
+
+        public String name()
+        {
+            return name;
+        }
+
+        public AnyType neo4jType()
+        {
+            return type;
+        }
+    }
+
+    private final ProcedureName name;
+    private final List<Argument> inputSignature;
+    private final List<Argument> outputSignature;
+
+    public ProcedureSignature( ProcedureName name, List<Argument> inputSignature, List<Argument> outputSignature )
+    {
         this.name = name;
         this.inputSignature = inputSignature;
         this.outputSignature = outputSignature;
     }
 
-    public ProcedureSignature( String[] namespace, String name )
+    public ProcedureSignature( ProcedureName name )
     {
-        this( namespace, name, null, null );
+        this( name, null, null );
     }
 
-    public String[] namespace()
-    {
-        return namespace;
-    }
-
-    public String name()
+    public ProcedureName name()
     {
         return name;
     }
 
-    public List<Pair<String,AnyType>> inputSignature()
+    public List<Argument> inputSignature()
     {
         return inputSignature;
     }
 
-    public List<Pair<String,AnyType>> outputSignature()
+    public List<Argument> outputSignature()
     {
         return outputSignature;
     }
@@ -84,9 +129,10 @@ public class ProcedureSignature
 
         ProcedureSignature that = (ProcedureSignature) o;
 
-        // Probably incorrect - comparing Object[] arrays with Arrays.equals
-        if ( !Arrays.equals( namespace, that.namespace ) ) { return false; }
-        return name.equals( that.name );
+        if ( !name.equals( that.name ) ) { return false; }
+        if ( inputSignature != null ? !inputSignature.equals( that.inputSignature ) : that.inputSignature != null ) { return false; }
+        return !(outputSignature != null ? !outputSignature.equals( that.outputSignature ) : that.outputSignature != null);
+
     }
 
     @Override
@@ -98,42 +144,40 @@ public class ProcedureSignature
     @Override
     public String toString()
     {
-        String strNamespace = namespace.length > 0 ? Iterables.toString( asList( namespace ), "." ) + "." : "";
+//        String strNamespace = namespace.length > 0 ? Iterables.toString( asList( namespace ), "." ) + "." : "";
         String strInSig = inputSignature == null ? "..." : Iterables.toString( typesOf( inputSignature ), ", " );
         String strOutSig = outputSignature == null ? "..." : Iterables.toString( typesOf( outputSignature ), ", " );
-        return String.format( "%s%s(%s) : (%s)", strNamespace, name, strInSig, strOutSig );
+        return String.format( "%s(%s) : (%s)", name, strInSig, strOutSig );
     }
 
     public static class Builder
     {
-        private final String[] namespace;
-        private final String name;
-        private final List<Pair<String,AnyType>> inputSignature = new LinkedList<>();
-        private final List<Pair<String,AnyType>> outputSignature = new LinkedList<>();
+        private final ProcedureName name;
+        private final List<Argument> inputSignature = new LinkedList<>();
+        private final List<Argument> outputSignature = new LinkedList<>();
 
         public Builder( String[] namespace, String name )
         {
-            this.namespace = namespace;
-            this.name = name;
+            this.name = new ProcedureName( namespace, name );
         }
 
         /** Define an input field */
         public Builder in( String name, AnyType type )
         {
-            inputSignature.add( pair( name, type ) );
+            inputSignature.add( new Argument( name, type ) );
             return this;
         }
 
         /** Define an output field */
         public Builder out( String name, AnyType type )
         {
-            outputSignature.add( pair( name, type ) );
+            outputSignature.add( new Argument( name, type ) );
             return this;
         }
 
         public ProcedureSignature build()
         {
-            return new ProcedureSignature(namespace, name, inputSignature, outputSignature );
+            return new ProcedureSignature(name, inputSignature, outputSignature );
         }
     }
 
@@ -149,12 +193,12 @@ public class ProcedureSignature
         return new Builder(namespace, name);
     }
 
-    private static List<AnyType> typesOf( List<Pair<String,AnyType>> namedSig )
+    private static List<AnyType> typesOf( List<Argument> namedSig )
     {
         List<AnyType> out = new LinkedList<>();
         for ( int i = 0; i < namedSig.size(); i++ )
         {
-            out.add( namedSig.get( i ).other() );
+            out.add( namedSig.get( i ).neo4jType() );
         }
         return out;
     }

@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.RewriterStepSequencer
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.helpers.Clock
+import org.neo4j.kernel.impl.core.NodeManager
 
 trait AstRewritingMonitor {
   def abortedRewriting(obj: AnyRef)
@@ -59,7 +60,7 @@ trait AstCacheMonitor extends CypherCacheMonitor[Statement, CacheAccessor[Statem
 object CypherCompilerFactory {
   val monitorTag = "cypher2.3"
 
-  def costBasedCompiler(graph: GraphDatabaseService, queryCacheSize: Int, statsDivergenceThreshold: Double,
+  def costBasedCompiler(nodeManager:NodeManager, queryCacheSize: Int, statsDivergenceThreshold: Double,
                         queryPlanTTL: Long, clock: Clock, structure: CodeStructure[GeneratedQuery], monitors: Monitors,
                         logger: InfoLogger,
                         rewriterSequencer: (String) => RewriterStepSequencer,
@@ -86,16 +87,18 @@ object CypherCompilerFactory {
       rewriterSequencer = rewriterSequencer,
       plannerName = plannerName,
       runtimeBuilder = runtimeBuilder,
+      nodeManager = nodeManager,
       semanticChecker = checker,
       useErrorsOverWarnings = useErrorsOverWarnings
     )
     val rulePlanProducer = new LegacyExecutablePlanBuilder(monitors, rewriterSequencer)
+    val schemaPlanProducer = new ProcedurePlanBuilder( rewriterSequencer )
 
     // Pick planner based on input
-    val planBuilder = ExecutablePlanBuilder.create(plannerName, rulePlanProducer,
+    val planBuilder = ExecutablePlanBuilder.create(plannerName, schemaPlanProducer, rulePlanProducer,
                                                    costPlanProducer, planBuilderMonitor, useErrorsOverWarnings)
 
-    val execPlanBuilder = new ExecutionPlanBuilder(graph, statsDivergenceThreshold, queryPlanTTL, clock, planBuilder)
+    val execPlanBuilder = new ExecutionPlanBuilder(PlanFingerprintReference(clock, queryPlanTTL, statsDivergenceThreshold, _), planBuilder)
     val planCacheFactory = () => new LRUCache[Statement, ExecutionPlan](queryCacheSize)
     monitors.addMonitorListener(logStalePlanRemovalMonitor(logger), monitorTag)
     val cacheMonitor = monitors.newMonitor[AstCacheMonitor](monitorTag)
@@ -112,7 +115,7 @@ object CypherCompilerFactory {
     val rewriter = new ASTRewriter(rewriterSequencer)
     val pipeBuilder = new LegacyExecutablePlanBuilder(monitors, rewriterSequencer)
 
-    val execPlanBuilder = new ExecutionPlanBuilder(graph, statsDivergenceThreshold, queryPlanTTL, clock, pipeBuilder)
+    val execPlanBuilder = new ExecutionPlanBuilder(PlanFingerprintReference(clock, queryPlanTTL, statsDivergenceThreshold, _), pipeBuilder)
     val planCacheFactory = () => new LRUCache[Statement, ExecutionPlan](queryCacheSize)
     val cacheMonitor = monitors.newMonitor[AstCacheMonitor](monitorTag)
     val cache = new MonitoringCacheAccessor[Statement, ExecutionPlan](cacheMonitor)

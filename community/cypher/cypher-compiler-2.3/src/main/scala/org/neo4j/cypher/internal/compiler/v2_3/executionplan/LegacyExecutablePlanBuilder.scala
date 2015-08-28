@@ -22,6 +22,7 @@ package org.neo4j.cypher.internal.compiler.v2_3.executionplan
 import org.neo4j.cypher.internal.compiler.v2_3.ast.rewriters.reattachAliasedExpressions
 import org.neo4j.cypher.internal.compiler.v2_3.commands._
 import org.neo4j.cypher.internal.compiler.v2_3.commands.values.{KeyToken, TokenType}
+import org.neo4j.cypher.internal.compiler.v2_3.executionplan.InterpretedExecutionPlanBuilder.interpretedToExecutionPlan
 import org.neo4j.cypher.internal.compiler.v2_3.executionplan.builders.{DisconnectedShortestPathEndPointsBuilder, _}
 import org.neo4j.cypher.internal.compiler.v2_3.executionplan.builders.prepare.KeyTokenResolver
 import org.neo4j.cypher.internal.compiler.v2_3.helpers.Converge.iterateUntilConverged
@@ -30,6 +31,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.RewriterStepSequencer
 import org.neo4j.cypher.internal.compiler.v2_3._
 import org.neo4j.kernel.api.procedure.ProcedureSignature
+import org.neo4j.kernel.impl.core.NodeManager
 
 import scala.None
 
@@ -42,7 +44,7 @@ class LegacyExecutablePlanBuilder(monitors: Monitors, rewriterSequencer: (String
 
   private implicit val pipeMonitor: PipeMonitor = monitors.newMonitor[PipeMonitor]()
 
-  override def producePlan(in: PreparedQuery, planContext: PlanContext, tracer: CompilationPhaseTracer) = {
+  def producePipePlan(in: PreparedQuery, planContext: PlanContext, tracer: CompilationPhaseTracer ): PipeInfo = {
     val rewriter = rewriterSequencer("LegacyPipeBuilder")(reattachAliasedExpressions).rewriter
     val rewrite = in.rewrite(rewriter)
 
@@ -60,13 +62,14 @@ class LegacyExecutablePlanBuilder(monitors: Monitors, rewriterSequencer: (String
       case q: PropertyConstraintOperation =>
         buildConstraintQuery(q)
 
-      case q: ProcedureOperation =>
-        buildProcedureQuery(q, planContext)
-
       case q: Union =>
         buildUnionQuery(q, planContext)
     }
-    Right(res)
+    res
+  }
+
+  override def producePlan(in: PreparedQuery, planContext: PlanContext, tracer: CompilationPhaseTracer, createFingerprintReference: (Option[PlanFingerprint]) => PlanFingerprintReference) = {
+    interpretedToExecutionPlan(producePipePlan(in, planContext, tracer), planContext, in, createFingerprintReference)
   }
 
   private val unionBuilder = new UnionBuilder(this)
@@ -84,16 +87,6 @@ class LegacyExecutablePlanBuilder(monitors: Monitors, rewriterSequencer: (String
     val propertyKey = KeyToken.Unresolved(op.propertyKey, TokenType.PropertyKey)
 
     PipeInfo(new ConstraintOperationPipe(op, label, propertyKey), updating = true, plannerUsed = RulePlannerName)
-  }
-
-  private def buildProcedureQuery(op: ProcedureOperation, context: PlanContext): PipeInfo = op match {
-    case op:CallProcedure => {
-      context.getProcedureSignature( op.namespace, op.name ) match {
-        case Some(sig) => PipeInfo(new ProcedureCallPipe(op, sig), updating = true, plannerUsed = RulePlannerName)
-        case _ => throw new MissingProcedureException( op.namespace, op.name )
-      }
-    }
-    case _ => PipeInfo(new ProcedureOperationPipe(op), updating = true, plannerUsed = RulePlannerName)
   }
 
   def buildQuery(inputQuery: Query, context: PlanContext)(implicit pipeMonitor:PipeMonitor): PipeInfo = {

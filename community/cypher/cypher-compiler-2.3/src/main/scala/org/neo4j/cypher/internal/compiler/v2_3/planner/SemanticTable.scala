@@ -45,12 +45,12 @@ class SemanticTable(
     }.reduce(_ & _)
 
     if (reducedType.isEmpty)
-      throw new InternalException(s"This semantic table contains conflicting type information for identifier $s")
+      throw new InternalException(s"This semantic table contains conflicting neo4jType information for identifier $s")
 
     reducedType
   } catch {
     case e: UnsupportedOperationException =>
-      throw new InternalException(s"Did not find any type information for identifier $s", e)
+      throw new InternalException(s"Did not find any neo4jType information for identifier $s", e)
   }
 
   def isNode(expr: String) = getTypeFor(expr) == symbols.CTNode.invariant

@@ -64,6 +64,7 @@ class RuleExecutablePlanBuilderTest
     plannerName = None,
     runtimeBuilder = SilentFallbackRuntimeBuilder(InterpretedPlanBuilder(Clock.SYSTEM_CLOCK, mock[Monitors]), CompiledPlanBuilder(Clock.SYSTEM_CLOCK,GeneratedQueryStructure)),
     semanticChecker = mock[SemanticChecker],
+    nodeManager = nodeManager,
     useErrorsOverWarnings = false
   )
 
@@ -85,7 +86,7 @@ class RuleExecutablePlanBuilderTest
     val exception = intercept[ExecutionException](timeoutAfter(5) {
       val pipeBuilder = new LegacyExecutablePlanBuilderWithCustomPlanBuilders(Seq(new BadBuilder), new WrappedMonitors2_3(kernelMonitors))
       val query = new FakePreparedQuery(q)
-      pipeBuilder.producePlan(query, planContext)
+      pipeBuilder.producePlan(query, planContext, mock[CompilationPhaseTracer], null)
     })
 
     assertTrue("Execution plan builder didn't throw expected exception - was " + exception.getMessage,
@@ -112,7 +113,7 @@ class RuleExecutablePlanBuilderTest
 
       // when
 
-      val commands = pipeBuilder.producePlan(parsedQ, planContext).right.toOption.get.pipe.asInstanceOf[ExecuteUpdateCommandsPipe].commands
+      val commands = pipeBuilder.producePipePlan(parsedQ, planContext, mock[CompilationPhaseTracer]).pipe.asInstanceOf[ExecuteUpdateCommandsPipe].commands
 
       assertTrue("Property was not resolved", commands == Seq(DeletePropertyAction(identifier, PropertyKey("foo", pkId))))
     } finally {
@@ -137,7 +138,7 @@ class RuleExecutablePlanBuilderTest
       val parsedQ = new FakePreparedQuery(q)
 
       // when
-      val predicate = execPlanBuilder.producePlan(parsedQ, planContext).right.toOption.get.pipe.asInstanceOf[FilterPipe].predicate
+      val predicate = execPlanBuilder.producePipePlan(parsedQ, planContext, mock[CompilationPhaseTracer]).pipe.asInstanceOf[FilterPipe].predicate
 
       assertTrue("Label was not resolved", predicate == HasLabel(Identifier("x"), Label("Person", labelId)))
     } finally {
@@ -162,7 +163,7 @@ class RuleExecutablePlanBuilderTest
       val parsedQ = new FakePreparedQuery(q)
 
       val pipeBuilder = new LegacyExecutablePlanBuilder(new WrappedMonitors2_3(kernelMonitors), RewriterStepSequencer.newValidating)
-      val pipe = pipeBuilder.producePlan(parsedQ, planContext).right.toOption.get.pipe
+      val pipe = pipeBuilder.producePipePlan(parsedQ, planContext, mock[CompilationPhaseTracer]).pipe
 
       toSeq(pipe) should equal (Seq(
         classOf[EmptyResultPipe],
@@ -188,7 +189,7 @@ class RuleExecutablePlanBuilderTest
 
 
       val execPlanBuilder = new LegacyExecutablePlanBuilder(new WrappedMonitors2_3(kernelMonitors), RewriterStepSequencer.newValidating)
-      val pipe = execPlanBuilder.producePlan(parsedQ, planContext).right.toOption.get.pipe
+      val pipe = execPlanBuilder.producePipePlan(parsedQ, planContext, mock[CompilationPhaseTracer]).pipe
 
       toSeq(pipe) should equal (Seq(
         classOf[EmptyResultPipe],
@@ -214,7 +215,7 @@ class RuleExecutablePlanBuilderTest
       val pipeBuilder = new LegacyExecutablePlanBuilder(new WrappedMonitors2_3(kernelMonitors), RewriterStepSequencer.newValidating)
 
       // when
-      val periodicCommit = pipeBuilder.producePlan(parsedQ, planContext).right.toOption.get.periodicCommit
+      val periodicCommit = pipeBuilder.producePipePlan(parsedQ, planContext, mock[CompilationPhaseTracer]).periodicCommit
 
       assert(periodicCommit === Some(PeriodicCommitInfo(None)))
     } finally {

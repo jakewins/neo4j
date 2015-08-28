@@ -36,6 +36,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.test_helpers.{CypherFunSuite, Cyp
 import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.RewriterStepSequencer
 import org.neo4j.graphdb.Direction
 import org.neo4j.helpers.Clock
+import org.neo4j.kernel.impl.core.NodeManager
 
 import scala.collection.mutable
 
@@ -167,6 +168,7 @@ trait LogicalPlanningTestSupport extends CypherTestSupport with AstConstructionT
       plannerName = None,
       runtimeBuilder = InterpretedRuntimeBuilder(InterpretedPlanBuilder(Clock.SYSTEM_CLOCK, monitors)),
       semanticChecker = semanticChecker,
+      nodeManager = mock[NodeManager],
       useErrorsOverWarnings = false)
   }
 

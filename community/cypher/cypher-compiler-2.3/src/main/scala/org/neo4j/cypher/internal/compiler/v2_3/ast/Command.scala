@@ -79,6 +79,6 @@ case class CreateProcedure(readOnly: Boolean, namespace: List[Identifier], name:
   def semanticCheck = Seq()
 }
 
-case class CallProcedure(namespace: List[Identifier], call:FunctionInvocation) (val position: InputPosition) extends Command {
+case class CallProcedure(namespace: List[Identifier], call: FunctionInvocation) (val position: InputPosition) extends Command {
   def semanticCheck = Seq()
 }

@@ -23,13 +23,10 @@ import org.neo4j.cypher.internal.compiler.v2_3.ast.{Expression, FunctionInvocati
 import org.neo4j.cypher.internal.compiler.v2_3.ast.convert.commands.StatementConverters
 import StatementConverters._
 import org.neo4j.cypher.internal.compiler.v2_3.commands.expressions.Literal
+import org.neo4j.cypher.internal.compiler.v2_3.spi.{ProcedureName, ProcedureSignature, Argument}
+import org.neo4j.cypher.internal.compiler.v2_3.symbols.{IntegerType}
 import org.neo4j.cypher.internal.compiler.v2_3.{commands => legacyCommands, _}
-import org.neo4j.helpers.Pair.pair
-import org.neo4j.kernel.api.procedure.ProcedureSignature
-import org.neo4j.kernel.impl.store.Neo4jTypes
-import org.neo4j.kernel.impl.store.Neo4jTypes.{AnyType, NTInteger, IntegerType}
 import org.parboiled.scala._
-import scala.collection.JavaConversions._
 
 class ProcedureTest extends ParserTest[ast.Command, legacyCommands.AbstractQuery] with Command {
   implicit val parserToTest = Command ~ EOI
@@ -37,7 +34,7 @@ class ProcedureTest extends ParserTest[ast.Command, legacyCommands.AbstractQuery
   test("create_no_arg_procedure") {
     parsing("CREATE READ ONLY PROCEDURE myProc() USING javascript FROM SOURCE \"log.info('hello, world');\"") or
       parsing("create read only procedure myProc() USING javascript FROM SOURCE \"log.info('hello, world');\"") shouldGive
-        legacyCommands.CreateProcedure( true, new ProcedureSignature( Array(), "myProc", List(), List()), "javascript", Literal("log.info('hello, world');") )
+        legacyCommands.CreateProcedure( true, ProcedureSignature( ProcedureName(Seq(), "myProc"), List(), List()), "javascript", Literal("log.info('hello, world');") )
   }
 
   test("create_no_output_procedure") {
@@ -45,7 +42,7 @@ class ProcedureTest extends ParserTest[ast.Command, legacyCommands.AbstractQuery
       "\"log.info('hello, world');\"") or
       parsing("create read only procedure myProc( in1: Integer ) using javascript from source " +
         "\"log.info('hello, world');\"") shouldGive
-      legacyCommands.CreateProcedure( true, new ProcedureSignature( Array(), "myProc", List(pair("in1", NTInteger.asInstanceOf[AnyType])), List()), "javascript", Literal("log.info('hello, world');") )
+      legacyCommands.CreateProcedure( true, ProcedureSignature( ProcedureName(Seq(), "myProc"), List(Argument("in1", IntegerType.instance)), List()), "javascript", Literal("log.info('hello, world');") )
   }
 
   test("create_procedure") {
@@ -53,13 +50,13 @@ class ProcedureTest extends ParserTest[ast.Command, legacyCommands.AbstractQuery
       "\"yield record(in1);\"") or
       parsing("create read only procedure myProc( in1: Integer ) : (out1: Integer) using javascript from source " +
         "\"yield record(in1);\"") shouldGive
-      legacyCommands.CreateProcedure( true, new ProcedureSignature( Array(), "myProc", List(pair("in1", NTInteger.asInstanceOf[AnyType])), List(pair("out1", NTInteger.asInstanceOf[AnyType]))), "javascript", Literal("yield record(in1);") )
+      legacyCommands.CreateProcedure( true, ProcedureSignature( ProcedureName(Seq(), "myProc"), List(Argument("in1", IntegerType.instance)), List(Argument("out1", IntegerType.instance))), "javascript", Literal("yield record(in1);") )
   }
 
   test("call_procedure") {
     parsing("CALL myProc( 12 )") or
       parsing("call myProc( 12 )") shouldGive
-      legacyCommands.CallProcedure( Seq(), "myProc", IndexedSeq( Literal(12) ) )
+      legacyCommands.CallProcedure( ProcedureName(Seq(), "myProc"), IndexedSeq( Literal(12) ) )
   }
 
   def convert(astNode: ast.Command): legacyCommands.AbstractQuery = astNode.asQuery

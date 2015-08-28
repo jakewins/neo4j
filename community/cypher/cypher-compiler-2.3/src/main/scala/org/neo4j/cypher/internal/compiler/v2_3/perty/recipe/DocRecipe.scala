@@ -39,7 +39,7 @@ case object DocRecipe {
         def expand(remaining: DocRecipe[Any], result: PrintableDocRecipe = Seq.empty): PrintableDocRecipe = remaining match {
           case Seq(hd: AddPretty[_], tl@_*) =>
             throw new IllegalArgumentException(
-              s"Cannot expand value of type ${hd.tpe}, it is not within the extractor's supported type bound <:< $tpe (extractor: $extractor)"
+              s"Cannot expand value of neo4jType ${hd.tpe}, it is not within the extractor's supported type bound <:< $tpe (extractor: $extractor)"
             )
 
           case Seq(hd: PrintableDocStep, tl@_*) =>
@@ -66,7 +66,7 @@ case object DocRecipe {
 
               case None =>
                 throw new IllegalArgumentException(
-                  s"Extractor failed to expand value of type: ${hd.tpe} (extractor: $extractor)"
+                  s"Extractor failed to expand value of neo4jType: ${hd.tpe} (extractor: $extractor)"
                 )
             }
 

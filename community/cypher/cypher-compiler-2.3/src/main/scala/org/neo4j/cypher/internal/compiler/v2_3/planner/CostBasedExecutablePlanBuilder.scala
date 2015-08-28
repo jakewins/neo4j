@@ -25,7 +25,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.ast._
 import org.neo4j.cypher.internal.compiler.v2_3.ast.conditions.containsNamedPathOnlyForShortestPath
 import org.neo4j.cypher.internal.compiler.v2_3.ast.convert.plannerQuery.StatementConverters._
 import org.neo4j.cypher.internal.compiler.v2_3.ast.rewriters._
-import org.neo4j.cypher.internal.compiler.v2_3.executionplan.{ExecutablePlanBuilder, NewRuntimeSuccessRateMonitor}
+import org.neo4j.cypher.internal.compiler.v2_3.executionplan.{PlanFingerprintReference, PlanFingerprint, ExecutablePlanBuilder, NewRuntimeSuccessRateMonitor}
 import org.neo4j.cypher.internal.compiler.v2_3.helpers.closing
 import org.neo4j.cypher.internal.compiler.v2_3.planner.execution.PipeExecutionBuilderContext
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical._
@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans._
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.steps.LogicalPlanProducer
 import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.{RewriterStep, ApplyRewriter, RewriterCondition, RewriterStepSequencer}
+import org.neo4j.kernel.impl.core.NodeManager
 
 /* This class is responsible for taking a query from an AST object to a runnable object.  */
 case class CostBasedExecutablePlanBuilder(monitors: Monitors,
@@ -44,10 +45,11 @@ case class CostBasedExecutablePlanBuilder(monitors: Monitors,
                                           semanticChecker: SemanticChecker,
                                           plannerName: CostBasedPlannerName,
                                           runtimeBuilder: RuntimeBuilder,
+                                          nodeManager: NodeManager,
                                           useErrorsOverWarnings: Boolean)
   extends ExecutablePlanBuilder {
 
-  def producePlan(inputQuery: PreparedQuery, planContext: PlanContext, tracer: CompilationPhaseTracer) = {
+  def producePlan(inputQuery: PreparedQuery, planContext: PlanContext, tracer: CompilationPhaseTracer, createFingerprintReference: (Option[PlanFingerprint]) => PlanFingerprintReference) = {
 
     // Temporary measure, to save time compiling update queries
     if (containsUpdateClause(inputQuery.statement)) {
@@ -74,7 +76,7 @@ case class CostBasedExecutablePlanBuilder(monitors: Monitors,
           produceLogicalPlan(ast, rewrittenSemanticTable)(planContext, inputQuery.notificationLogger)
         }
         runtimeBuilder(logicalPlan, pipeBuildContext, planContext, tracer, rewrittenSemanticTable, planBuilderMonitor,
-                      plannerName, inputQuery)
+                      plannerName, inputQuery, nodeManager, createFingerprintReference)
       case _ =>
         throw new CantHandleQueryException
     }

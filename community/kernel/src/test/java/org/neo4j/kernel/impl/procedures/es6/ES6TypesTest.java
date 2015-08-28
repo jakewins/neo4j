@@ -43,7 +43,7 @@ import static org.neo4j.kernel.impl.store.Neo4jTypes.NTAny;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTBoolean;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTFloat;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTInteger;
-import static org.neo4j.kernel.impl.store.Neo4jTypes.NTList;
+import static org.neo4j.kernel.impl.store.Neo4jTypes.NTCollection;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTMap;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTNode;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTNumber;
@@ -85,8 +85,8 @@ public class ES6TypesTest
             new Object[]{ NTMap, "neo4j.db.createNode()", node },
             new Object[]{ NTMap, "neo4j.db.createNode().createRelationshipTo( neo4j.db.createNode(), relType('K') )", rel },
 
-            new Object[]{ NTList( NTAny ), "[]", asList() },
-            new Object[]{ NTList( NTInteger ), "[1,2,3]", asList(1l,2l,3l) }
+            new Object[]{ NTCollection( NTAny ), "[]", asList() },
+            new Object[]{ NTCollection( NTInteger ), "[1,2,3]", asList(1l,2l,3l) }
         );
     }
 
@@ -140,7 +140,7 @@ public class ES6TypesTest
     public void shouldHandleTypeAsOutputNestedInList() throws Throwable
     {
         assumeTrue( es6LanguageHandlerAvailable() );
-        assertThat( exec( procedureSignature( "f" ).out( "out", NTList( type ) ).build(), String.format( "yield [ [%s] ]", javascriptExpression ) ),
+        assertThat( exec( procedureSignature( "f" ).out( "out", NTCollection( type ) ).build(), String.format( "yield [ [%s] ]", javascriptExpression ) ),
                 yields( record( asList(javaExpression) ) ) );
     }
 
@@ -148,7 +148,7 @@ public class ES6TypesTest
     public void shouldHandleTypeAsInputNestedInList() throws Throwable
     {
         assumeTrue( es6LanguageHandlerAvailable() );
-        assertThat( exec( procedureSignature( "f" ).in( "arg", NTList( type ) ).out( "out", NTList( type ) ).build(), "yield [arg]", asList( javaExpression ) ),
+        assertThat( exec( procedureSignature( "f" ).in( "arg", NTCollection( type ) ).out( "out", NTCollection( type ) ).build(), "yield [arg]", asList( javaExpression ) ),
                 yields( record( asList(javaExpression) ) ));
     }
 

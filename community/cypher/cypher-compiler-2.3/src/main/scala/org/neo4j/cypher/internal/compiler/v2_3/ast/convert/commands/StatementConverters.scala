@@ -23,10 +23,9 @@ import ExpressionConverters._
 import PatternConverters._
 import org.neo4j.cypher.internal.compiler.v2_3._
 import org.neo4j.cypher.internal.compiler.v2_3.commands.{expressions => commandexpressions, values => commandvalues, Hint, ReturnColumn, StartItem, PeriodicCommitQuery}
+import org.neo4j.cypher.internal.compiler.v2_3.spi.{Argument, ProcedureName, ProcedureSignature}
 import org.neo4j.helpers.Pair.pair
 import org.neo4j.helpers.ThisShouldNotHappenError
-import org.neo4j.kernel.api.procedure.ProcedureSignature
-import org.neo4j.kernel.api.procedure.ProcedureSignature.procedureSignature
 import scala.collection.JavaConversions._
 import ExpressionConverters._
 
@@ -83,18 +82,14 @@ object StatementConverters {
       case s: ast.CreateProcedure =>
         commands.CreateProcedure(
           readOnly = s.readOnly,
-          signature = new ProcedureSignature(
-            s.namespace.map( _.name ).toArray,
-            s.name.name,
-            s.inputs.map((a) => pair(a._1.name, a._2.asType)).toList,
-            s.outputs.getOrElse(Seq()).map( (a) => pair(a._1.name, a._2.asType) ).toList
-          ),
+          signature = ProcedureSignature( ProcedureName(s.namespace.map(_.name), s.name.name),
+            s.inputs.map((a) => Argument(a._1.name, a._2.asType)),
+            s.outputs.getOrElse(Seq()).map( (a) => Argument(a._1.name, a._2.asType) )),
           language = s.language.name,
           body = s.body.asCommandExpression )
       case s: ast.CallProcedure =>
         commands.CallProcedure(
-          namespace = s.namespace.map( _.name ),
-          name = s.call.functionName.name,
+          name = ProcedureName( s.namespace.map( _.name ), s.call.functionName.name ),
           args = s.call.args.map(ExpressionConverter(_).asCommandExpression) )
       case _ =>
         throw new ThisShouldNotHappenError("cleishm", s"Unknown statement during transformation ($statement)")

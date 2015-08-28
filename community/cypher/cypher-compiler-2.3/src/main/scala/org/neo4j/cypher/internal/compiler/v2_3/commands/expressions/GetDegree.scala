@@ -38,7 +38,7 @@ case class GetDegree(node: Expression, typ: Option[KeyToken], direction: Directi
 
   def compute(value: Any, m: ExecutionContext)(implicit state: QueryState): Any = value match {
     case n: Node => getDegree(state.query, n.getId)
-    case other   => throw new CypherTypeException(s"Type mismatch: expected a node but was $other of type ${other.getClass.getSimpleName}")
+    case other   => throw new CypherTypeException(s"Type mismatch: expected a node but was $other of neo4jType ${other.getClass.getSimpleName}")
   }
 
   def arguments: Seq[Expression] = Seq(node)

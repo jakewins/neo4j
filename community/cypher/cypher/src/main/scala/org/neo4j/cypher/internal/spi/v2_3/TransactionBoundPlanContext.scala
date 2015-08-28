@@ -72,12 +72,6 @@ class TransactionBoundPlanContext(initialStatement: Statement, val gdb: GraphDat
     case _: KernelException => None
   }
 
-  def getProcedureSignature(namespace: Seq[String], name: String): Option[ProcedureSignature] = try {
-    Some(statement.readOperations().procedureGetSignature(namespace.toArray, name))
-  } catch {
-    case _: KernelException => None
-  }
-
   def checkNodeIndex(idxName: String) {
     if (!gdb.index().existsForNodes(idxName)) {
       throw new MissingIndexException(idxName)

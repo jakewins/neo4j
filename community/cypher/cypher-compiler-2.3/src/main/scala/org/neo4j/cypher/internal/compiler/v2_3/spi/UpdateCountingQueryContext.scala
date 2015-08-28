@@ -22,6 +22,7 @@ package org.neo4j.cypher.internal.compiler.v2_3.spi
 import java.util.concurrent.atomic.AtomicInteger
 import org.neo4j.cypher.internal.compiler.v2_3.InternalQueryStatistics
 import org.neo4j.graphdb.{Direction, PropertyContainer, Relationship, Node}
+import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 class UpdateCountingQueryContext(inner: QueryContext) extends DelegatingQueryContext(inner) {
 
@@ -38,6 +39,8 @@ class UpdateCountingQueryContext(inner: QueryContext) extends DelegatingQueryCon
   private val uniqueConstraintsRemoved = new Counter
   private val mandatoryConstraintsAdded = new Counter
   private val mandatoryConstraintsRemoved = new Counter
+  private val proceduresAdded = new Counter
+  private val proceduresRemoved = new Counter
 
   def getStatistics = InternalQueryStatistics(
     nodesCreated = nodesCreated.count,
@@ -52,7 +55,9 @@ class UpdateCountingQueryContext(inner: QueryContext) extends DelegatingQueryCon
     uniqueConstraintsAdded = uniqueConstraintsAdded.count,
     uniqueConstraintsRemoved = uniqueConstraintsRemoved.count,
     mandatoryConstraintsAdded = mandatoryConstraintsAdded.count,
-    mandatoryConstraintsRemoved = mandatoryConstraintsRemoved.count)
+    mandatoryConstraintsRemoved = mandatoryConstraintsRemoved.count,
+    proceduresAdded = proceduresAdded.count,
+    proceduresRemoved = proceduresRemoved.count)
 
   override def getOptStatistics = Some(getStatistics)
 
@@ -125,6 +130,11 @@ class UpdateCountingQueryContext(inner: QueryContext) extends DelegatingQueryCon
   override def dropRelationshipMandatoryConstraint(relTypeId: Int, propertyKeyId: Int) {
     inner.dropRelationshipMandatoryConstraint(relTypeId, propertyKeyId)
     mandatoryConstraintsRemoved.increase()
+  }
+
+  override def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String) {
+    inner.createProcedure(readOnly, signature, language, body)
+    proceduresAdded.increase()
   }
 
   override def nodeGetDegree(node: Long, dir: Direction): Int = super.nodeGetDegree(node, dir)

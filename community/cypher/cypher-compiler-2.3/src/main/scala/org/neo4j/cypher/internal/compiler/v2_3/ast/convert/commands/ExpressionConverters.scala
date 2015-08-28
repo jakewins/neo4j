@@ -92,7 +92,7 @@ object ExpressionConverters {
       case e: ast.ValueExpressionSeekRangeWrapper => e.asCommandValueSeekRange
       case e: ast.AndedPropertyInequalities => e.asCommandAnds
       case _ =>
-        throw new ThisShouldNotHappenError("cleishm", s"Unknown expression type during transformation (${expression.getClass})")
+        throw new ThisShouldNotHappenError("cleishm", s"Unknown expression neo4jType during transformation (${expression.getClass})")
     }
 
     def asCommandPredicate: CommandPredicate = expression match {

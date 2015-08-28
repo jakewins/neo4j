@@ -59,7 +59,9 @@ trait QueryStatisticsTestSupport {
     indexesAdded: Int = 0,
     indexesRemoved: Int = 0,
     constraintsAdded: Int = 0,
-    constraintsRemoved: Int = 0
+    constraintsRemoved: Int = 0,
+    procedureAdded: Int = 0,
+    procedureRemoved: Int = 0
   ) = {
     assertStatsResult(
       nodesCreated,
@@ -72,7 +74,9 @@ trait QueryStatisticsTestSupport {
       indexesAdded,
       indexesRemoved,
       constraintsAdded,
-      constraintsRemoved
+      constraintsRemoved,
+      procedureAdded,
+      procedureRemoved
     )(result)
   }
 
@@ -88,7 +92,9 @@ trait QueryStatisticsTestSupport {
     indexesAdded: Int = 0,
     indexesRemoved: Int = 0,
     constraintsAdded: Int = 0,
-    constraintsRemoved: Int = 0
+    constraintsRemoved: Int = 0,
+    procedureAdded: Int = 0,
+    procedureRemoved: Int = 0
   ): QueryStatisticsAssertions = QueryStatistics(
     nodesCreated,
     relationshipsCreated,
@@ -100,6 +106,8 @@ trait QueryStatisticsTestSupport {
     indexesAdded,
     indexesRemoved,
     constraintsAdded,
-    constraintsRemoved
+    constraintsRemoved,
+    procedureAdded,
+    procedureRemoved
   )
 }

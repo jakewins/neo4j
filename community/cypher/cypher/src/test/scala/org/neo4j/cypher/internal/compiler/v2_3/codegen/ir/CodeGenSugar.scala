@@ -22,14 +22,14 @@ package org.neo4j.cypher.internal.compiler.v2_3.codegen.ir
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.mockito.Mockito._
+import org.neo4j.cypher.internal.compiler.v2_3.CompiledPlanBuilder.createTracer
 import org.neo4j.cypher.internal.compiler.v2_3.codegen.{Namer, _}
-import org.neo4j.cypher.internal.compiler.v2_3.executionplan.ExecutionPlanBuilder.tracer
 import org.neo4j.cypher.internal.compiler.v2_3.executionplan.{CompiledExecutionResult, CompiledPlan, GeneratedQuery, GeneratedQueryExecution, InternalExecutionResult}
 import org.neo4j.cypher.internal.compiler.v2_3.planDescription.{Id, InternalPlanDescription}
 import org.neo4j.cypher.internal.compiler.v2_3.planner.SemanticTable
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.compiler.v2_3.spi.{GraphStatistics, PlanContext}
-import org.neo4j.cypher.internal.compiler.v2_3.{CostBasedPlannerName, ExecutionMode, NormalMode, TaskCloser}
+import org.neo4j.cypher.internal.compiler.v2_3._
 import org.neo4j.cypher.internal.spi.v2_3.GeneratedQueryStructure
 import org.neo4j.function.Supplier
 import org.neo4j.graphdb.GraphDatabaseService
@@ -69,7 +69,7 @@ trait CodeGenSugar extends MockitoSugar {
     try {
       val statement = graphDb.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).get()
       val nodeManager = graphDb.getDependencyResolver.resolveDependency(classOf[NodeManager])
-      val result = plan.executionResultBuilder(statement, nodeManager, mode, tracer(mode), params, taskCloser)
+      val result = plan.executionResultBuilder(statement, nodeManager, mode, createTracer(mode), params, taskCloser)
       tx.success()
       result.size
       result
@@ -120,7 +120,7 @@ trait CodeGenSugar extends MockitoSugar {
                   params: Map[String, AnyRef] = Map.empty): InternalExecutionResult = {
     val generated = clazz.execute(taskCloser, statement, nodeManager,
       executionMode, supplier, queryExecutionTracer, JavaConversions.mapAsJavaMap(params))
-    new CompiledExecutionResult(taskCloser, statement, generated, supplier)
+    new CompiledExecutionResult(taskCloser, statement, generated)
   }
 
   def insertStatic(clazz: Class[GeneratedQueryExecution], mappings: (String, Id)*) = mappings.foreach {

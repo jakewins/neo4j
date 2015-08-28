@@ -36,7 +36,7 @@ import static org.neo4j.kernel.impl.procedures.es6.JSSoftDependency.es6LanguageH
 import static org.neo4j.kernel.impl.procedures.es6.ProcedureMatchers.exec;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTAny;
 import static org.neo4j.kernel.impl.store.Neo4jTypes.NTInteger;
-import static org.neo4j.kernel.impl.store.Neo4jTypes.NTList;
+import static org.neo4j.kernel.impl.store.Neo4jTypes.NTCollection;
 
 public class ES6ArraysTest
 {
@@ -75,7 +75,7 @@ public class ES6ArraysTest
         exception.expectCause( Matchers.<Throwable>instanceOf( ProcedureException.class ) );
 
         // When
-        exec( procedureSignature( "f" ).in( "arg", NTAny ).out( "out", NTList( NTInteger ) ).build(), "yield [arg]", new boolean[0] );
+        exec( procedureSignature( "f" ).in( "arg", NTAny ).out( "out", NTCollection( NTInteger ) ).build(), "yield [arg]", new boolean[0] );
     }
 
     @Test
@@ -87,6 +87,6 @@ public class ES6ArraysTest
         exception.expectCause( Matchers.<Throwable>instanceOf( ProcedureException.class ) );
 
         // When
-        exec( procedureSignature( "f" ).out( "out", NTList( NTInteger ) ).build(), "yield [[true,false]]" );
+        exec( procedureSignature( "f" ).out( "out", NTCollection( NTInteger ) ).build(), "yield [[true,false]]" );
     }
 }

@@ -31,6 +31,7 @@ import org.neo4j.kernel.api.procedure.Procedure;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.ProcedureName;
 import org.neo4j.kernel.impl.api.KernelStatement;
 import org.neo4j.kernel.impl.api.operations.ProcedureExecutionOperations;
 
@@ -40,11 +41,11 @@ import org.neo4j.kernel.impl.api.operations.ProcedureExecutionOperations;
 public class ProcedureExecutor
         implements LanguageHandlers, ProcedureExecutionOperations
 {
-    public static final Function<String,Map<ProcedureSignature,Procedure>>
-            NEW_CONCURRENT_HASHMAP = new Function<String,Map<ProcedureSignature,Procedure>>()
+    public static final Function<String,Map<ProcedureName,Procedure>>
+            NEW_CONCURRENT_HASHMAP = new Function<String,Map<ProcedureName,Procedure>>()
     {
         @Override
-        public Map<ProcedureSignature,Procedure> apply( String s )
+        public Map<ProcedureName,Procedure> apply( String s )
         {
             return new ConcurrentHashMap<>();
         }
@@ -77,20 +78,20 @@ public class ProcedureExecutor
     }
 
     @Override
-    public void call( KernelStatement statement, ProcedureSignature signature, Object[] args, Visitor<Object[], ProcedureException> visitor )
+    public void call( KernelStatement statement, ProcedureName name, Object[] args, Visitor<Object[], ProcedureException> visitor )
             throws ProcedureException
     {
-        Map<ProcedureSignature,Procedure> procedures = statement.readOperations().schemaStateGetOrCreate( "procedures", NEW_CONCURRENT_HASHMAP );
+        Map<ProcedureName,Procedure> procedures = statement.readOperations().schemaStateGetOrCreate( "procedures", NEW_CONCURRENT_HASHMAP );
 
-        Procedure procedure = procedures.get( signature );
+        Procedure procedure = procedures.get( name );
         if ( procedure == null )
         {
-            ProcedureDescriptor proc = statement.readOperations().procedureGet( signature );
+            ProcedureDescriptor proc = statement.readOperations().procedureGet( name );
 
             LanguageHandler languageHandler = languageHandlers.get( proc.language() );
             // TODO: Language handler may have been removed here, give user helpful error if no such language handler
             procedure = languageHandler.compile( statement, proc.signature(), proc.procedureBody() );
-            procedures.put( signature, procedure );
+            procedures.put( name, procedure );
         }
 
         procedure.call( statement, args, visitor );

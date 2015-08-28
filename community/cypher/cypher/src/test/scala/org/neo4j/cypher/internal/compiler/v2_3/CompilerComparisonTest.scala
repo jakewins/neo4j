@@ -38,6 +38,7 @@ import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.factory.GraphDatabaseFactory
 import org.neo4j.helpers.Clock
 import org.neo4j.kernel.GraphDatabaseAPI
+import org.neo4j.kernel.impl.core.NodeManager
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 
 import scala.xml.Elem
@@ -290,6 +291,7 @@ class CompilerComparisonTest extends ExecutionEngineFunSuite with QueryStatistic
     val planBuilderMonitor = monitors.newMonitor[NewLogicalPlanSuccessRateMonitor](monitorTag)
     val metricsFactory = CachedMetricsFactory(metricsFactoryInput)
     val queryPlanner = new DefaultQueryPlanner(LogicalPlanRewriter(rewriterSequencer))
+    var nodeManager = graph.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[NodeManager])
     val planner = CostBasedPipeBuilderFactory.create(
       monitors = monitors,
       metricsFactory = metricsFactory,
@@ -298,11 +300,12 @@ class CompilerComparisonTest extends ExecutionEngineFunSuite with QueryStatistic
       queryPlanner = queryPlanner,
       runtimeBuilder = SilentFallbackRuntimeBuilder(InterpretedPlanBuilder(clock, monitors), CompiledPlanBuilder(clock,GeneratedQueryStructure)),
       semanticChecker = checker,
+      nodeManager = nodeManager,
       useErrorsOverWarnings = false
     )
     val pipeBuilder = new SilentFallbackPlanBuilder(Seq(planner, new LegacyExecutablePlanBuilder(monitors, rewriterSequencer)),
                                                     planBuilderMonitor)
-    val execPlanBuilder = new ExecutionPlanBuilder(graph, statsDivergenceThreshold, queryPlanTTL, clock, pipeBuilder)
+    val execPlanBuilder = new ExecutionPlanBuilder(PlanFingerprintReference(clock, queryPlanTTL, statsDivergenceThreshold, _), pipeBuilder)
     val planCacheFactory = () => new LRUCache[Statement, ExecutionPlan](100)
     val cacheHitMonitor = monitors.newMonitor[CypherCacheHitMonitor[Statement]](monitorTag)
     val cacheFlushMonitor = monitors.newMonitor[CypherCacheFlushingMonitor[CacheAccessor[Statement, ExecutionPlan]]](monitorTag)
@@ -318,7 +321,7 @@ class CompilerComparisonTest extends ExecutionEngineFunSuite with QueryStatistic
     val checker = new SemanticChecker
     val rewriter = new ASTRewriter(rewriterSequencer)
     val pipeBuilder = new LegacyExecutablePlanBuilder(monitors, rewriterSequencer)
-    val execPlanBuilder = new ExecutionPlanBuilder(graph, statsDivergenceThreshold, queryPlanTTL, clock, pipeBuilder)
+    val execPlanBuilder = new ExecutionPlanBuilder(PlanFingerprintReference(clock, queryPlanTTL, statsDivergenceThreshold, _), pipeBuilder)
     val planCacheFactory = () => new LRUCache[Statement, ExecutionPlan](100)
     val cacheHitMonitor = monitors.newMonitor[CypherCacheHitMonitor[Statement]](monitorTag)
     val cacheFlushMonitor = monitors.newMonitor[CypherCacheFlushingMonitor[CacheAccessor[Statement, ExecutionPlan]]](monitorTag)

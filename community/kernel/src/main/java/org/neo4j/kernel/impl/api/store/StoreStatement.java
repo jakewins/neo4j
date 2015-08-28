@@ -20,8 +20,6 @@
 package org.neo4j.kernel.impl.api.store;
 
 import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.function.Function;
@@ -32,7 +30,7 @@ import org.neo4j.kernel.api.cursor.PropertyCursor;
 import org.neo4j.kernel.api.cursor.RelationshipCursor;
 import org.neo4j.kernel.api.procedure.ProcedureDescriptor;
 import org.neo4j.kernel.api.procedure.ProcedureException;
-import org.neo4j.kernel.api.procedure.ProcedureSignature;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.ProcedureName;
 import org.neo4j.kernel.impl.store.NeoStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -195,7 +193,7 @@ public class StoreStatement
         }, schema.allProcedures() );
     }
 
-    public ProcedureDescriptor procedureGetBySignature( ProcedureSignature signature ) throws ProcedureException
+    public ProcedureDescriptor procedureGetBySignature( ProcedureName signature ) throws ProcedureException
     {
         neoStore.assertOpen();
         return schema.procedure( signature ).descriptor();

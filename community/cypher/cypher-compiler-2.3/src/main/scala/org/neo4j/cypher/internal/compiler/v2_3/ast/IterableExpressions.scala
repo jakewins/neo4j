@@ -238,7 +238,7 @@ case class ReduceExpression(scope: ReduceScope, init: Expression, collection: Ex
 }
 
 object ReduceExpression {
-  val AccumulatorExpressionTypeMismatchMessageGenerator = (expected: String, existing: String) => s"accumulator is $expected but expression has type $existing"
+  val AccumulatorExpressionTypeMismatchMessageGenerator = (expected: String, existing: String) => s"accumulator is $expected but expression has neo4jType $existing"
 
   def apply(accumulator: Identifier, init: Expression, identifier: Identifier, collection: Expression, expression: Expression)(position: InputPosition): ReduceExpression =
     ReduceExpression(ReduceScope(accumulator, identifier, expression)(position), init, collection)(position)

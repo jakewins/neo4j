@@ -23,11 +23,11 @@ import org.neo4j.cypher.GraphDatabaseFunSuite
 import org.neo4j.cypher.internal.compiler.v2_3.commands.expressions.Literal
 import org.neo4j.cypher.internal.compiler.v2_3.commands.values.{KeyToken, TokenType}
 import org.neo4j.cypher.internal.compiler.v2_3.commands.{LabelAction, LabelSetOp}
-import org.neo4j.cypher.internal.compiler.v2_3.spi.{IdempotentResult, LockingQueryContext, QueryContext}
+import org.neo4j.cypher.internal.compiler.v2_3.spi._
+import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.kernel.api.constraints.{MandatoryPropertyConstraint, UniquenessConstraint}
 import org.neo4j.kernel.api.index.IndexDescriptor
-import org.neo4j.kernel.api.procedure.ProcedureSignature
 
 class LabelActionTest extends GraphDatabaseFunSuite {
   val queryContext = new SnitchingQueryContext
@@ -142,9 +142,11 @@ class SnitchingQueryContext extends QueryContext {
 
   def dropUniqueConstraint(labelId: Int, propertyKeyId: Int) = ???
 
-  def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String): Unit = ???
+  def procedureSignature(name: ProcedureName): ProcedureSignature = ???
 
-  def callProcedure(signature: ProcedureSignature, args: Seq[Any]): Iterator[Seq[Any]] = ???
+  def callProcedure[EX <: Exception](name: ProcedureName, args: Seq[Any], visitor: ResultVisitor[EX]): Unit = ???
+
+  def createProcedure(readOnly: Boolean, signature: ProcedureSignature, language: String, body: String): Unit = ???
 
   def createNodeMandatoryConstraint(labelId: Int, propertyKeyId: Int): IdempotentResult[MandatoryPropertyConstraint] = ???
 

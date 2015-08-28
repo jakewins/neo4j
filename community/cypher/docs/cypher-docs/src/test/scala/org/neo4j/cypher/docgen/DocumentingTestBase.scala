@@ -224,7 +224,7 @@ abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper w
         e match {
           case expectedExceptionType(typedE) =>
             dumpToFileWithException(dir, writer, title, query, "", text, typedE, consoleData, Map.empty)
-          case _ => fail(s"Expected an exception of type $expectedException but got ${e.getClass}", e)
+          case _ => fail(s"Expected an exception of neo4jType $expectedException but got ${e.getClass}", e)
         }
     }
   }
@@ -320,7 +320,7 @@ abstract class DocumentingTestBase extends JUnitSuite with DocumentationHelper w
         val expectedExceptionType = expectedException.get
         e match {
           case expectedExceptionType(typedE) => expectedCaught(typedE)
-          case _ => fail(s"Expected an exception of type $expectedException but got ${e.getClass}", e)
+          case _ => fail(s"Expected an exception of neo4jType $expectedException but got ${e.getClass}", e)
         }
         None
     }

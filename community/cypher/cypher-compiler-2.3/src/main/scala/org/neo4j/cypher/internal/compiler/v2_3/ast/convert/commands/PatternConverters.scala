@@ -276,7 +276,7 @@ object PatternConverters {
       }
       val typeName = relationship.types match {
         case Seq(i) => i.name
-        case _ => throw new SyntaxException(s"A single relationship type must be specified for CREATE (${relationship.position})")
+        case _ => throw new SyntaxException(s"A single relationship neo4jType must be specified for CREATE (${relationship.position})")
       }
       mutation.CreateRelationship(relationship.legacyName, from, to, typeName, legacyProperties)
     }

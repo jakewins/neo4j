@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.compiler.v2_3.planner.logical._
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.greedy.{GreedyQueryGraphSolver, expandsOnly, expandsOrJoins}
 import org.neo4j.cypher.internal.compiler.v2_3.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor}
 import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.RewriterStepSequencer
+import org.neo4j.kernel.impl.core.NodeManager
 
 object CostBasedPipeBuilderFactory {
 
@@ -35,6 +36,7 @@ object CostBasedPipeBuilderFactory {
              tokenResolver: SimpleTokenResolver = new SimpleTokenResolver(),
              plannerName: Option[CostBasedPlannerName],
              runtimeBuilder: RuntimeBuilder,
+             nodeManager: NodeManager,
              useErrorsOverWarnings: Boolean
     ) = {
 
@@ -52,6 +54,8 @@ object CostBasedPipeBuilderFactory {
     }
 
     val actualPlannerName = plannerName.getOrElse(CostBasedPlannerName.default)
-    CostBasedExecutablePlanBuilder(monitors, metricsFactory, tokenResolver, queryPlanner, createQueryGraphSolver(actualPlannerName), rewriterSequencer, semanticChecker, actualPlannerName, runtimeBuilder, useErrorsOverWarnings)
+    CostBasedExecutablePlanBuilder(monitors, metricsFactory, tokenResolver, queryPlanner,
+      createQueryGraphSolver(actualPlannerName), rewriterSequencer, semanticChecker, actualPlannerName,
+      runtimeBuilder, nodeManager, useErrorsOverWarnings)
   }
 }

@@ -21,10 +21,9 @@ package org.neo4j.kernel.impl.procedures.es6;
 
 import javax.script.ScriptException;
 
-import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.api.procedure.ProcedureException;
 import org.neo4j.kernel.api.procedure.ProcedureSignature;
-import org.neo4j.kernel.impl.store.Neo4jTypes;
+import org.neo4j.kernel.api.procedure.ProcedureSignature.Argument;
 
 /**
  * Wraps a raw javascript script in a function block with a signature matching the procedure signature.
@@ -55,9 +54,9 @@ public class JSProcedureBoilerplate
         // Special argument containing the emit function, injected for each invocation of the procedure
         out.append( EMIT );
 
-        for ( Pair<String,Neo4jTypes.AnyType> sig : signature.inputSignature() )
+        for ( Argument sig : signature.inputSignature() )
         {
-            out.append( ", " ).append( sig.first() );
+            out.append( ", " ).append( sig.name() );
         }
         out.append( " )" );
 
@@ -68,13 +67,13 @@ public class JSProcedureBoilerplate
     {
         StringBuilder ns = new StringBuilder();
         StringBuilder out = new StringBuilder();
-        for ( String s : signature.namespace() )
+        for ( String s : signature.name().namespace() )
         {
             ns.append( s );
             out.append( String.format( "var %1$s=%1$s||{};", ns.toString() ) );
             ns.append( "." );
         }
-        out.append( ns ).append( signature.name() );
+        out.append( ns ).append( signature.name().name() );
         return out.toString();
     }
 }
