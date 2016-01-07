@@ -55,7 +55,7 @@ public interface Configurator
     String NEO_SERVER_CONFIG_FILE_KEY = ServerInternalSettings.SERVER_CONFIG_FILE_KEY;
     String DB_MODE_KEY = "org.neo4j.server.database.mode";
 
-    int DEFAULT_WEBSERVER_PORT = Integer.valueOf( ServerSettings.webserver_port.getDefaultValue() );
+    int DEFAULT_WEBSfirERVER_PORT = Integer.valueOf( ServerSettings.webserver_port.getDefaultValue() );
     String WEBSERVER_PORT_PROPERTY_KEY = ServerSettings.webserver_port.name();
     String DEFAULT_WEBSERVER_ADDRESS = ServerSettings.webserver_address.getDefaultValue();
     String WEBSERVER_ADDRESS_PROPERTY_KEY = ServerSettings.webserver_address.name();

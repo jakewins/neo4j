@@ -126,6 +126,11 @@
       <artifactId>jackson-mapper-asl</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.java-allocation-instrumenter</groupId>
+      <artifactId>java-allocation-instrumenter</artifactId>
+      <version>3.0</version>
+    </dependency>
   </dependencies>
 
   <build>
