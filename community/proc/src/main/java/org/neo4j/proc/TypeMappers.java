@@ -1,5 +1,6 @@
 package org.neo4j.proc;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -30,41 +31,51 @@ public class TypeMappers
         Object apply( Object javaValue ) throws ProcedureException;
     }
 
+    private final Map<Class<?>, ToNeoValue> javaToNeo = new HashMap<>();
+
+    public TypeMappers()
+    {
+        registerScalarsAndCollections();
+    }
+
+    /**
+     * We don't have Node, Relationship, Property available down here - and don't strictly want to, we want the procedures to be independent of which
+     * Graph API is being used (and we don't want them to get tangled up with kernel code). So, we only register the "core" type system here, scalars and
+     * collection types. Node, Relationship, Path and any other future graph types should be registered from the outside in the same place APIs to work
+     * with those types is registered.
+     */
+    private void registerScalarsAndCollections()
+    {
+        registerType( String.class, TO_STRING );
+        registerType( int.class, TO_INTEGER );
+        registerType( Integer.class, TO_INTEGER );
+        registerType( long.class, TO_INTEGER );
+        registerType( Long.class, TO_INTEGER );
+        registerType( float.class, TO_FLOAT );
+        registerType( Float.class, TO_FLOAT );
+        registerType( double.class, TO_FLOAT );
+        registerType( Double.class, TO_FLOAT );
+        registerType( Number.class, TO_NUMBER );
+        registerType( boolean.class, TO_BOOLEAN );
+        registerType( Boolean.class, TO_BOOLEAN );
+        registerType( Map.class, TO_MAP );
+        registerType( List.class, TO_LIST );
+        registerType( Object.class, TO_ANY );
+    }
+
     public ToNeoValue javaToNeo( Class<?> javaType ) throws ProcedureException
     {
-        if( javaType == String.class )
+        ToNeoValue converter = javaToNeo.get( javaType );
+        if( converter != null )
         {
-            return TO_STRING;
-        }
-        else if( javaType == int.class || javaType == long.class )
-        {
-            return TO_INTEGER;
-        }
-        else if( javaType == float.class || javaType == double.class )
-        {
-            return TO_FLOAT;
-        }
-        else if( javaType == Number.class )
-        {
-            return TO_NUMBER;
-        }
-        else if( javaType == boolean.class )
-        {
-            return TO_BOOLEAN;
-        }
-        else if( javaType == Map.class )
-        {
-            return TO_MAP;
-        }
-        else if( javaType == List.class )
-        {
-            return TO_LIST;
-        }
-        else if( javaType == Object.class )
-        {
-            return TO_ANY;
+            return converter;
         }
         throw javaToNeoMappingError( javaType, Neo4jTypes.NTAny );
+    }
+
+    public void registerType( Class<?> javaClass, ToNeoValue toNeo )
+    {
+        javaToNeo.put( javaClass, toNeo );
     }
 
     public static class TypeMapper implements ToNeoValue

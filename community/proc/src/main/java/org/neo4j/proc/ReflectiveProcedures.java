@@ -30,7 +30,7 @@ public class ReflectiveProcedures
     {
         try
         {
-            MethodHandle constructor = lookup.unreflectConstructor( procDefinition.getConstructor() );
+            MethodHandle constructor = constructor( procDefinition );
 
             return asList(procDefinition.getDeclaredMethods()).stream()
                     .filter( m -> m.isAnnotationPresent( ReadOnlyProcedure.class ) )
@@ -85,9 +85,27 @@ public class ReflectiveProcedures
         {
             throw e.unwrap();
         }
+        catch( ProcedureException e )
+        {
+            throw e;
+        }
         catch ( Exception e )
         {
             throw new ProcedureException( Status.Procedure.FailedRegistration, e, "Failed to compile procedure defined in `%s`: %s", procDefinition.getSimpleName(), e.getMessage() );
+        }
+    }
+
+    private MethodHandle constructor( Class<?> procDefinition ) throws ProcedureException
+    {
+        try
+        {
+            return lookup.unreflectConstructor( procDefinition.getConstructor() );
+        }
+        catch ( IllegalAccessException | NoSuchMethodException e )
+        {
+            throw new ProcedureException( Status.Procedure.FailedRegistration, e, "Unable to find a usable public no-argument constructor in the class `%s`. " +
+                                                                                  "Please add a valid, public constructor, recompile the class and try again.",
+                    procDefinition.getSimpleName() );
         }
     }
 

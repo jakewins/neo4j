@@ -1,9 +1,13 @@
 package org.neo4j.proc;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.neo4j.kernel.api.exceptions.ProcedureException;
 
 import static java.util.stream.Collectors.toList;
 import static junit.framework.TestCase.assertEquals;
@@ -14,6 +18,9 @@ import static org.neo4j.proc.ProcedureSignature.procedureSignature;
 
 public class ReflectiveProcedureTest
 {
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
+
     @Test
     public void shouldCompileProcedure() throws Throwable
     {
@@ -44,6 +51,30 @@ public class ReflectiveProcedureTest
         ));
     }
 
+    @Test
+    public void shouldGiveHelpfulErrorOnConstructorThatRequiresArgument() throws Throwable
+    {
+        // Expect
+        exception.expect( ProcedureException.class );
+        exception.expectMessage( "Unable to find a usable public no-argument constructor in the class `WierdConstructorProcedure`. " +
+                                 "Please add a valid, public constructor, recompile the class and try again." );
+
+        // When
+        new ReflectiveProcedures().compile( WierdConstructorProcedure.class );
+    }
+
+    @Test
+    public void shouldGiveHelpfulErrorOnNoPublicConstructor() throws Throwable
+    {
+        // Expect
+        exception.expect( ProcedureException.class );
+        exception.expectMessage( "Unable to find a usable public no-argument constructor in the class `PrivateConstructorProcedure`. " +
+                                 "Please add a valid, public constructor, recompile the class and try again." );
+
+        // When
+        new ReflectiveProcedures().compile( PrivateConstructorProcedure.class );
+    }
+
     public static class MyOutputRecord
     {
         public String name;
@@ -56,6 +87,36 @@ public class ReflectiveProcedureTest
 
     public static class SingleReadOnlyProcedure
     {
+        @ReadOnlyProcedure
+        public Stream<MyOutputRecord> listCoolPeople() {
+            return Stream.of(
+                    new MyOutputRecord( "Bonnie" ),
+                    new MyOutputRecord( "Clyde" ));
+        }
+    }
+
+    public static class WierdConstructorProcedure
+    {
+        public WierdConstructorProcedure( WierdConstructorProcedure wat )
+        {
+
+        }
+
+        @ReadOnlyProcedure
+        public Stream<MyOutputRecord> listCoolPeople() {
+            return Stream.of(
+                    new MyOutputRecord( "Bonnie" ),
+                    new MyOutputRecord( "Clyde" ));
+        }
+    }
+
+    public static class PrivateConstructorProcedure
+    {
+        private PrivateConstructorProcedure()
+        {
+
+        }
+
         @ReadOnlyProcedure
         public Stream<MyOutputRecord> listCoolPeople() {
             return Stream.of(
