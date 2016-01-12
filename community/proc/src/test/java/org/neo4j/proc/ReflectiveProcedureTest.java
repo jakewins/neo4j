@@ -5,7 +5,9 @@ import org.junit.Test;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.toList;
 import static junit.framework.TestCase.assertEquals;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.proc.ProcedureSignature.procedureSignature;
@@ -24,6 +26,22 @@ public class ReflectiveProcedureTest
                 procedureSignature( "org", "neo4j", "proc", "listCoolPeople" )
                         .out( "name", Neo4jTypes.NTString )
                         .build() ));
+    }
+
+    @Test
+    public void shouldRunSimpleReadOnlyProcedure() throws Throwable
+    {
+        // Given
+        Procedure proc = new ReflectiveProcedures().compile( SingleReadOnlyProcedure.class ).get( 0 );
+
+        // When
+        Stream<Object[]> out = proc.apply( new Procedure.BasicContext(), new Object[0] );
+
+        // Then
+        assertThat( out.collect( toList() ), contains(
+            new Object[]{"Bonnie"},
+            new Object[]{"Clyde"}
+        ));
     }
 
     public static class MyOutputRecord

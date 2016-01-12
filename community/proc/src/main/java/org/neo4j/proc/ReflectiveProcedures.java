@@ -12,6 +12,8 @@ import java.util.stream.Stream;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.proc.ClassRecordMappers.ClassRecordMapper;
+import org.neo4j.proc.ProcedureSignature.ProcedureName;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -35,64 +37,51 @@ public class ReflectiveProcedures
                     .map( (method) -> {
                         try
                         {
-                            ProcedureSignature.ProcedureName procName = extractName( procDefinition, method );
+                            ProcedureName procName = extractName( procDefinition, method );
+                            ClassRecordMapper outputMapper = outputMapper( procDefinition, method );
+                            MethodHandle procedureMethod = lookup.unreflect( method );
 
-                            MethodHandle handle = lookup.unreflect( method );
+                            ProcedureSignature signature = new ProcedureSignature( procName, emptyList(), outputMapper.signature() );
 
-                            Class<?> cls = method.getReturnType();
-                            if( cls != Stream.class )
+                            return new Procedure()
                             {
-                                throw new RuntimeWrappedException( new ProcedureException( Status.Procedure.FailedRegistration,
-                                        "A procedure must return a `java.util.stream.Stream`, `%s.%s` returns `%s`.",
-                                        procDefinition.getSimpleName(), method.getName(), cls.getSimpleName() ) );
-                            }
-
-                            try
-                            {
-                                ParameterizedType genType = (ParameterizedType) method.getGenericReturnType();
-                                Type recordType = genType.getActualTypeArguments()[0];
-
-                                ClassRecordMappers.ClassRecordMapper outputMapper = recordMappers.mapper( (Class<?>) recordType );
-
-                                ProcedureSignature signature = new ProcedureSignature( procName, emptyList(), outputMapper.signature() );
-
-                                return new Procedure()
+                                @Override
+                                public ProcedureSignature signature()
                                 {
-                                    @Override
-                                    public ProcedureSignature signature()
-                                    {
-                                        return signature;
-                                    }
+                                    return signature;
+                                }
 
-                                    @Override
-                                    public Stream<Object[]> apply( Context ctx, Object[] input ) throws ProcedureException
+                                @Override
+                                public Stream<Object[]> apply( Context ctx, Object[] input ) throws ProcedureException
+                                {
+                                    // For now, create a new instance of the class for each invocation. In the future, we'd like to keep instances local to
+                                    // at least the executing session, but we don't yet have good interfaces to the kernel to model that with.
+                                    try
                                     {
-                                        // For now, create a new instance of the class for each invocation. In the future, we'd like to keep instances local to
-                                        // at least the executing session, but we don't yet have good interfaces to the kernel to model that with.
-                                        try
-                                        {
-                                            Object cls = constructor.invoke();
-                                            return null;
-                                        }
-                                        catch ( Throwable throwable )
-                                        {
-                                            throw new ProcedureException( Status.Procedure.CallFailed, throwable, "Failed to invoke procedure." ); // TODO
-                                        }
+                                        Object cls = constructor.invoke();
+                                        Stream<?> out = (Stream<?>) procedureMethod.invoke( cls );
+                                        return out.map( outputMapper::apply );
                                     }
-                                };
-                            }
-                            catch ( ProcedureException e )
-                            {
-                                throw new RuntimeWrappedException( e );
-                            }
+                                    catch ( Throwable throwable )
+                                    {
+                                        throw new ProcedureException( Status.Procedure.CallFailed, throwable, "Failed to invoke procedure." ); // TODO
+                                    }
+                                }
+                            };
+                        }
+                        catch ( ProcedureException e )
+                        {
+                            throw new RuntimeWrappedKernelException( e );
                         }
                         catch ( IllegalAccessException e )
                         {
-                            throw new AssertionError( e );
+                            throw new RuntimeWrappedKernelException( new ProcedureException( Status.Procedure.FailedRegistration, e,
+                                    "Unable to access declared procedure method `%s.%s`: %s",
+                                    procDefinition.getSimpleName(), method.getName(), e.getMessage() ) );
                         }
                     }).collect( Collectors.toList() );
         }
-        catch( RuntimeWrappedException e )
+        catch( RuntimeWrappedKernelException e )
         {
             throw e.unwrap();
         }
@@ -102,10 +91,26 @@ public class ReflectiveProcedures
         }
     }
 
-    private ProcedureSignature.ProcedureName extractName( Class<?> procDefinition, Method m )
+    private ClassRecordMapper outputMapper( Class<?> procDefinition, Method method ) throws ProcedureException
+    {
+        Class<?> cls = method.getReturnType();
+        if( cls != Stream.class )
+        {
+            throw new RuntimeWrappedKernelException( new ProcedureException( Status.Procedure.FailedRegistration,
+                    "A procedure must return a `java.util.stream.Stream`, `%s.%s` returns `%s`.",
+                    procDefinition.getSimpleName(), method.getName(), cls.getSimpleName() ) );
+        }
+
+        ParameterizedType genType = (ParameterizedType) method.getGenericReturnType();
+        Type recordType = genType.getActualTypeArguments()[0];
+
+        return recordMappers.mapper( (Class<?>) recordType );
+    }
+
+    private ProcedureName extractName( Class<?> procDefinition, Method m )
     {
         String[] namespace = procDefinition.getPackage().getName().split( "\\." );
         String name = m.getName();
-        return new ProcedureSignature.ProcedureName( namespace, name );
+        return new ProcedureName( namespace, name );
     }
 }
