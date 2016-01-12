@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2002-2016 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.proc;
 
 import java.lang.invoke.MethodHandle;
@@ -22,7 +41,7 @@ import static java.util.Collections.emptyList;
 /**
  * Handles converting a class into one or more callable {@link Procedure}.
  */
-public class ReflectiveProcedures
+public class ReflectiveProcedureCompiler
 {
     private final MethodHandles.Lookup lookup = MethodHandles.lookup();
     private final ClassRecordMappers recordMappers = new ClassRecordMappers();
@@ -85,9 +104,9 @@ public class ReflectiveProcedures
         Class<?> cls = method.getReturnType();
         if( cls != Stream.class )
         {
-            throw new RuntimeWrappedKernelException( new ProcedureException( Status.Procedure.FailedRegistration,
+            throw new ProcedureException( Status.Procedure.FailedRegistration,
                     "A procedure must return a `java.util.stream.Stream`, `%s.%s` returns `%s`.",
-                    procDefinition.getSimpleName(), method.getName(), cls.getSimpleName() ) );
+                    procDefinition.getSimpleName(), method.getName(), cls.getSimpleName() );
         }
 
         ParameterizedType genType = (ParameterizedType) method.getGenericReturnType();

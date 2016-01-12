@@ -801,7 +801,7 @@ public class NeoStoreDataSource implements NeoStoresSupplier, Lifecycle, IndexPr
                 storeLayer, legacyPropertyTrackers, constraintIndexCreator, updateableSchemaState, guard,
                 legacyIndexStore ) );
 
-        Procedures procedures = dependencies.satisfyDependency(new Procedures());
+        Procedures procedures = dependencies.satisfyDependency( new Procedures() );
 
         TransactionHooks hooks = new TransactionHooks();
         KernelTransactions kernelTransactions = life.add( new KernelTransactions( locks, constraintIndexCreator,

@@ -19,17 +19,16 @@
  */
 package org.neo4j.proc;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.api.exceptions.Status;
 
 
 public class Procedures
 {
-    private final Map<ProcedureSignature.ProcedureName,Procedure> procedures = new HashMap<>();
+    private final ProcedureRegistry registry = new ProcedureRegistry();
+    private final ReflectiveProcedureCompiler compiler = new ReflectiveProcedureCompiler();
 
     /**
      * Register a new procedure. This method must not be called concurrently with {@link #get(ProcedureSignature.ProcedureName)}.
@@ -37,38 +36,28 @@ public class Procedures
      */
     public synchronized void register( Procedure proc ) throws ProcedureException
     {
-        ProcedureSignature signature = proc.signature();
-        ProcedureSignature.ProcedureName name = signature.name();
-        if( procedures.putIfAbsent( name, proc ) != null )
+        registry.register( proc );
+    }
+
+    /**
+     * Register a new procedure defined with annotations on a java class.
+     * @param proc the procedure class
+     */
+    public synchronized void register( Class<?> proc ) throws KernelException
+    {
+        for ( Procedure procedure : compiler.compile( proc ) )
         {
-            throw new ProcedureException( Status.Procedure.FailedRegistration, "Unable to register procedure, because the name `%s` is already in use.", name );
+            register( procedure );
         }
     }
 
     public ProcedureSignature get( ProcedureSignature.ProcedureName name ) throws ProcedureException
     {
-        Procedure proc = procedures.get( name );
-        if( proc == null )
-        {
-            throw noSuchProcedure( name );
-        }
-        return proc.signature();
+        return registry.get( name );
     }
 
     public Stream<Object[]> call( Procedure.Context ctx, ProcedureSignature.ProcedureName name, Object[] input ) throws ProcedureException
     {
-        Procedure proc = procedures.get( name );
-        if( proc == null )
-        {
-            throw noSuchProcedure( name );
-        }
-        return proc.apply( ctx, input );
-    }
-
-    private ProcedureException noSuchProcedure( ProcedureSignature.ProcedureName name )
-    {
-        return new ProcedureException( Status.Procedure.NoSuchProcedure, "There is no procedure with the name `%s` registered for this database instance. " +
-                                                                        "Please ensure you've spelled the procedure name correctly and that the " +
-                                                                        "procedure is properly deployed.", name );
+        return registry.call( ctx, name, input );
     }
 }

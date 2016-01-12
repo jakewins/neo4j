@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2002-2016 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.proc;
 
 import org.junit.Rule;
@@ -25,7 +44,7 @@ public class ReflectiveProcedureTest
     public void shouldCompileProcedure() throws Throwable
     {
         // When
-        List<Procedure> procedures = new ReflectiveProcedures().compile( SingleReadOnlyProcedure.class );
+        List<Procedure> procedures = new ReflectiveProcedureCompiler().compile( SingleReadOnlyProcedure.class );
 
         // Then
         assertEquals( 1, procedures.size() );
@@ -39,7 +58,7 @@ public class ReflectiveProcedureTest
     public void shouldRunSimpleReadOnlyProcedure() throws Throwable
     {
         // Given
-        Procedure proc = new ReflectiveProcedures().compile( SingleReadOnlyProcedure.class ).get( 0 );
+        Procedure proc = new ReflectiveProcedureCompiler().compile( SingleReadOnlyProcedure.class ).get( 0 );
 
         // When
         Stream<Object[]> out = proc.apply( new Procedure.BasicContext(), new Object[0] );
@@ -55,7 +74,7 @@ public class ReflectiveProcedureTest
     public void shouldIgnoreClassesWithNoProcedures() throws Throwable
     {
         // When
-        List<Procedure> procedures = new ReflectiveProcedures().compile( PrivateConstructorButNoProcedures.class );
+        List<Procedure> procedures = new ReflectiveProcedureCompiler().compile( PrivateConstructorButNoProcedures.class );
 
         // Then
         assertEquals( 0, procedures.size() );
@@ -65,7 +84,7 @@ public class ReflectiveProcedureTest
     public void shouldRunClassWithMultipleProceduresDeclared() throws Throwable
     {
         // Given
-        List<Procedure> compiled = new ReflectiveProcedures().compile( MultiProcedureProcedure.class );
+        List<Procedure> compiled = new ReflectiveProcedureCompiler().compile( MultiProcedureProcedure.class );
         Procedure bananaPeople = compiled.get( 0 );
         Procedure coolPeople = compiled.get( 1 );
 
@@ -94,7 +113,7 @@ public class ReflectiveProcedureTest
                                  "Please add a valid, public constructor, recompile the class and try again." );
 
         // When
-        new ReflectiveProcedures().compile( WierdConstructorProcedure.class );
+        new ReflectiveProcedureCompiler().compile( WierdConstructorProcedure.class );
     }
 
     @Test
@@ -106,7 +125,7 @@ public class ReflectiveProcedureTest
                                  "Please add a valid, public constructor, recompile the class and try again." );
 
         // When
-        new ReflectiveProcedures().compile( PrivateConstructorProcedure.class );
+        new ReflectiveProcedureCompiler().compile( PrivateConstructorProcedure.class );
     }
 
     public static class MyOutputRecord
