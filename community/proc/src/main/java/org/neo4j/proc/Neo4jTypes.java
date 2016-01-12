@@ -113,7 +113,7 @@ public class Neo4jTypes
 
         public ListType( AnyType innerType )
         {
-            super( "Collection[" + innerType.toString() + "]" );
+            super( "List[" + innerType.toString() + "]" );
             this.innerType = innerType;
         }
 
