@@ -121,6 +121,21 @@ public class Neo4jTypes
         {
             return innerType;
         }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o ) { return true; }
+            if ( o == null || getClass() != o.getClass() ) { return false; }
+            ListType listType = (ListType) o;
+            return innerType.equals( listType.innerType );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return innerType.hashCode();
+        }
     }
 
     public static class MapType extends AnyType

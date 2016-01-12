@@ -126,6 +126,23 @@ public class ProcedureSignature
         {
             return type;
         }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o ) { return true; }
+            if ( o == null || getClass() != o.getClass() ) { return false; }
+            FieldSignature that = (FieldSignature) o;
+            return name.equals( that.name ) && type.equals( that.type );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = name.hashCode();
+            result = 31 * result + type.hashCode();
+            return result;
+        }
     }
 
     private final ProcedureName name;
