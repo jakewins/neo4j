@@ -52,6 +52,40 @@ public class ReflectiveProcedureTest
     }
 
     @Test
+    public void shouldIgnoreClassesWithNoProcedures() throws Throwable
+    {
+        // When
+        List<Procedure> procedures = new ReflectiveProcedures().compile( PrivateConstructorButNoProcedures.class );
+
+        // Then
+        assertEquals( 0, procedures.size() );
+    }
+
+    @Test
+    public void shouldRunClassWithMultipleProceduresDeclared() throws Throwable
+    {
+        // Given
+        List<Procedure> compiled = new ReflectiveProcedures().compile( MultiProcedureProcedure.class );
+        Procedure bananaPeople = compiled.get( 0 );
+        Procedure coolPeople = compiled.get( 1 );
+
+        // When
+        Stream<Object[]> coolOut = coolPeople.apply( new Procedure.BasicContext(), new Object[0] );
+        Stream<Object[]> bananaOut = bananaPeople.apply( new Procedure.BasicContext(), new Object[0] );
+
+        // Then
+        assertThat( coolOut.collect( toList() ), contains(
+                new Object[]{"Bonnie"},
+                new Object[]{"Clyde"}
+        ));
+
+        assertThat( bananaOut.collect( toList() ), contains(
+                new Object[]{"Jake", 18L},
+                new Object[]{"Pontus", 2L }
+        ));
+    }
+
+    @Test
     public void shouldGiveHelpfulErrorOnConstructorThatRequiresArgument() throws Throwable
     {
         // Expect
@@ -85,6 +119,19 @@ public class ReflectiveProcedureTest
         }
     }
 
+
+    public static class SomeOtherOutputRecord
+    {
+        public String name;
+        public int bananas;
+
+        public SomeOtherOutputRecord( String name, int bananas )
+        {
+            this.name = name;
+            this.bananas = bananas;
+        }
+    }
+
     public static class SingleReadOnlyProcedure
     {
         @ReadOnlyProcedure
@@ -92,6 +139,23 @@ public class ReflectiveProcedureTest
             return Stream.of(
                     new MyOutputRecord( "Bonnie" ),
                     new MyOutputRecord( "Clyde" ));
+        }
+    }
+
+    public static class MultiProcedureProcedure
+    {
+        @ReadOnlyProcedure
+        public Stream<MyOutputRecord> listCoolPeople() {
+            return Stream.of(
+                    new MyOutputRecord( "Bonnie" ),
+                    new MyOutputRecord( "Clyde" ));
+        }
+
+        @ReadOnlyProcedure
+        public Stream<SomeOtherOutputRecord> listBananaOwningPeople() {
+            return Stream.of(
+                    new SomeOtherOutputRecord( "Jake", 18 ),
+                    new SomeOtherOutputRecord( "Pontus", 2 ));
         }
     }
 
@@ -122,6 +186,18 @@ public class ReflectiveProcedureTest
             return Stream.of(
                     new MyOutputRecord( "Bonnie" ),
                     new MyOutputRecord( "Clyde" ));
+        }
+    }
+
+    public static class PrivateConstructorButNoProcedures
+    {
+        private PrivateConstructorButNoProcedures()
+        {
+
+        }
+
+        public Stream<MyOutputRecord> thisIsNotAProcedure() {
+            return null;
         }
     }
 }
