@@ -21,6 +21,7 @@ package org.neo4j.proc;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayOutputStream;
@@ -34,11 +35,13 @@ import java.util.jar.JarOutputStream;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
+import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.proc.jar.ProcedureJarLoader;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.neo4j.proc.Neo4jTypes.NTInteger;
 import static org.neo4j.proc.ProcedureSignature.procedureSignature;
@@ -46,13 +49,15 @@ import static org.neo4j.proc.ProcedureSignature.procedureSignature;
 public class ProcedureJarLoaderTest
 {
     @Rule public TemporaryFolder tmpdir = new TemporaryFolder();
+    @Rule public ExpectedException exception = ExpectedException.none();
+
+    private final ProcedureJarLoader jarloader = new ProcedureJarLoader( new ReflectiveProcedureCompiler() );
 
     @Test
     public void shouldLoadProcedureFromJar() throws Throwable
     {
         // Given
-        URL jar = createJarFor( ReadOnlyProcedures.class );
-        ProcedureJarLoader jarloader = new ProcedureJarLoader( new ReflectiveProcedureCompiler() );
+        URL jar = createJarFor( ClassWithOneProcedure.class );
 
         // When
         List<Procedure> procedures = jarloader.loadProcedures( jar );
@@ -66,17 +71,49 @@ public class ProcedureJarLoaderTest
                 contains( equalTo( new Object[]{1337L} )) );
     }
 
-    private URL createJarFor( Class<?> target ) throws IOException
+    @Test
+    public void shouldLoadProcedureFromJarWithMultipleProcedureClasses() throws Throwable
     {
-        String fileName = target.getName().replace( ".", "/" ) + ".class";
+        // Given
+        URL jar = createJarFor( ClassWithOneProcedure.class, AnotherProcedure.class, ClassWithNoProcedureAtAll.class );
 
+        // When
+        List<Procedure> procedures = jarloader.loadProcedures( jar );
+
+        // Then
+        List<ProcedureSignature> signatures = procedures.stream().map( Procedure::signature ).collect( toList() );
+        assertThat( signatures, containsInAnyOrder(
+                procedureSignature( "org","neo4j", "proc", "myOtherProcedure" ).out( "someNumber", NTInteger ).build(),
+                procedureSignature( "org","neo4j", "proc", "myProcedure" ).out( "someNumber", NTInteger ).build() ));
+    }
+
+    @Test
+    public void shouldGiveHelpfulErrorOnInvalidProcedure() throws Throwable
+    {
+        // Given
+        URL jar = createJarFor( ClassWithOneProcedure.class, ClassWithInvalidProcedure.class );
+
+        // Expect
+        exception.expect( ProcedureException.class );
+        exception.expectMessage( "A procedure must return a `java.util.stream.Stream`, `ClassWithInvalidProcedure.booleansAreNotAcceptableReturnTypes` returns `boolean`." );
+
+        // When
+        jarloader.loadProcedures( jar );
+    }
+
+    private URL createJarFor( Class<?> ... targets ) throws IOException
+    {
         File f =  tmpdir.newFile( "myJar.jar" );
         try( FileOutputStream fout = new FileOutputStream( f );
              JarOutputStream jarOut = new JarOutputStream(fout) )
         {
-            jarOut.putNextEntry( new ZipEntry( fileName ) );
-            jarOut.write( classCompiledBytes( fileName ) );
-            jarOut.closeEntry();
+            for ( Class<?> target : targets )
+            {
+                String fileName = target.getName().replace( ".", "/" ) + ".class";
+                jarOut.putNextEntry( new ZipEntry( fileName ) );
+                jarOut.write( classCompiledBytes( fileName ) );
+                jarOut.closeEntry();
+            }
         }
         return f.toURI().toURL();
     }
@@ -93,15 +130,41 @@ public class ProcedureJarLoaderTest
         return out.toByteArray();
     }
 
-    public static class ReadOnlyProcedures
+    public static class Output
     {
-        public static class Output
-        {
-            public int someNumber = 1337;
-        }
+        public int someNumber = 1337;
+    }
 
+    public static class ClassWithInvalidProcedure
+    {
+        @ReadOnlyProcedure
+        public boolean booleansAreNotAcceptableReturnTypes()
+        {
+            return false;
+        }
+    }
+
+    public static class ClassWithOneProcedure
+    {
         @ReadOnlyProcedure
         public Stream<Output> myProcedure()
+        {
+            return Stream.of( new Output() );
+        }
+    }
+
+    public static class ClassWithNoProcedureAtAll
+    {
+        void thisMethodIsEntirelyUnrelatedToAllThisExcitement()
+        {
+
+        }
+    }
+
+    public static class AnotherProcedure
+    {
+        @ReadOnlyProcedure
+        public Stream<Output> myOtherProcedure()
         {
             return Stream.of( new Output() );
         }
