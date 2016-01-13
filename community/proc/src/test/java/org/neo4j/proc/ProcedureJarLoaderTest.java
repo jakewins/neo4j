@@ -24,19 +24,13 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
-import java.util.jar.JarOutputStream;
+import java.util.Random;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
 
 import org.neo4j.kernel.api.exceptions.ProcedureException;
-import org.neo4j.proc.jar.ProcedureJarLoader;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -75,7 +69,7 @@ public class ProcedureJarLoaderTest
     public void shouldLoadProcedureFromJarWithMultipleProcedureClasses() throws Throwable
     {
         // Given
-        URL jar = createJarFor( ClassWithOneProcedure.class, AnotherProcedure.class, ClassWithNoProcedureAtAll.class );
+        URL jar = createJarFor( ClassWithOneProcedure.class, ClassWithAnotherProcedure.class, ClassWithNoProcedureAtAll.class );
 
         // When
         List<Procedure> procedures = jarloader.loadProcedures( jar );
@@ -101,33 +95,26 @@ public class ProcedureJarLoaderTest
         jarloader.loadProcedures( jar );
     }
 
-    private URL createJarFor( Class<?> ... targets ) throws IOException
+    @Test
+    public void shouldLoadProceduresFromDirectory() throws Throwable
     {
-        File f =  tmpdir.newFile( "myJar.jar" );
-        try( FileOutputStream fout = new FileOutputStream( f );
-             JarOutputStream jarOut = new JarOutputStream(fout) )
-        {
-            for ( Class<?> target : targets )
-            {
-                String fileName = target.getName().replace( ".", "/" ) + ".class";
-                jarOut.putNextEntry( new ZipEntry( fileName ) );
-                jarOut.write( classCompiledBytes( fileName ) );
-                jarOut.closeEntry();
-            }
-        }
-        return f.toURI().toURL();
+        // Given
+        createJarFor( ClassWithOneProcedure.class );
+        createJarFor( ClassWithAnotherProcedure.class );
+
+        // When
+        List<Procedure> procedures = jarloader.loadProceduresFromDir( tmpdir.getRoot() );
+
+        // Then
+        List<ProcedureSignature> signatures = procedures.stream().map( Procedure::signature ).collect( toList() );
+        assertThat( signatures, containsInAnyOrder(
+                procedureSignature( "org","neo4j", "proc", "myOtherProcedure" ).out( "someNumber", NTInteger ).build(),
+                procedureSignature( "org","neo4j", "proc", "myProcedure" ).out( "someNumber", NTInteger ).build() ));
     }
 
-    private byte[] classCompiledBytes( String fileName ) throws IOException
+    public URL createJarFor( Class<?> ... targets ) throws IOException
     {
-        InputStream in = getClass().getClassLoader().getResourceAsStream( fileName );
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        while ( in.available() > 0 )
-        {
-            out.write( in.read() );
-        }
-
-        return out.toByteArray();
+        return new JarBuilder().createJarFor( tmpdir.newFile( new Random().nextInt() + ".jar" ), targets );
     }
 
     public static class Output
@@ -161,7 +148,7 @@ public class ProcedureJarLoaderTest
         }
     }
 
-    public static class AnotherProcedure
+    public static class ClassWithAnotherProcedure
     {
         @ReadOnlyProcedure
         public Stream<Output> myOtherProcedure()

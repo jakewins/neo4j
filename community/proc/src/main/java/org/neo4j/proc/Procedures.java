@@ -19,6 +19,8 @@
  */
 package org.neo4j.proc;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.api.exceptions.KernelException;
@@ -46,6 +48,20 @@ public class Procedures
     public synchronized void register( Class<?> proc ) throws KernelException
     {
         for ( Procedure procedure : compiler.compile( proc ) )
+        {
+            register( procedure );
+        }
+    }
+
+    /**
+     * Find all procedure-annotated methods in jar files in the given directory and register them.
+     * @param dir directory to look for jarfiles in
+     * @throws IOException
+     * @throws KernelException
+     */
+    public synchronized void loadFromDirectory( File dir ) throws IOException, KernelException
+    {
+        for ( Procedure procedure : new ProcedureJarLoader( compiler ).loadProceduresFromDir( dir ) )
         {
             register( procedure );
         }

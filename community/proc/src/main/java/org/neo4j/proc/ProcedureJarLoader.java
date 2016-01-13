@@ -17,23 +17,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.proc.jar;
+package org.neo4j.proc;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.neo4j.collection.PrefetchingRawIterator;
 import org.neo4j.collection.RawIterator;
 import org.neo4j.kernel.api.exceptions.KernelException;
-import org.neo4j.proc.Procedure;
-import org.neo4j.proc.ReflectiveProcedureCompiler;
+
+import static java.util.stream.Collectors.toList;
 
 /**
- * Loads
+ * Given the location of a jarfile, reads the contents of the jar and returns compiled {@link Procedure} instances.
  */
 public class ProcedureJarLoader
 {
@@ -46,17 +51,54 @@ public class ProcedureJarLoader
 
     public List<Procedure> loadProcedures( URL jar ) throws IOException, KernelException
     {
-        LinkedList<Procedure> procedures = new LinkedList<>();
-        RawIterator<Class<?>,IOException> classes = listClassesIn( jar );
+        return loadProcedures( jar, new URLClassLoader( new URL[]{jar}, this.getClass().getClassLoader()), new LinkedList<>() );
+    }
+
+    public List<Procedure> loadProceduresFromDir( File root ) throws IOException, KernelException
+    {
+        if(!root.exists())
+        {
+            return Collections.emptyList();
+        }
+
+        LinkedList<Procedure> out = new LinkedList<>();
+
+        List<URL> list = Stream.of( root.listFiles( ( dir, name ) -> name.endsWith( ".jar" ) ) ).map( this::toURL ).collect( toList() );
+        URL[] jarFiles = list.toArray(new URL[list.size()]);
+
+        URLClassLoader loader = new URLClassLoader( jarFiles, this.getClass().getClassLoader());
+
+        for ( URL jarFile : jarFiles )
+        {
+            loadProcedures( jarFile, loader, out );
+        }
+        return out;
+    }
+
+    private List<Procedure> loadProcedures( URL jar, ClassLoader loader, List<Procedure> target ) throws IOException, KernelException
+    {
+        RawIterator<Class<?>,IOException> classes = listClassesIn( jar, loader );
         while(classes.hasNext())
         {
             Class<?> next = classes.next();
-            procedures.addAll( compiler.compile( next ) );
+            target.addAll( compiler.compile( next ) );
         }
-        return procedures;
+        return target;
     }
 
-    private RawIterator<Class<?>, IOException> listClassesIn( URL jar ) throws IOException
+    private URL toURL( File f )
+    {
+        try
+        {
+            return f.toURI().toURL();
+        }
+        catch ( MalformedURLException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    private RawIterator<Class<?>, IOException> listClassesIn( URL jar, ClassLoader loader ) throws IOException
     {
         ZipInputStream zip = new ZipInputStream(jar.openStream());
 
@@ -81,7 +123,7 @@ public class ProcedureJarLoader
 
                         try
                         {
-                            return Class.forName( className );
+                            return loader.loadClass( className );
                         }
                         catch ( ClassNotFoundException e1 )
                         {
