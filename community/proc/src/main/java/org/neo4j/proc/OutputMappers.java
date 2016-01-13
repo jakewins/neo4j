@@ -23,7 +23,11 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -39,17 +43,17 @@ import static java.util.stream.Collectors.toList;
  * Takes user-defined record classes, and does two things: Describe the class as a {@link ProcedureSignature}, and provide a mechanism to convert
  * an instance of the class to Neo4j-typed Object[].
  */
-public class ClassRecordMappers
+public class OutputMappers
 {
     /**
      * A compiled mapper, takes an instance of a java class, and converts it to an Object[] matching the specified {@link #signature()}.
      */
-    public static class ClassRecordMapper
+    public static class OutputMapper
     {
         private final List<FieldSignature> signature;
         private final FieldMapper[] fieldMappers;
 
-        public ClassRecordMapper( FieldSignature[] signature, FieldMapper[] fieldMappers )
+        public OutputMapper( FieldSignature[] signature, FieldMapper[] fieldMappers )
         {
             this.signature = asList( signature );
             this.fieldMappers = fieldMappers;
@@ -101,7 +105,30 @@ public class ClassRecordMappers
     private final Lookup lookup = MethodHandles.lookup();
     private final TypeMappers typeMappers = new TypeMappers();
 
-    public ClassRecordMapper mapper( Class<?> userClass ) throws ProcedureException
+
+    /**
+     * Build an output mapper for the return type of a given method.
+     * @param method the procedure method
+     * @return
+     * @throws ProcedureException
+     */
+    public OutputMapper mapper( Method method ) throws ProcedureException
+    {
+        Class<?> cls = method.getReturnType();
+        if( cls != Stream.class )
+        {
+            throw new ProcedureException( Status.Procedure.FailedRegistration,
+                    "A procedure must return a `java.util.stream.Stream`, `%s.%s` returns `%s`.",
+                    method.getDeclaringClass().getSimpleName(), method.getName(), cls.getSimpleName() );
+        }
+
+        ParameterizedType genType = (ParameterizedType) method.getGenericReturnType();
+        Type recordType = genType.getActualTypeArguments()[0];
+
+        return mapper( (Class<?>) recordType );
+    }
+
+    public OutputMapper mapper( Class<?> userClass ) throws ProcedureException
     {
         List<Field> fields = instanceFields( userClass );
         FieldSignature[] signature = new FieldSignature[fields.size()];
@@ -134,7 +161,7 @@ public class ClassRecordMappers
             }
         }
 
-        return new ClassRecordMapper( signature, fieldMappers );
+        return new OutputMapper( signature, fieldMappers );
     }
 
     private List<Field> instanceFields( Class<?> userClass )

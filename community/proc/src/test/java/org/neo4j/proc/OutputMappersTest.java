@@ -24,13 +24,13 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import org.neo4j.kernel.api.exceptions.ProcedureException;
-import org.neo4j.proc.ClassRecordMappers.ClassRecordMapper;
+import org.neo4j.proc.OutputMappers.OutputMapper;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
-public class ClassRecordMappersTest
+public class OutputMappersTest
 {
     @Rule
     public ExpectedException exception = ExpectedException.none();
@@ -71,7 +71,7 @@ public class ClassRecordMappersTest
     public void shouldMapSimpleRecordWithString() throws Throwable
     {
         // When
-        ClassRecordMapper mapper = new ClassRecordMappers().mapper( SingleStringFieldRecord.class );
+        OutputMapper mapper = new OutputMappers().mapper( SingleStringFieldRecord.class );
 
         // Then
         assertThat(
@@ -88,7 +88,7 @@ public class ClassRecordMappersTest
     public void shouldSkipStaticFields() throws Throwable
     {
         // When
-        ClassRecordMapper mapper = new ClassRecordMappers().mapper( RecordWithStaticFields.class );
+        OutputMapper mapper = new OutputMappers().mapper( RecordWithStaticFields.class );
 
         // Then
         assertThat(
@@ -106,10 +106,10 @@ public class ClassRecordMappersTest
     {
         // Expect
         exception.expect( ProcedureException.class );
-        exception.expectMessage( "Field `wat` in record `UnmappableRecord` cannot be converted to a Neo4j type: Don't know how to map `class org.neo4j.proc.ClassRecordMappersTest$UnmappableRecord`" );
+        exception.expectMessage( "Field `wat` in record `UnmappableRecord` cannot be converted to a Neo4j type: Don't know how to map `class org.neo4j.proc.OutputMappersTest$UnmappableRecord`" );
 
         // When
-        new ClassRecordMappers().mapper( UnmappableRecord.class );
+        new OutputMappers().mapper( UnmappableRecord.class );
     }
 
     @Test
@@ -120,6 +120,6 @@ public class ClassRecordMappersTest
         exception.expectMessage( "Field `wat` in record `RecordWithPrivateField` cannot be accessed. Please ensure the field is marked as `public`." );
 
         // When
-        new ClassRecordMappers().mapper( RecordWithPrivateField.class );
+        new OutputMappers().mapper( RecordWithPrivateField.class );
     }
 }

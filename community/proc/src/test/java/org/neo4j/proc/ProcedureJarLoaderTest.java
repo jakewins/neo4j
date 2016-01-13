@@ -66,6 +66,27 @@ public class ProcedureJarLoaderTest
     }
 
     @Test
+    public void shouldLoadProcedureWithArgumentFromJar() throws Throwable
+    {
+        // Given
+        URL jar = createJarFor( ClassWithProcedureWithArgument.class );
+
+        // When
+        List<Procedure> procedures = jarloader.loadProcedures( jar );
+
+        // Then
+        List<ProcedureSignature> signatures = procedures.stream().map( Procedure::signature ).collect( toList() );
+        assertThat( signatures, contains(
+                procedureSignature( "org","neo4j", "proc", "myProcedure" )
+                        .in( "value", NTInteger )
+                        .out( "someNumber", NTInteger )
+                        .build() ));
+
+        assertThat( procedures.get( 0 ).apply( new Procedure.BasicContext(), new Object[]{42} ).collect( toList() ),
+                contains( equalTo( new Object[]{42L} )) );
+    }
+
+    @Test
     public void shouldLoadProcedureFromJarWithMultipleProcedureClasses() throws Throwable
     {
         // Given
@@ -120,6 +141,16 @@ public class ProcedureJarLoaderTest
     public static class Output
     {
         public int someNumber = 1337;
+
+        public Output()
+        {
+
+        }
+
+        public Output( int anotherNumber )
+        {
+            this.someNumber = anotherNumber;
+        }
     }
 
     public static class ClassWithInvalidProcedure
@@ -154,6 +185,15 @@ public class ProcedureJarLoaderTest
         public Stream<Output> myOtherProcedure()
         {
             return Stream.of( new Output() );
+        }
+    }
+
+    public static class ClassWithProcedureWithArgument
+    {
+        @ReadOnlyProcedure
+        public Stream<Output> myProcedure(@FieldName( "value" ) int value)
+        {
+            return Stream.of( new Output(value) );
         }
     }
 }

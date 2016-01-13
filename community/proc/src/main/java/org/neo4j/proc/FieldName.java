@@ -17,31 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.harness.internal;
+package org.neo4j.proc;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.api.exceptions.KernelException;
-import org.neo4j.proc.Procedures;
-
-public class Procs
+@Target( ElementType.PARAMETER )
+@Retention( RetentionPolicy.RUNTIME )
+public @interface FieldName
 {
-    private final List<Class<?>> procs = new LinkedList<>();
-
-    public void add( Class<?> procedureClass )
-    {
-        this.procs.add( procedureClass );
-    }
-
-    @SuppressWarnings( "deprecation" )
-    public void applyTo( GraphDatabaseAPI graph ) throws KernelException
-    {
-        Procedures procedures = graph.getDependencyResolver().resolveDependency( Procedures.class );
-        for ( Class<?> cls : procs )
-        {
-            procedures.register( cls );
-        }
-    }
+    String value();
 }

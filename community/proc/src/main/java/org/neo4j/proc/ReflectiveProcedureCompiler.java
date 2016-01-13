@@ -22,8 +22,6 @@ package org.neo4j.proc;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,7 +30,8 @@ import java.util.stream.Stream;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.proc.ClassRecordMappers.ClassRecordMapper;
+import org.neo4j.proc.InputMappers.InputMapper;
+import org.neo4j.proc.OutputMappers.OutputMapper;
 import org.neo4j.proc.ProcedureSignature.ProcedureName;
 
 import static java.util.Arrays.asList;
@@ -44,7 +43,8 @@ import static java.util.Collections.emptyList;
 public class ReflectiveProcedureCompiler
 {
     private final MethodHandles.Lookup lookup = MethodHandles.lookup();
-    private final ClassRecordMappers recordMappers = new ClassRecordMappers();
+    private final OutputMappers outputMappers = new OutputMappers();
+    private final InputMappers inputMappers = new InputMappers();
 
     public List<Procedure> compile( Class<?> procDefinition ) throws KernelException
     {
@@ -75,7 +75,8 @@ public class ReflectiveProcedureCompiler
         }
         catch ( Exception e )
         {
-            throw new ProcedureException( Status.Procedure.FailedRegistration, e, "Failed to compile procedure defined in `%s`: %s", procDefinition.getSimpleName(), e.getMessage() );
+            throw new ProcedureException( Status.Procedure.FailedRegistration, e,
+                    "Failed to compile procedure defined in `%s`: %s", procDefinition.getSimpleName(), e.getMessage() );
         }
     }
 
@@ -83,10 +84,12 @@ public class ReflectiveProcedureCompiler
             throws ProcedureException, IllegalAccessException
     {
         ProcedureName procName = extractName( procDefinition, method );
-        ClassRecordMapper outputMapper = outputMapper( procDefinition, method );
+
+        InputMapper inputMapper = inputMappers.mapper( method );
+        OutputMapper outputMapper = outputMappers.mapper( method );
         MethodHandle procedureMethod = lookup.unreflect( method );
 
-        ProcedureSignature signature = new ProcedureSignature( procName, emptyList(), outputMapper.signature() );
+        ProcedureSignature signature = new ProcedureSignature( procName, inputMapper.signature(), outputMapper.signature() );
 
         return new ReflectiveProcedure( signature, constructor, procedureMethod, outputMapper );
     }
@@ -105,22 +108,6 @@ public class ReflectiveProcedureCompiler
         }
     }
 
-    private ClassRecordMapper outputMapper( Class<?> procDefinition, Method method ) throws ProcedureException
-    {
-        Class<?> cls = method.getReturnType();
-        if( cls != Stream.class )
-        {
-            throw new ProcedureException( Status.Procedure.FailedRegistration,
-                    "A procedure must return a `java.util.stream.Stream`, `%s.%s` returns `%s`.",
-                    procDefinition.getSimpleName(), method.getName(), cls.getSimpleName() );
-        }
-
-        ParameterizedType genType = (ParameterizedType) method.getGenericReturnType();
-        Type recordType = genType.getActualTypeArguments()[0];
-
-        return recordMappers.mapper( (Class<?>) recordType );
-    }
-
     private ProcedureName extractName( Class<?> procDefinition, Method m )
     {
         String[] namespace = procDefinition.getPackage().getName().split( "\\." );
@@ -133,14 +120,17 @@ public class ReflectiveProcedureCompiler
         private final ProcedureSignature signature;
         private final MethodHandle constructor;
         private final MethodHandle procedureMethod;
-        private final ClassRecordMapper outputMapper;
+        private final OutputMapper outputMapper;
+        private Object[] args;
 
-        public ReflectiveProcedure( ProcedureSignature signature, MethodHandle constructor, MethodHandle procedureMethod, ClassRecordMapper outputMapper )
+        public ReflectiveProcedure( ProcedureSignature signature, MethodHandle constructor, MethodHandle procedureMethod, OutputMapper outputMapper )
         {
             this.signature = signature;
             this.constructor = constructor;
             this.procedureMethod = procedureMethod;
             this.outputMapper = outputMapper;
+            //args are instance + input
+            this.args = new Object[signature.inputSignature().size() + 1];
         }
 
         @Override
@@ -157,13 +147,21 @@ public class ReflectiveProcedureCompiler
             try
             {
                 Object cls = constructor.invoke();
-                Stream<?> out = (Stream<?>) procedureMethod.invoke( cls );
+                setArgs( cls, input );
+                Stream<?> out = (Stream<?>) procedureMethod.invokeWithArguments( args );
                 return out.map( outputMapper::apply );
             }
             catch ( Throwable throwable )
             {
                 throw new ProcedureException( Status.Procedure.CallFailed, throwable, "Failed to invoke procedure." ); // TODO
             }
+        }
+
+        //this is most probably premature optimization
+        private void setArgs( Object cls, Object[] input )
+        {
+            args[0] = cls;
+            System.arraycopy( input, 0, args, 1, input.length );
         }
     }
 }
