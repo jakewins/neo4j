@@ -64,13 +64,7 @@ public class ReflectiveProcedureCompiler
             ArrayList<Procedure> out = new ArrayList<>( procedureMethods.size() );
             for ( Method method : procedureMethods )
             {
-                ProcedureName procName = extractName( procDefinition, method );
-                ClassRecordMapper outputMapper = outputMapper( procDefinition, method );
-                MethodHandle procedureMethod = lookup.unreflect( method );
-
-                ProcedureSignature signature = new ProcedureSignature( procName, emptyList(), outputMapper.signature() );
-
-                out.add( new ReflectiveProcedure( signature, constructor, procedureMethod, outputMapper ) );
+                out.add( compileProcedure( procDefinition, constructor, method ) );
             }
             out.sort( (a,b) -> a.signature().name().toString().compareTo( b.signature().name().toString() ) );
             return out;
@@ -83,6 +77,18 @@ public class ReflectiveProcedureCompiler
         {
             throw new ProcedureException( Status.Procedure.FailedRegistration, e, "Failed to compile procedure defined in `%s`: %s", procDefinition.getSimpleName(), e.getMessage() );
         }
+    }
+
+    private ReflectiveProcedure compileProcedure( Class<?> procDefinition, MethodHandle constructor, Method method )
+            throws ProcedureException, IllegalAccessException
+    {
+        ProcedureName procName = extractName( procDefinition, method );
+        ClassRecordMapper outputMapper = outputMapper( procDefinition, method );
+        MethodHandle procedureMethod = lookup.unreflect( method );
+
+        ProcedureSignature signature = new ProcedureSignature( procName, emptyList(), outputMapper.signature() );
+
+        return new ReflectiveProcedure( signature, constructor, procedureMethod, outputMapper );
     }
 
     private MethodHandle constructor( Class<?> procDefinition ) throws ProcedureException

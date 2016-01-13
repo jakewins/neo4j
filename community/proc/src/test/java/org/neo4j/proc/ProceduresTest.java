@@ -31,6 +31,7 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.proc.Neo4jTypes.NTAny;
 import static org.neo4j.proc.Procedure.Key.key;
 import static org.neo4j.proc.ProcedureSignature.procedureSignature;
 
@@ -103,6 +104,30 @@ public class ProceduresTest
     }
 
     @Test
+    public void shouldNotAllowDuplicateFieldNamesInInput() throws Throwable
+    {
+        // Expect
+        exception.expect( ProcedureException.class );
+        exception.expectMessage( "Procedure `asd(a :: Any, a :: Any) : ()` cannot be registered, because it contains a duplicated input field, 'a'. " +
+                                 "You need to rename or remove one of the input fields." );
+
+        // When
+        procs.register( procedureWithSignature( procedureSignature( "asd" ).in( "a", NTAny ).in( "a", NTAny ).build() ) );
+    }
+
+    @Test
+    public void shouldNotAllowDuplicateFieldNamesInOutput() throws Throwable
+    {
+        // Expect
+        exception.expect( ProcedureException.class );
+        exception.expectMessage( "Procedure `asd() : (a :: Any, a :: Any)` cannot be registered, because it contains a duplicated output field, 'a'. " +
+                                 "You need to rename or remove one of the input fields." );
+
+        // When
+        procs.register( procedureWithSignature( procedureSignature( "asd" ).out( "a", NTAny ).out( "a", NTAny ).build() ) );
+    }
+
+    @Test
     public void shouldSignalNonExistantProcedure() throws Throwable
     {
         // Expect
@@ -137,5 +162,17 @@ public class ProceduresTest
 
         // Then
         assertThat( result.collect( toList() ), contains( equalTo( new Object[]{ "hello, world" } ) ) );
+    }
+
+    private Procedure.BasicProcedure procedureWithSignature( final ProcedureSignature signature )
+    {
+        return new Procedure.BasicProcedure(signature)
+        {
+            @Override
+            public Stream<Object[]> apply( Context ctx, Object[] input ) throws ProcedureException
+            {
+                return null;
+            }
+        };
     }
 }

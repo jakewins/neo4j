@@ -20,7 +20,10 @@
 package org.neo4j.proc;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.api.exceptions.ProcedureException;
@@ -38,9 +41,28 @@ public class ProcedureRegistry
     {
         ProcedureSignature signature = proc.signature();
         ProcedureSignature.ProcedureName name = signature.name();
+
+        validateSignature( signature, signature.inputSignature(), "input" );
+        validateSignature( signature, signature.outputSignature(), "output" );
+
         if( procedures.putIfAbsent( name, proc ) != null )
         {
             throw new ProcedureException( Status.Procedure.FailedRegistration, "Unable to register procedure, because the name `%s` is already in use.", name );
+        }
+    }
+
+    private void validateSignature( ProcedureSignature signature, List<ProcedureSignature.FieldSignature> fields, String fieldType )
+            throws ProcedureException
+    {
+        Set<String> names = new HashSet<>();
+        for ( ProcedureSignature.FieldSignature field : fields )
+        {
+            if( !names.add( field.name() ) )
+            {
+                throw new ProcedureException(  Status.Procedure.FailedRegistration,
+                        "Procedure `%s` cannot be registered, because it contains a duplicated "+fieldType+" field, '%s'. " +
+                        "You need to rename or remove one of the input fields.", signature.toString(), field.name() );
+            }
         }
     }
 

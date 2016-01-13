@@ -28,6 +28,7 @@ import java.util.List;
 import org.neo4j.proc.Neo4jTypes.AnyType;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 
 /**
  * This describes the signature of a procedure, made up of its namespace, name, and input/output description.
@@ -128,6 +129,12 @@ public class ProcedureSignature
         }
 
         @Override
+        public String toString()
+        {
+            return String.format("%s :: %s", name, type);
+        }
+
+        @Override
         public boolean equals( Object o )
         {
             if ( this == o ) { return true; }
@@ -152,8 +159,8 @@ public class ProcedureSignature
     public ProcedureSignature( ProcedureName name, List<FieldSignature> inputSignature, List<FieldSignature> outputSignature )
     {
         this.name = name;
-        this.inputSignature = inputSignature;
-        this.outputSignature = outputSignature;
+        this.inputSignature = unmodifiableList(inputSignature);
+        this.outputSignature = unmodifiableList(outputSignature);
     }
 
     public ProcedureSignature( ProcedureName name )
@@ -187,7 +194,6 @@ public class ProcedureSignature
         if ( !name.equals( that.name ) ) { return false; }
         if ( inputSignature != null ? !inputSignature.equals( that.inputSignature ) : that.inputSignature != null ) { return false; }
         return !(outputSignature != null ? !outputSignature.equals( that.outputSignature ) : that.outputSignature != null);
-
     }
 
     @Override
@@ -199,8 +205,8 @@ public class ProcedureSignature
     @Override
     public String toString()
     {
-        String strInSig = inputSignature == null ? "..." : iterableToString( typesOf( inputSignature ), ", " );
-        String strOutSig = outputSignature == null ? "..." : iterableToString( typesOf( outputSignature ), ", " );
+        String strInSig = inputSignature == null ? "..." : iterableToString( inputSignature, ", " );
+        String strOutSig = outputSignature == null ? "..." : iterableToString( outputSignature, ", " );
         return String.format( "%s(%s) : (%s)", name, strInSig, strOutSig );
     }
 
