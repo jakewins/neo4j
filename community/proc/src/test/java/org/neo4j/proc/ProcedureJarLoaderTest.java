@@ -82,7 +82,7 @@ public class ProcedureJarLoaderTest
                         .out( "someNumber", NTInteger )
                         .build() ));
 
-        assertThat( procedures.get( 0 ).apply( new Procedure.BasicContext(), new Object[]{42} ).collect( toList() ),
+        assertThat( procedures.get( 0 ).apply( new Procedure.BasicContext(), new Object[]{42L} ).collect( toList() ),
                 contains( equalTo( new Object[]{42L} )) );
     }
 

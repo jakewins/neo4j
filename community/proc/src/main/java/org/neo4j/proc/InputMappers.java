@@ -21,25 +21,48 @@ package org.neo4j.proc;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.proc.ProcedureSignature.FieldSignature;
+import org.neo4j.proc.TypeMappers.ToNeoValue;
+import org.neo4j.proc.TypeMappers.ToProcedureValue;
+
+import static java.util.Arrays.asList;
 
 public class InputMappers
 {
     //TODO this need to be some sort of singleton injected here
     private final TypeMappers typeMappers = new TypeMappers();
 
+    /**
+     * Converts arguments coming from Neo4j to match the native signature of the procedure.
+     */
     public static class InputMapper
     {
         private final List<FieldSignature> signature;
+        private final ToProcedureValue[] mappers;
 
-        public InputMapper( List<FieldSignature> signature )
+
+        public InputMapper( FieldSignature[] signature, ToProcedureValue[] mappers )
         {
-            this.signature = signature;
+            this.signature = asList( signature );
+            this.mappers = mappers;
+        }
+
+        /**
+         * In-place type conversion of args to match what is declared in the native procedure.
+         * @param args The arguments to be converted
+         * @throws ProcedureException If the conversion is not possible.
+         */
+        public void apply( Object[] args ) throws ProcedureException
+        {
+            assert args.length == mappers.length;
+            for ( int i = 0; i < args.length; i++ )
+            {
+                args[i] = mappers[i].apply( args[i] );
+            }
         }
 
         public List<FieldSignature> signature()
@@ -51,8 +74,8 @@ public class InputMappers
     public InputMapper mapper( Method method ) throws ProcedureException
     {
         Parameter[] params = method.getParameters();
-        List<FieldSignature> signature = new ArrayList<>( params.length );
-
+        FieldSignature[] signature = new FieldSignature[params.length];
+        ToProcedureValue[] mappers = new ToProcedureValue[params.length];
         for ( int i = 0; i < params.length; i++ )
         {
             Parameter param = params[i];
@@ -68,8 +91,9 @@ public class InputMappers
 
             try
             {
-                TypeMappers.ToNeoValue neoValue = typeMappers.javaToNeo( param.getType() );
-                signature.add( new FieldSignature( name, neoValue.type() ) );
+                ToNeoValue neoValue = typeMappers.javaToNeo( param.getType() );
+                mappers[i]= typeMappers.neoToJava( param.getParameterizedType() );
+                signature[i] = new FieldSignature( name, neoValue.type() );
             }
             catch ( ProcedureException e )
             {
@@ -80,6 +104,6 @@ public class InputMappers
 
         }
 
-        return new InputMapper( signature );
+        return new InputMapper( signature, mappers );
     }
 }

@@ -105,11 +105,10 @@ public class OutputMappers
     private final Lookup lookup = MethodHandles.lookup();
     private final TypeMappers typeMappers = new TypeMappers();
 
-
     /**
      * Build an output mapper for the return type of a given method.
      * @param method the procedure method
-     * @return
+     * @return an outputmapper for the return type of the method.
      * @throws ProcedureException
      */
     public OutputMapper mapper( Method method ) throws ProcedureException

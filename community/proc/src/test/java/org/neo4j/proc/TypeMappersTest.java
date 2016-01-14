@@ -30,6 +30,7 @@ import java.util.Map;
 import org.neo4j.proc.TypeMappers.ToNeoValue;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertEquals;
 
 @RunWith( Parameterized.class )
@@ -60,7 +61,7 @@ public class TypeMappersTest
             new Object[]{ Map.class, Neo4jTypes.NTMap, null, null },
 
             // TODO: Expand on this to pull out the generic type of the lists (which you can do from the field ParameterizedType info) to get the inner type
-            new Object[]{ List.class, Neo4jTypes.NTList( Neo4jTypes.NTAny ), asList(), asList() },
+            new Object[]{ List.class, Neo4jTypes.NTList( Neo4jTypes.NTAny ), emptyList(), emptyList() },
             new Object[]{ List.class, Neo4jTypes.NTList( Neo4jTypes.NTAny ), asList(1,2,3,4) , asList(1,2,3,4) },
             new Object[]{ List.class, Neo4jTypes.NTList( Neo4jTypes.NTAny ), asList(asList(1,2), asList("three", "four")) , asList(asList(1,2), asList("three", "four")) },
             new Object[]{ List.class, Neo4jTypes.NTList( Neo4jTypes.NTAny ), null, null },
@@ -150,4 +151,7 @@ public class TypeMappersTest
         // Then
         assertEquals( expectecNeoValue, converted );
     }
+
+
+
 }

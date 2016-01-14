@@ -91,7 +91,7 @@ public class ReflectiveProcedureCompiler
 
         ProcedureSignature signature = new ProcedureSignature( procName, inputMapper.signature(), outputMapper.signature() );
 
-        return new ReflectiveProcedure( signature, constructor, procedureMethod, outputMapper );
+        return new ReflectiveProcedure( signature, constructor, procedureMethod, inputMapper, outputMapper );
     }
 
     private MethodHandle constructor( Class<?> procDefinition ) throws ProcedureException
@@ -120,17 +120,18 @@ public class ReflectiveProcedureCompiler
         private final ProcedureSignature signature;
         private final MethodHandle constructor;
         private final MethodHandle procedureMethod;
+        private final InputMapper inputMapper;
         private final OutputMapper outputMapper;
-        private Object[] args;
 
-        public ReflectiveProcedure( ProcedureSignature signature, MethodHandle constructor, MethodHandle procedureMethod, OutputMapper outputMapper )
+
+        public ReflectiveProcedure( ProcedureSignature signature, MethodHandle constructor,
+                MethodHandle procedureMethod, InputMapper inputMapper, OutputMapper outputMapper )
         {
             this.signature = signature;
             this.constructor = constructor;
             this.procedureMethod = procedureMethod;
+            this.inputMapper = inputMapper;
             this.outputMapper = outputMapper;
-            //args are instance + input
-            this.args = new Object[signature.inputSignature().size() + 1];
         }
 
         @Override
@@ -147,7 +148,11 @@ public class ReflectiveProcedureCompiler
             try
             {
                 Object cls = constructor.invoke();
-                setArgs( cls, input );
+                Object[] args = new Object[signature.inputSignature().size() + 1];
+                args[0] = cls;
+                //in place converts to correct type
+                inputMapper.apply( input );
+                System.arraycopy( input, 0, args, 1, input.length );
                 Stream<?> out = (Stream<?>) procedureMethod.invokeWithArguments( args );
                 return out.map( outputMapper::apply );
             }
@@ -155,13 +160,6 @@ public class ReflectiveProcedureCompiler
             {
                 throw new ProcedureException( Status.Procedure.CallFailed, throwable, "Failed to invoke procedure." ); // TODO
             }
-        }
-
-        //this is most probably premature optimization
-        private void setArgs( Object cls, Object[] input )
-        {
-            args[0] = cls;
-            System.arraycopy( input, 0, args, 1, input.length );
         }
     }
 }
