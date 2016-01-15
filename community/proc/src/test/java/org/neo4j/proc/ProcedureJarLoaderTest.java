@@ -45,7 +45,8 @@ public class ProcedureJarLoaderTest
     @Rule public TemporaryFolder tmpdir = new TemporaryFolder();
     @Rule public ExpectedException exception = ExpectedException.none();
 
-    private final ProcedureJarLoader jarloader = new ProcedureJarLoader( new ReflectiveProcedureCompiler() );
+    private final ProcedureJarLoader jarloader =
+            new ProcedureJarLoader( new ReflectiveProcedureCompiler( new TypeMappers() ) );
 
     @Test
     public void shouldLoadProcedureFromJar() throws Throwable

@@ -26,6 +26,7 @@ import org.junit.rules.ExpectedException;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 
 import static java.util.stream.Collectors.toList;
@@ -44,7 +45,7 @@ public class ReflectiveProcedureTest
     public void shouldCompileProcedure() throws Throwable
     {
         // When
-        List<Procedure> procedures = new ReflectiveProcedureCompiler().compile( SingleReadOnlyProcedure.class );
+        List<Procedure> procedures = compile(SingleReadOnlyProcedure.class );
 
         // Then
         assertEquals( 1, procedures.size() );
@@ -54,11 +55,12 @@ public class ReflectiveProcedureTest
                         .build() ));
     }
 
+
     @Test
     public void shouldRunSimpleReadOnlyProcedure() throws Throwable
     {
         // Given
-        Procedure proc = new ReflectiveProcedureCompiler().compile( SingleReadOnlyProcedure.class ).get( 0 );
+        Procedure proc = compile( SingleReadOnlyProcedure.class ).get( 0 );
 
         // When
         Stream<Object[]> out = proc.apply( new Procedure.BasicContext(), new Object[0] );
@@ -74,7 +76,7 @@ public class ReflectiveProcedureTest
     public void shouldIgnoreClassesWithNoProcedures() throws Throwable
     {
         // When
-        List<Procedure> procedures = new ReflectiveProcedureCompiler().compile( PrivateConstructorButNoProcedures.class );
+        List<Procedure> procedures = compile( PrivateConstructorButNoProcedures.class );
 
         // Then
         assertEquals( 0, procedures.size() );
@@ -84,7 +86,7 @@ public class ReflectiveProcedureTest
     public void shouldRunClassWithMultipleProceduresDeclared() throws Throwable
     {
         // Given
-        List<Procedure> compiled = new ReflectiveProcedureCompiler().compile( MultiProcedureProcedure.class );
+        List<Procedure> compiled = compile( MultiProcedureProcedure.class );
         Procedure bananaPeople = compiled.get( 0 );
         Procedure coolPeople = compiled.get( 1 );
 
@@ -113,7 +115,7 @@ public class ReflectiveProcedureTest
                                  "Please add a valid, public constructor, recompile the class and try again." );
 
         // When
-        new ReflectiveProcedureCompiler().compile( WierdConstructorProcedure.class );
+        compile( WierdConstructorProcedure.class );
     }
 
     @Test
@@ -125,7 +127,7 @@ public class ReflectiveProcedureTest
                                  "Please add a valid, public constructor, recompile the class and try again." );
 
         // When
-        new ReflectiveProcedureCompiler().compile( PrivateConstructorProcedure.class );
+        compile( PrivateConstructorProcedure.class );
     }
 
     public static class MyOutputRecord
@@ -218,5 +220,10 @@ public class ReflectiveProcedureTest
         public Stream<MyOutputRecord> thisIsNotAProcedure() {
             return null;
         }
+    }
+
+    private List<Procedure> compile(Class<?> clazz) throws KernelException
+    {
+        return new ReflectiveProcedureCompiler(new TypeMappers()).compile( clazz);
     }
 }

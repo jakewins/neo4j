@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 
 import static java.util.stream.Collectors.toList;
@@ -46,7 +47,7 @@ public class ReflectiveProcedureWithArgumentsTest
     public void shouldCompileSimpleProcedure() throws Throwable
     {
         // When
-        List<Procedure> procedures = new ReflectiveProcedureCompiler().compile( ClassWithProcedureWithSimpleArgs.class );
+        List<Procedure> procedures =compile( ClassWithProcedureWithSimpleArgs.class );
 
         // Then
         assertEquals( 1, procedures.size() );
@@ -62,7 +63,7 @@ public class ReflectiveProcedureWithArgumentsTest
     public void shouldRunSimpleProcedure() throws Throwable
     {
         // Given
-        Procedure procedure = new ReflectiveProcedureCompiler().compile( ClassWithProcedureWithSimpleArgs.class ).get(0);
+        Procedure procedure =compile( ClassWithProcedureWithSimpleArgs.class ).get(0);
 
         // When
         Stream<Object[]> out = procedure.apply( new Procedure.BasicContext(), new Object[]{"Pontus", 35L} );
@@ -76,7 +77,7 @@ public class ReflectiveProcedureWithArgumentsTest
     public void shouldRunGenericProcedure() throws Throwable
     {
         // Given
-        Procedure procedure = new ReflectiveProcedureCompiler().compile( ClassWithProcedureWithGenericArgs.class ).get(0);
+        Procedure procedure =compile( ClassWithProcedureWithGenericArgs.class ).get(0);
 
         // When
         Stream<Object[]> out = procedure.apply( new Procedure.BasicContext(), new Object[]{
@@ -101,7 +102,7 @@ public class ReflectiveProcedureWithArgumentsTest
                                  "and try again." );
 
         // When
-        new ReflectiveProcedureCompiler().compile( ClassWithProcedureWithoutAnnotatedArgs.class );
+       compile( ClassWithProcedureWithoutAnnotatedArgs.class );
     }
 
 
@@ -149,5 +150,10 @@ public class ReflectiveProcedureWithArgumentsTest
         {
             return Stream.of( new MyOutputRecord( name + " is " + age + " years old." ));
         }
+    }
+
+    private List<Procedure> compile(Class<?> clazz) throws KernelException
+    {
+        return new ReflectiveProcedureCompiler(new TypeMappers()).compile( clazz);
     }
 }

@@ -45,6 +45,17 @@ import static java.util.stream.Collectors.toList;
  */
 public class OutputMappers
 {
+
+//    public OutputMappers( )
+//    {
+//        this(new TypeMappers());
+//    }
+
+    public OutputMappers( TypeMappers typeMappers )
+    {
+        this.typeMappers = typeMappers;
+    }
+
     /**
      * A compiled mapper, takes an instance of a java class, and converts it to an Object[] matching the specified {@link #signature()}.
      */
@@ -103,7 +114,7 @@ public class OutputMappers
     }
 
     private final Lookup lookup = MethodHandles.lookup();
-    private final TypeMappers typeMappers = new TypeMappers();
+    private final TypeMappers typeMappers;
 
     /**
      * Build an output mapper for the return type of a given method.

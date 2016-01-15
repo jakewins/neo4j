@@ -33,8 +33,12 @@ import static java.util.Arrays.asList;
 
 public class InputMappers
 {
-    //TODO this need to be some sort of singleton injected here
-    private final TypeMappers typeMappers = new TypeMappers();
+    private final TypeMappers typeMappers;
+
+    public InputMappers( TypeMappers typeMappers )
+    {
+        this.typeMappers = typeMappers;
+    }
 
     /**
      * Converts arguments coming from Neo4j to match the native signature of the procedure.

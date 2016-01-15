@@ -77,7 +77,7 @@ public class InputMappersTest
     {
         // When
         Method echo = ClassWithProcedureWithSimpleArgs.class.getMethod( "echo", String.class );
-        InputMappers.InputMapper mapper = new InputMappers().mapper( echo );
+        InputMappers.InputMapper mapper = new InputMappers(new TypeMappers()).mapper( echo );
 
         // THen
         assertThat(mapper.signature(), contains( new ProcedureSignature.FieldSignature("name", Neo4jTypes.NTString)));
@@ -97,7 +97,7 @@ public class InputMappersTest
                                  "`class org.neo4j.proc.InputMappersTest$UnmappableRecord` to `Any`" );
 
         // When
-        new InputMappers().mapper( echo );
+        new InputMappers(new TypeMappers()).mapper( echo );
     }
 
     @Test
@@ -113,6 +113,6 @@ public class InputMappersTest
                                  "try again." );
 
         // When
-        new InputMappers().mapper( echo );
+        new InputMappers(new TypeMappers()).mapper( echo );
     }
 }

@@ -71,7 +71,7 @@ public class OutputMappersTest
     public void shouldMapSimpleRecordWithString() throws Throwable
     {
         // When
-        OutputMapper mapper = new OutputMappers().mapper( SingleStringFieldRecord.class );
+        OutputMapper mapper =mapper( SingleStringFieldRecord.class );
 
         // Then
         assertThat(
@@ -88,7 +88,7 @@ public class OutputMappersTest
     public void shouldSkipStaticFields() throws Throwable
     {
         // When
-        OutputMapper mapper = new OutputMappers().mapper( RecordWithStaticFields.class );
+        OutputMapper mapper =mapper( RecordWithStaticFields.class );
 
         // Then
         assertThat(
@@ -109,7 +109,7 @@ public class OutputMappersTest
         exception.expectMessage( "Field `wat` in record `UnmappableRecord` cannot be converted to a Neo4j type: Don't know how to map `class org.neo4j.proc.OutputMappersTest$UnmappableRecord`" );
 
         // When
-        new OutputMappers().mapper( UnmappableRecord.class );
+       mapper( UnmappableRecord.class );
     }
 
     @Test
@@ -120,6 +120,13 @@ public class OutputMappersTest
         exception.expectMessage( "Field `wat` in record `RecordWithPrivateField` cannot be accessed. Please ensure the field is marked as `public`." );
 
         // When
-        new OutputMappers().mapper( RecordWithPrivateField.class );
+       mapper( RecordWithPrivateField.class );
     }
+
+    private OutputMapper mapper(Class<?> clazz) throws ProcedureException
+    {
+        return new OutputMappers( new TypeMappers() ).mapper(clazz);
+    }
+
+
 }

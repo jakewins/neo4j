@@ -31,6 +31,9 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
 import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -153,10 +156,14 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.proc.Procedures;
+import org.neo4j.proc.TypeMappers.ToNeoTypeMapper;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StoreReadLayer;
 
 import static org.neo4j.kernel.impl.transaction.log.pruning.LogPruneStrategyFactory.fromConfigValue;
+import static org.neo4j.proc.Neo4jTypes.NTNode;
+import static org.neo4j.proc.Neo4jTypes.NTPath;
+import static org.neo4j.proc.Neo4jTypes.NTRelationship;
 
 public class NeoStoreDataSource implements NeoStoresSupplier, Lifecycle, IndexProviders
 {
@@ -801,9 +808,7 @@ public class NeoStoreDataSource implements NeoStoresSupplier, Lifecycle, IndexPr
                 storeLayer, legacyPropertyTrackers, constraintIndexCreator, updateableSchemaState, guard,
                 legacyIndexStore ) );
 
-        Procedures procedures = dependencies.satisfyDependency( new Procedures() );
-        BuiltInProcedures.addTo( procedures );
-        procedures.loadFromDirectory( config.get( GraphDatabaseSettings.plugin_dir ) );
+        Procedures procedures = setupProcedures();
 
         TransactionHooks hooks = new TransactionHooks();
         KernelTransactions kernelTransactions = life.add( new KernelTransactions( locks, constraintIndexCreator,
@@ -844,6 +849,18 @@ public class NeoStoreDataSource implements NeoStoresSupplier, Lifecycle, IndexPr
                 return fileListing;
             }
         };
+    }
+
+    // register graph types, set up built-in procedures and scan for procedures on disk
+    private Procedures setupProcedures() throws KernelException, IOException
+    {
+        Procedures procedures = dependencies.satisfyDependency( new Procedures() );
+        procedures.registerType(Node.class, new ToNeoTypeMapper( NTNode, (v) -> v instanceof Node ? v : null ));
+        procedures.registerType(Relationship.class, new ToNeoTypeMapper( NTRelationship, (v) -> v instanceof Relationship ? v : null ));
+        procedures.registerType(Path.class, new ToNeoTypeMapper( NTPath, (v) -> v instanceof Path ? v : null ));
+        BuiltInProcedures.addTo( procedures );
+        procedures.loadFromDirectory( config.get( GraphDatabaseSettings.plugin_dir ) );
+        return procedures;
     }
 
     // We do this last to ensure no one is cheating with dependency access

@@ -43,8 +43,16 @@ import static java.util.Collections.emptyList;
 public class ReflectiveProcedureCompiler
 {
     private final MethodHandles.Lookup lookup = MethodHandles.lookup();
-    private final OutputMappers outputMappers = new OutputMappers();
-    private final InputMappers inputMappers = new InputMappers();
+    private final OutputMappers outputMappers;
+    private final InputMappers inputMappers;
+
+    public ReflectiveProcedureCompiler( TypeMappers typeMappers )
+    {
+        inputMappers = new InputMappers(typeMappers);
+        outputMappers = new OutputMappers( typeMappers );
+
+    }
+
 
     public List<Procedure> compile( Class<?> procDefinition ) throws KernelException
     {

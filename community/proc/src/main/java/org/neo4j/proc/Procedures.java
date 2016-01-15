@@ -30,7 +30,8 @@ import org.neo4j.kernel.api.exceptions.ProcedureException;
 public class Procedures
 {
     private final ProcedureRegistry registry = new ProcedureRegistry();
-    private final ReflectiveProcedureCompiler compiler = new ReflectiveProcedureCompiler();
+    private final TypeMappers typeMappers = new TypeMappers();
+    private final ReflectiveProcedureCompiler compiler = new ReflectiveProcedureCompiler(typeMappers);
 
     /**
      * Register a new procedure. This method must not be called concurrently with {@link #get(ProcedureSignature.ProcedureName)}.
@@ -51,6 +52,11 @@ public class Procedures
         {
             register( procedure );
         }
+    }
+
+    public synchronized void registerType( Class<?> javaClass, TypeMappers.ToNeoValue toNeo )
+    {
+        typeMappers.registerType( javaClass, toNeo );
     }
 
     /**
