@@ -126,6 +126,7 @@ import org.neo4j.kernel.impl.core.DelegatingRelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.core.LastTxIdGetter;
 import org.neo4j.kernel.impl.core.ReadOnlyTokenCreator;
 import org.neo4j.kernel.impl.core.TokenCreator;
+import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
 import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.CommunityEditionModule;
@@ -202,6 +203,8 @@ public class HighlyAvailableEditionModule
         Supplier<KernelAPI> kernelProvider = dependencies.provideDependency( KernelAPI.class );
 
         transactionStartTimeout = config.get( HaSettings.state_switch_timeout );
+
+        coreAPIAvailabilityGuard = new CoreAPIAvailabilityGuard( platformModule.availabilityGuard, transactionStartTimeout );
 
         DelegateInvocationHandler<ClusterMemberEvents> clusterEventsDelegateInvocationHandler =
                 new DelegateInvocationHandler<>( ClusterMemberEvents.class );

@@ -108,11 +108,10 @@ public class GraphDatabaseFacade
     private IndexManager indexManager;
     private NodeProxy.NodeActions nodeActions;
     private RelationshipProxy.RelationshipActions relActions;
-    private Config config;
     private SPI spi;
 
     /**
-     * This is what you need to implemenent to get your very own {@link GraphDatabaseFacade}. This SPI exists as a thin layer to make it easy to provide
+     * This is what you need to implement to get your very own {@link GraphDatabaseFacade}. This SPI exists as a thin layer to make it easy to provide
      * alternate {@link org.neo4j.graphdb.GraphDatabaseService} instances without having to re-implement this whole API implementation.
      */
     public interface SPI
@@ -170,7 +169,7 @@ public class GraphDatabaseFacade
         URL validateURLAccess( URL url ) throws URLAccessValidationError;
     }
 
-    protected GraphDatabaseFacade()
+    public GraphDatabaseFacade()
     {
     }
 
@@ -182,14 +181,13 @@ public class GraphDatabaseFacade
         IndexProviderImpl idxProvider = new IndexProviderImpl( this, spi::currentStatement );
 
         this.spi = spi;
-        this.config = config;
         this.relActions = new StandardRelationshipActions( spi::currentStatement, spi::currentTransaction,
                 this::assertTransactionOpen, (id) -> new NodeProxy( nodeActions, id ), this );
         this.nodeActions = new StandardNodeActions( spi::currentStatement, spi::currentTransaction, this::assertTransactionOpen, relActions, this );
         this.schema = new SchemaImpl( spi::currentStatement );
-        this.indexManager = new IndexManagerImpl( spi::currentStatement, idxProvider,
-                new NodeAutoIndexerImpl( config.get( node_auto_indexing ), config.get( node_keys_indexable ), idxProvider, spi ),
-                new RelationshipAutoIndexerImpl( config.get( relationship_auto_indexing ), config.get( relationship_keys_indexable ), idxProvider, spi ) );
+        NodeAutoIndexerImpl nodeAutoIndexer = new NodeAutoIndexerImpl( config.get( node_auto_indexing ), config.get( node_keys_indexable ), idxProvider, spi );
+        RelationshipAutoIndexerImpl relAutoIndexer = new RelationshipAutoIndexerImpl( config.get( relationship_auto_indexing ), config.get( relationship_keys_indexable ), idxProvider, spi );
+        this.indexManager = new IndexManagerImpl( spi::currentStatement, idxProvider, nodeAutoIndexer, relAutoIndexer );
     }
 
     @Override

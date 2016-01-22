@@ -21,33 +21,37 @@ package org.neo4j.kernel.impl.proc;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.function.Function;
 
 import org.neo4j.collection.RawIterator;
+import org.neo4j.function.ThrowingFunction;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.proc.Procedure;
 import org.neo4j.kernel.api.proc.ProcedureSignature;
+import org.neo4j.kernel.builtinprocs.BuiltInProcedures;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
 
-public class Procedures
+public class Procedures extends LifecycleAdapter
 {
     private final ProcedureRegistry registry = new ProcedureRegistry();
     private final TypeMappers typeMappers = new TypeMappers();
     private final ComponentRegistry components = new ComponentRegistry();
     private final ReflectiveProcedureCompiler compiler = new ReflectiveProcedureCompiler(typeMappers, components);
     private final Log log;
+    private final File pluginDirectory;
 
     public Procedures()
     {
-        this( NullLog.getInstance() );
+        this( NullLog.getInstance(), null );
     }
 
-    public Procedures( Log log )
+    public Procedures( Log log, File pluginDirectory )
     {
         this.log = log;
+        this.pluginDirectory = pluginDirectory;
     }
 
     /**
@@ -87,7 +91,7 @@ public class Procedures
      * @param cls the type of component to be registered (this is what users 'ask' for in their field declaration)
      * @param supplier a function that supplies the actual component, given the context of a procedure invocation
      */
-    public synchronized <T> void registerComponent( Class<T> cls, Function<Procedure.Context, T> supplier )
+    public synchronized <T> void registerComponent( Class<T> cls, ThrowingFunction<Procedure.Context, T, ProcedureException> supplier )
     {
         components.register( cls, supplier );
     }
@@ -98,11 +102,21 @@ public class Procedures
      * @throws IOException
      * @throws KernelException
      */
-    public synchronized void loadFromDirectory( File dir ) throws IOException, KernelException
+    private void load( File dir ) throws IOException, KernelException
     {
         for ( Procedure procedure : new ProcedureJarLoader( compiler, log ).loadProceduresFromDir( dir ) )
         {
             register( procedure );
+        }
+    }
+
+    @Override
+    public void init() throws Throwable
+    {
+        BuiltInProcedures.addTo( this );
+        if( pluginDirectory != null )
+        {
+            load( pluginDirectory );
         }
     }
 

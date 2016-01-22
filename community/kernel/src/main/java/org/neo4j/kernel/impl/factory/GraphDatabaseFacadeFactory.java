@@ -128,7 +128,7 @@ public abstract class GraphDatabaseFacadeFactory
         Logger msgLog = platform.logging.getInternalLog( getClass() ).infoLogger();
 
         // Start it
-        graphDatabaseFacade.init( platform.config, new ClassicCoreSPI( platform, dataSource, msgLog, edition ) );
+        graphDatabaseFacade.init( platform.config, new ClassicCoreSPI( platform, dataSource, msgLog, edition.coreAPIAvailabilityGuard ) );
 
         Throwable error = null;
         try

@@ -19,11 +19,13 @@
  */
 package org.neo4j.procedure;
 
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -58,12 +60,15 @@ public class ProcedureIT
     @Rule
     public ExpectedException exception = ExpectedException.none();
 
+    @Before
+    public void setup() throws IOException
+    {
+        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
+    }
+
     @Test
     public void shouldLoadProcedureFromPluginDirectory() throws Throwable
     {
-        // Given
-        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
-
         // When
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
@@ -85,9 +90,6 @@ public class ProcedureIT
     @Test
     public void shouldLoadBeAbleToCallMethodWithParameterMap() throws Throwable
     {
-        // Given
-        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
-
         // When
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
@@ -105,9 +107,6 @@ public class ProcedureIT
     @Test
     public void shouldLoadBeAbleToCallProcedureWithGenericArgument() throws Throwable
     {
-        // Given
-        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
-
         // When
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
@@ -127,9 +126,6 @@ public class ProcedureIT
     @Test
     public void shouldLoadBeAbleToCallProcedureWithMapArgument() throws Throwable
     {
-        // Given
-        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
-
         // When
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
@@ -148,9 +144,6 @@ public class ProcedureIT
     @Test
     public void shouldLoadBeAbleToCallProcedureWithNodeReturn() throws Throwable
     {
-        // Given
-        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
-
         // When
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
@@ -187,7 +180,6 @@ public class ProcedureIT
     public void shouldGiveHelpfulErrorOnExceptionMidStream() throws Throwable
     {
         // Given
-        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
                 .newGraphDatabase();
@@ -207,9 +199,6 @@ public class ProcedureIT
     @Test
     public void shouldLoadBeAbleToCallProcedureWithAccessToDB() throws Throwable
     {
-        // Given
-        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
-
         // When
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
@@ -220,14 +209,28 @@ public class ProcedureIT
         }
 
         // Then
-        try ( Transaction ignore = db.beginTx() )
-        {
-            Result res = db.execute(
-                    "CALL org.neo4j.procedure.listCoolPeopleInDatabase" );
+        Result res = db.execute(
+                "CALL org.neo4j.procedure.listCoolPeopleInDatabase" );
 
-            assertFalse( res.hasNext() );
-        }
+        assertFalse( res.hasNext() );
     }
+
+    @Test
+    public void shouldNotAllowWritesForReadOnlyProcedures() throws Throwable
+    {
+        // When
+        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
+                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
+                .newGraphDatabase();
+
+        // Expect
+        exception.expect( QueryExecutionException.class );
+        exception.expectMessage( ".." );
+
+        // Then
+        db.execute( "CALL org.neo4j.procedure.tryAndShutdown" ).next();
+    }
+
 
     public static class Output
     {
@@ -322,6 +325,13 @@ public class ProcedureIT
         {
             return stream( spliteratorUnknownSize( db.findNodes( label( "Person" ) ), ORDERED | IMMUTABLE ), false )
                     .map( ( n ) -> new MyOutputRecord( (String) n.getProperty( "name" ) ) );
+        }
+
+        @ReadOnlyProcedure
+        public Stream<MyOutputRecord> tryAndShutdown()
+        {
+            db.shutdown();
+            return Stream.empty();
         }
     }
 }

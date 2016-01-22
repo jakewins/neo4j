@@ -87,12 +87,15 @@ import org.neo4j.storageengine.api.schema.PopulationProgress;
 
 public class OperationsFacade implements ReadOperations, DataWriteOperations, SchemaWriteOperations
 {
-    final KernelStatement statement;
+    private final KernelTransactionImplementation transaction;
+    private final KernelStatement statement;
+
     private final StatementOperationParts operations;
     private final Procedures procedures;
 
-    OperationsFacade( KernelStatement statement, StatementOperationParts operations, Procedures procedures )
+    OperationsFacade( KernelTransactionImplementation transaction, KernelStatement statement, StatementOperationParts operations, Procedures procedures )
     {
+        this.transaction = transaction;
         this.statement = statement;
         this.operations = operations;
         this.procedures = procedures;
@@ -671,7 +674,8 @@ public class OperationsFacade implements ReadOperations, DataWriteOperations, Sc
     {
         statement.assertOpen();
         Procedure.BasicContext ctx = new Procedure.BasicContext();
-        ctx.put( ReadOperations.readStatement, this );
+        ctx.put( ReadOperations.KERNEL_TRANSACTION, transaction );
+        ctx.put( ReadOperations.STATEMENT, statement );
         return procedures.call( ctx, name, input );
     }
 

@@ -548,11 +548,14 @@ public interface ReadOperations
             throws IndexNotFoundKernelException;
 
     //===========================================
-    //== PRECEDURE OPERATIONS ===================
+    //== PROCEDURE OPERATIONS ===================
     //===========================================
 
-    /** For read procedures, this key will be available in the invocation context as a means to access the current read statement. */
-    Procedure.Key<ReadOperations> readStatement = Procedure.Key.key("statementContext.read", ReadOperations.class );
+    /** For read procedures, this key will be available in the invocation context as a means to access the current statement. */
+    Procedure.Key<KernelTransaction> KERNEL_TRANSACTION = Procedure.Key.key("KernelTransaction", KernelTransaction.class );
+
+    /** For read procedures, this key will be available in the invocation context as a means to access the current statement. */
+    Procedure.Key<Statement> STATEMENT = Procedure.Key.key("Statement", Statement.class );
 
     /** Fetch a procedure given its signature. */
     ProcedureSignature procedureGet( ProcedureSignature.ProcedureName name ) throws ProcedureException;

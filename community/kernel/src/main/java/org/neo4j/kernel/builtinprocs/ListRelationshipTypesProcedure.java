@@ -26,7 +26,7 @@ import org.neo4j.kernel.api.proc.Procedure;
 import org.neo4j.kernel.api.proc.ProcedureSignature;
 import org.neo4j.storageengine.api.Token;
 
-import static org.neo4j.kernel.api.ReadOperations.readStatement;
+import static org.neo4j.kernel.api.ReadOperations.STATEMENT;
 import static org.neo4j.kernel.api.proc.ProcedureSignature.procedureSignature;
 import static org.neo4j.helpers.collection.Iterables.asRawIterator;
 import static org.neo4j.helpers.collection.Iterables.map;
@@ -41,7 +41,7 @@ public class ListRelationshipTypesProcedure extends Procedure.BasicProcedure
     @Override
     public RawIterator<Object[], ProcedureException> apply( Context ctx, Object[] input ) throws ProcedureException
     {
-        RawIterator<Token,ProcedureException> tokens = asRawIterator( ctx.get( readStatement ).relationshipTypesGetAllTokens() );
+        RawIterator<Token,ProcedureException> tokens = asRawIterator( ctx.get( STATEMENT ).readOperations().relationshipTypesGetAllTokens() );
         return map(  ( token ) -> new Object[]{ token.name() }, tokens );
     }
 }

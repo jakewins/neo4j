@@ -26,8 +26,10 @@ import java.util.function.Supplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
+import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.AvailabilityGuard;
@@ -52,8 +54,12 @@ import org.neo4j.kernel.impl.core.StartupStatisticsProvider;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.logging.LogService;
+import org.neo4j.kernel.impl.proc.ProcedureGDSFactory;
+import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.TypeMappers;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
+import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
@@ -62,6 +68,9 @@ import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
+import static org.neo4j.kernel.api.proc.Neo4jTypes.NTNode;
+import static org.neo4j.kernel.api.proc.Neo4jTypes.NTPath;
+import static org.neo4j.kernel.api.proc.Neo4jTypes.NTRelationship;
 import static org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory.Configuration.execution_guard_enabled;
 
 /**
@@ -140,7 +149,15 @@ public class DataSourceModule
         DatabaseHealth databaseHealth = deps.satisfyDependency( new DatabaseHealth( databasePanicEventGenerator,
                 logging.getInternalLog( DatabaseHealth.class ) ) );
 
-        neoStoreDataSource = deps.satisfyDependency( new NeoStoreDataSource( storeDir, config,
+        final AtomicReference<QueryExecutionEngine> queryExecutorRef = new AtomicReference<>( QueryEngineProvider
+                .noEngine() );
+
+        storeId = () -> platformModule.dependencies.resolveDependency( MetaDataStore.class ).getStoreId();
+        queryExecutor = queryExecutorRef::get;
+
+        Procedures procedures = createProcedures( platformModule, editionModule, config, logging, life );
+
+        neoStoreDataSource = deps.satisfyDependency( new NeoStoreDataSource( storeDir, storeId, config,
                 editionModule.idGeneratorFactory, logging, platformModule.jobScheduler,
                 new NonTransactionalTokenNameLookup( editionModule.labelTokenHolder,
                         editionModule.relationshipTypeTokenHolder, editionModule.propertyKeyTokenHolder ),
@@ -151,8 +168,10 @@ public class DataSourceModule
                 platformModule.monitors.newMonitor( PhysicalLogFile.Monitor.class ),
                 editionModule.headerInformationFactory, startupStatistics, nodeManager, guard,
                 editionModule.commitProcessFactory, pageCache, editionModule.constraintSemantics,
-                platformModule.monitors, platformModule.tracers ) );
+                platformModule.monitors, platformModule.tracers, procedures ) );
         dataSourceManager.register( neoStoreDataSource );
+
+        kernelAPI = neoStoreDataSource::getKernel;
 
         life.add( new MonitorGc( config, logging.getInternalLog( MonitorGc.class ) ) );
 
@@ -164,9 +183,6 @@ public class DataSourceModule
 
         // Kernel event handlers should be the very last, i.e. very first to receive shutdown events
         life.add( kernelEventHandlers );
-
-        final AtomicReference<QueryExecutionEngine> queryExecutor = new AtomicReference<>( QueryEngineProvider
-                .noEngine() );
 
         dataSourceManager.addListener( new DataSourceManager.Listener()
         {
@@ -183,42 +199,33 @@ public class DataSourceModule
                     deps.satisfyDependency( engine );
                 }
 
-                queryExecutor.set( engine );
+                queryExecutorRef.set( engine );
             }
 
             @Override
             public void unregistered( NeoStoreDataSource dataSource )
             {
-                queryExecutor.set( QueryEngineProvider.noEngine() );
+                queryExecutorRef.set( QueryEngineProvider.noEngine() );
             }
         } );
+    }
 
-        storeId = new Supplier<StoreId>()
-        {
-            @Override
-            public StoreId get()
-            {
-                return neoStoreDataSource.getStoreId();
-            }
-        };
+    private Procedures createProcedures( PlatformModule platformModule, EditionModule editionModule, Config config,
+                                         LogService logging, LifeSupport life )
+    {
+        Procedures procedures = platformModule.dependencies.satisfyDependency(
+                new Procedures( logging.getInternalLog( Procedures.class ), config.get( GraphDatabaseSettings.plugin_dir ) ) );
+        life.add(procedures);
 
-        kernelAPI = new Supplier<KernelAPI>()
-        {
-            @Override
-            public KernelAPI get()
-            {
-                return neoStoreDataSource.getKernel();
-            }
-        };
+        procedures.registerComponent( GraphDatabaseService.class,
+                new ProcedureGDSFactory( config, platformModule.dependencies, storeId, this.queryExecutor,
+                        editionModule.coreAPIAvailabilityGuard ) );
 
-        this.queryExecutor = new Supplier<QueryExecutionEngine>()
-        {
-            @Override
-            public QueryExecutionEngine get()
-            {
-                return queryExecutor.get();
-            }
-        };
+        // Done here to avoid procedures depending directly on Core API.
+        procedures.registerType( Node.class, new TypeMappers.SimpleConverter( NTNode, Node.class ) );
+        procedures.registerType( Relationship.class, new TypeMappers.SimpleConverter( NTRelationship, Relationship.class ) );
+        procedures.registerType( Path.class, new TypeMappers.SimpleConverter( NTPath, Path.class ) );
+        return procedures;
     }
 
     protected RelationshipProxy.RelationshipActions createRelationshipActions(

@@ -25,6 +25,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.proc.Neo4jTypes;
@@ -36,7 +39,10 @@ import static org.neo4j.kernel.api.proc.Neo4jTypes.NTFloat;
 import static org.neo4j.kernel.api.proc.Neo4jTypes.NTInteger;
 import static org.neo4j.kernel.api.proc.Neo4jTypes.NTList;
 import static org.neo4j.kernel.api.proc.Neo4jTypes.NTMap;
+import static org.neo4j.kernel.api.proc.Neo4jTypes.NTNode;
 import static org.neo4j.kernel.api.proc.Neo4jTypes.NTNumber;
+import static org.neo4j.kernel.api.proc.Neo4jTypes.NTPath;
+import static org.neo4j.kernel.api.proc.Neo4jTypes.NTRelationship;
 import static org.neo4j.kernel.api.proc.Neo4jTypes.NTString;
 
 public class TypeMappers
@@ -56,17 +62,10 @@ public class TypeMappers
 
     public TypeMappers()
     {
-        registerScalarsAndCollections();
+        registerTypes();
     }
 
-    /**
-     * We don't have Node, Relationship, Property available down here - and don't strictly want to,
-     * we want the procedures to be independent of which Graph API is being used (and we don't want
-     * them to get tangled up with kernel code). So, we only register the "core" type system here,
-     * scalars and collection types. Node, Relationship, Path and any other future graph types should
-     * be registered from the outside in the same place APIs to work with those types is registered.
-     */
-    private void registerScalarsAndCollections()
+    private void registerTypes()
     {
         registerType( String.class, TO_STRING );
         registerType( long.class, TO_INTEGER );
