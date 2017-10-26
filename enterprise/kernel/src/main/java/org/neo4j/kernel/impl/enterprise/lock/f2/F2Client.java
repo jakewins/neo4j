@@ -1,53 +1,79 @@
+/*
+ * Copyright (c) 2002-2017 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.enterprise.lock.f2;
-
-import com.jakewins.f2.F2Lock.AcquireOutcome;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import com.jakewins.f2.infrastructure.SingleWaiterLatch;
 import org.neo4j.kernel.DeadlockDetectedException;
+import org.neo4j.kernel.impl.enterprise.lock.f2.F2Lock.AcquireOutcome;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
 import org.neo4j.storageengine.api.lock.ResourceType;
 
-class ClientAcquireOutcome {
-    final static ClientAcquireOutcome ACQUIRED = new ClientAcquireOutcome();
-    final static ClientAcquireOutcome NOT_ACQUIRED = new ClientAcquireOutcome();
+class ClientAcquireOutcome
+{
+    static final ClientAcquireOutcome ACQUIRED = new ClientAcquireOutcome();
+    static final ClientAcquireOutcome NOT_ACQUIRED = new ClientAcquireOutcome();
 }
 
-class Deadlock extends ClientAcquireOutcome {
+class Deadlock extends ClientAcquireOutcome
+{
     private final String description;
 
-    Deadlock(String description) {
+    Deadlock( String description )
+    {
         this.description = description;
     }
 
-    String deadlockDescription() {
+    String deadlockDescription()
+    {
         return description;
     }
 }
 
-class ClientAcquireError extends ClientAcquireOutcome {
+class ClientAcquireError extends ClientAcquireOutcome
+{
     private final Throwable cause;
 
-    ClientAcquireError(Throwable cause) {
+    ClientAcquireError( Throwable cause )
+    {
         this.cause = cause;
     }
 
-    RuntimeException asRuntimeException() {
-        if(cause instanceof RuntimeException) {
-            return (RuntimeException)cause;
+    RuntimeException asRuntimeException()
+    {
+        if ( cause instanceof RuntimeException )
+        {
+            return (RuntimeException) cause;
         }
-        return new RuntimeException(cause);
+        return new RuntimeException( cause );
     }
 }
 
-class F2Client implements Locks.Client {
+class F2Client implements Locks.Client
+{
     private static final int CHECK_DEADLOCK_AFTER_MS = 1000;
     private static AtomicInteger ID_GEN = new AtomicInteger();
 
@@ -57,7 +83,7 @@ class F2Client implements Locks.Client {
     /**
      * Lock entry this client is currently waiting on, or null; this is set by the lock when we're added to
      * wait list, cleared when someone grants us the lock.
-     *
+     * <p>
      * NOTE: Must hold partition lock of the entry to write to this
      */
     F2ClientEntry waitsFor;
@@ -69,273 +95,341 @@ class F2Client implements Locks.Client {
     private final DeadlockDetector deadlockDetector;
     private final F2ClientLocks heldLocks;
 
-    F2Client(int numResourceTypes, F2Partitions partitions, DeadlockDetector deadlockDetector) {
+    F2Client( int numResourceTypes, F2Partitions partitions, DeadlockDetector deadlockDetector )
+    {
         this.partitions = partitions;
         this.deadlockDetector = deadlockDetector;
-        this.heldLocks = new F2ClientLocks(numResourceTypes);
+        this.heldLocks = new F2ClientLocks( numResourceTypes );
     }
 
     @Override
-    public void acquireShared(LockTracer lockTracer, ResourceType resourceType, long... resourceIds) throws AcquireLockTimeoutException {
-        for(long resourceId : resourceIds) {
-            ClientAcquireOutcome outcome = acquire(AcquireMode.BLOCKING, LockMode.SHARED, resourceType, resourceId);
-            handleAcquireOutcome(outcome);
+    public void acquireShared( LockTracer lockTracer, ResourceType resourceType, long... resourceIds ) throws AcquireLockTimeoutException
+    {
+        for ( long resourceId : resourceIds )
+        {
+            ClientAcquireOutcome outcome = acquire( AcquireMode.BLOCKING, LockMode.SHARED, resourceType, resourceId );
+            handleAcquireOutcome( outcome );
         }
     }
 
     @Override
-    public void acquireExclusive(LockTracer lockTracer, ResourceType resourceType, long... resourceIds) throws AcquireLockTimeoutException {
-        for(long resourceId : resourceIds) {
-            ClientAcquireOutcome outcome = acquire(AcquireMode.BLOCKING, LockMode.EXCLUSIVE, resourceType, resourceId);
-            handleAcquireOutcome(outcome);
+    public void acquireExclusive( LockTracer lockTracer, ResourceType resourceType, long... resourceIds ) throws AcquireLockTimeoutException
+    {
+        for ( long resourceId : resourceIds )
+        {
+            ClientAcquireOutcome outcome = acquire( AcquireMode.BLOCKING, LockMode.EXCLUSIVE, resourceType, resourceId );
+            handleAcquireOutcome( outcome );
         }
     }
 
-    private static void handleAcquireOutcome(ClientAcquireOutcome outcome) {
-        if(outcome == ClientAcquireOutcome.ACQUIRED || outcome == ClientAcquireOutcome.NOT_ACQUIRED) {
+    private static void handleAcquireOutcome( ClientAcquireOutcome outcome )
+    {
+        if ( outcome == ClientAcquireOutcome.ACQUIRED || outcome == ClientAcquireOutcome.NOT_ACQUIRED )
+        {
             return;
         }
-        if(outcome instanceof Deadlock) {
-            throw new DeadlockDetectedException(((Deadlock) outcome).deadlockDescription());
+        if ( outcome instanceof Deadlock )
+        {
+            throw new DeadlockDetectedException( ((Deadlock) outcome).deadlockDescription() );
         }
-        if(outcome instanceof ClientAcquireError) {
+        if ( outcome instanceof ClientAcquireError )
+        {
             throw ((ClientAcquireError) outcome).asRuntimeException();
         }
     }
 
     @Override
-    public void releaseShared(ResourceType resourceType, long resourceId) {
-        release(LockMode.SHARED, resourceType, resourceId);
+    public void releaseShared( ResourceType resourceType, long ... resourceId )
+    {
+        for ( long id : resourceId )
+        {
+            release( LockMode.SHARED, resourceType, id );
+        }
     }
 
     @Override
-    public void releaseExclusive(ResourceType resourceType, long resourceId) {
-        release(LockMode.EXCLUSIVE, resourceType, resourceId);
+    public void releaseExclusive( ResourceType resourceType, long ... resourceId )
+    {
+        for ( long id : resourceId )
+        {
+            release( LockMode.EXCLUSIVE, resourceType, id );
+        }
     }
 
     @Override
-    public boolean trySharedLock(ResourceType resourceType, long resourceId) {
-        return acquire(AcquireMode.NONBLOCKING, LockMode.SHARED, resourceType, resourceId) == ClientAcquireOutcome.ACQUIRED;
+    public boolean trySharedLock( ResourceType resourceType, long resourceId )
+    {
+        return acquire( AcquireMode.NONBLOCKING, LockMode.SHARED, resourceType, resourceId ) == ClientAcquireOutcome.ACQUIRED;
     }
 
     @Override
-    public boolean tryExclusiveLock(ResourceType resourceType, long resourceId) {
-        return acquire(AcquireMode.NONBLOCKING, LockMode.EXCLUSIVE, resourceType, resourceId) == ClientAcquireOutcome.ACQUIRED;
+    public boolean tryExclusiveLock( ResourceType resourceType, long resourceId )
+    {
+        return acquire( AcquireMode.NONBLOCKING, LockMode.EXCLUSIVE, resourceType, resourceId ) == ClientAcquireOutcome.ACQUIRED;
     }
 
     @Override
-    public boolean reEnterShared(ResourceType resourceType, long resourceId) {
-        return heldLocks.tryLocalAcquire(resourceType, resourceId, LockMode.SHARED) == LockMode.NONE;
+    public boolean reEnterShared( ResourceType resourceType, long resourceId )
+    {
+        return heldLocks.tryLocalAcquire( resourceType, resourceId, LockMode.SHARED ) == LockMode.NONE;
     }
 
     @Override
-    public boolean reEnterExclusive(ResourceType resourceType, long resourceId) {
-        return heldLocks.tryLocalAcquire(resourceType, resourceId, LockMode.EXCLUSIVE) == LockMode.NONE;
+    public boolean reEnterExclusive( ResourceType resourceType, long resourceId )
+    {
+        return heldLocks.tryLocalAcquire( resourceType, resourceId, LockMode.EXCLUSIVE ) == LockMode.NONE;
     }
 
     @Override
-    public void close() {
+    public void close()
+    {
         // Step 1: Group locks by partition, so we can release in each partition in bulk
         List<F2ClientEntry>[] heldByPartition = new List[partitions.numberOfPartitions()];
-        heldLocks.releaseAll(partitions, heldByPartition);
+        heldLocks.releaseAll( partitions, heldByPartition );
 
         // Step 2: Release locks in each partition in bulk
-        for(int partitionIndex=0;partitionIndex < heldByPartition.length;partitionIndex++) {
+        for ( int partitionIndex = 0; partitionIndex < heldByPartition.length; partitionIndex++ )
+        {
             List<F2ClientEntry> entries = heldByPartition[partitionIndex];
-            if(entries == null) {
+            if ( entries == null )
+            {
                 continue;
             }
 
-            F2Partition partition = partitions.getPartitionByIndex(partitionIndex);
+            F2Partition partition = partitions.getPartitionByIndex( partitionIndex );
             partition.lock();
-            try {
-                for (F2ClientEntry entry : entries) {
-                    release_partitionLockHeld(partition, entry);
+            try
+            {
+                for ( F2ClientEntry entry : entries )
+                {
+                    release_partitionLockHeld( partition, entry );
                 }
-            } finally {
+            }
+            finally
+            {
                 partition.unlock();
             }
         }
     }
 
     @Override
-    public int getLockSessionId() {
+    public int getLockSessionId()
+    {
         return clientId;
     }
 
     @Override
-    public Stream<? extends ActiveLock> activeLocks() {
+    public Stream<? extends ActiveLock> activeLocks()
+    {
         return heldLocks.asStream();
     }
 
     @Override
-    public long activeLockCount() {
+    public long activeLockCount()
+    {
         return heldLocks.activeLockCount();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return name;
     }
 
-    public String name() {
+    public String name()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName( String name )
+    {
         this.name = name;
     }
 
     // TODO
     @Override
-    public void stop() {
-        throw new UnsupportedOperationException("Out-of-band interrupting F2 locks is not yet implemented.");
+    public void stop()
+    {
+        throw new UnsupportedOperationException( "Out-of-band interrupting F2 locks is not yet implemented." );
     }
 
-    private ClientAcquireOutcome acquire(AcquireMode acquireMode, LockMode requestedLockMode, ResourceType resourceType, long resourceId) {
+    private ClientAcquireOutcome acquire( AcquireMode acquireMode, LockMode requestedLockMode, ResourceType resourceType, long resourceId )
+    {
         F2Lock lock;
         F2ClientEntry entry;
         AcquireOutcome outcome;
 
         // If we already hold this lock, no need to globally synchronize
-        LockMode lockMode = heldLocks.tryLocalAcquire(resourceType, resourceId, requestedLockMode);
-        if(lockMode == LockMode.NONE) {
+        LockMode lockMode = heldLocks.tryLocalAcquire( resourceType, resourceId, requestedLockMode );
+        if ( lockMode == LockMode.NONE )
+        {
             return ClientAcquireOutcome.ACQUIRED;
         }
 
         // We don't hold this lock already, go to work on the relevant partition
-        F2Partition partition = partitions.getPartition(resourceId);
+        F2Partition partition = partitions.getPartition( resourceId );
         partition.lock();
-        try {
-            entry = partition.newClientEntry(this, lockMode, resourceType, resourceId);
+        try
+        {
+            entry = partition.newClientEntry( this, lockMode, resourceType, resourceId );
 
-            lock = partition.getOrCreateLock(resourceType, resourceId);
+            lock = partition.getOrCreateLock( resourceType, resourceId );
 
-            outcome = lock.acquire(acquireMode, entry);
+            outcome = lock.acquire( acquireMode, entry );
 
-            if (outcome == AcquireOutcome.NOT_ACQUIRED) {
-                partition.releaseClientEntry(entry);
+            if ( outcome == AcquireOutcome.NOT_ACQUIRED )
+            {
+                partition.releaseClientEntry( entry );
                 return ClientAcquireOutcome.NOT_ACQUIRED;
             }
-        } finally {
+        }
+        finally
+        {
             partition.unlock();
         }
 
-        if (outcome == AcquireOutcome.ACQUIRED) {
-            heldLocks.globallyAcquired(entry);
+        if ( outcome == AcquireOutcome.ACQUIRED )
+        {
+            heldLocks.globallyAcquired( entry );
             return ClientAcquireOutcome.ACQUIRED;
         }
 
-        try {
+        try
+        {
             assert outcome == AcquireOutcome.MUST_WAIT;
 
             // At this point, we are on the wait list for the lock we want, and we *have* to wait for it.
             // The way this works is that, eventually, someone ahead of us on the wait list will grant us the lock
             // and wake us up via {@link latch}. Until then, we wait; if it takes to long we wake up and check deadlock.
-            for (; ; ) {
-                boolean latchTripped = latch.tryAcquire(CHECK_DEADLOCK_AFTER_MS, TimeUnit.MILLISECONDS);
-                if (latchTripped) {
+            for ( ; ; )
+            {
+                boolean latchTripped = latch.tryAcquire( CHECK_DEADLOCK_AFTER_MS, TimeUnit.MILLISECONDS );
+                if ( latchTripped )
+                {
                     // Someone told us we got the lock!
-                    assert waitsFor == null: String.format("Should not be marked waiting if lock was granted, %s.waitsFor=%s", this, waitsFor);
-                    heldLocks.globallyAcquired(entry);
+                    assert waitsFor == null : String.format( "Should not be marked waiting if lock was granted, %s.waitsFor=%s", this, waitsFor );
+                    heldLocks.globallyAcquired( entry );
                     return ClientAcquireOutcome.ACQUIRED;
-                } else {
+                }
+                else
+                {
                     // We timed out; need to do deadlock detection
                     Deadlock deadlock = detectDeadlock();
-                    if (deadlock != null) {
+                    if ( deadlock != null )
+                    {
                         return deadlock;
                     }
                 }
             }
-        } catch (Throwable e) {
+        }
+        catch ( Throwable e )
+        {
             // Current thread was interrupted while waiting on a lock, not good.
             // We are on the wait list for the lock, so we can't simply leave, need cleanup.
-            if(this.waitsFor != null) {
-                cleanUpErrorWhileWaiting(partition, entry);
+            if ( this.waitsFor != null )
+            {
+                cleanUpErrorWhileWaiting( partition, entry );
             }
-            return new ClientAcquireError(e);
+            return new ClientAcquireError( e );
         }
     }
 
-    private void release(LockMode lockMode, ResourceType resourceType, long resourceId) {
+    private void release( LockMode lockMode, ResourceType resourceType, long resourceId )
+    {
         // Start by reducing the count of locally held locks; if we're lucky that's all we need
-        F2ClientEntry entry = heldLocks.tryLocalRelease(lockMode, resourceType, resourceId);
-        if(entry == null) {
+        F2ClientEntry entry = heldLocks.tryLocalRelease( lockMode, resourceType, resourceId );
+        if ( entry == null )
+        {
             return;
         }
 
         // If we end up here, we've brought our counter of lock re-entrancy to zero, meaning it's time to release the
         // actual lock; hence we lock the relevant partition and go to work.
-        F2Partition partition = partitions.getPartition(resourceId);
+        F2Partition partition = partitions.getPartition( resourceId );
         partition.lock();
-        try {
-            release_partitionLockHeld(partition, entry);
-        } finally {
+        try
+        {
+            release_partitionLockHeld( partition, entry );
+        }
+        finally
+        {
             partition.unlock();
         }
     }
 
-    private void release_partitionLockHeld(F2Partition partition, F2ClientEntry entry) {
+    private void release_partitionLockHeld( F2Partition partition, F2ClientEntry entry )
+    {
         ResourceType resourceType = entry.resourceType;
         long resourceId = entry.resourceId;
 
-        F2Lock.ReleaseOutcome outcome = entry.lock.release(entry);
-        partition.releaseClientEntry(entry);
+        F2Lock.ReleaseOutcome outcome = entry.lock.release( entry );
+        partition.releaseClientEntry( entry );
 
-
-        if(outcome == F2Lock.ReleaseOutcome.LOCK_HELD) {
+        if ( outcome == F2Lock.ReleaseOutcome.LOCK_HELD )
+        {
             return;
         }
 
         // If the lock is idle (eg. there are no holders and no waiters) then its our job to remove it
         // from the lock table.
         assert outcome == F2Lock.ReleaseOutcome.LOCK_IDLE : "Lock idle is only allowed state here.";
-        partition.removeLock(resourceType, resourceId);
+        partition.removeLock( resourceType, resourceId );
     }
 
-    private Deadlock detectDeadlock() {
+    private Deadlock detectDeadlock()
+    {
         partitions.stopTheWorld();
-        try {
-            DeadlockDescription description = deadlockDetector.detectDeadlock(this);
-            if(description == DeadlockDetector.NONE) {
+        try
+        {
+            DeadlockDescription description = deadlockDetector.detectDeadlock( this );
+            if ( description == DeadlockDetector.NONE )
+            {
                 return null;
             }
 
-            Deadlock deadlock = new Deadlock(description.toString());
+            Deadlock deadlock = new Deadlock( description.toString() );
 
             // TODO: We could easily tell any waiter in the deadlock chain to abort by signalling;
             //       eg. we could abort a client with lower prio than us, or whatever.
             // For now, abort the client that firsts discovers the deadlock
-            F2Partition partition = partitions.getPartition(waitsFor.resourceId);
-            cleanUpErrorWhileWaiting_partitionLockHeld(partition, waitsFor);
+            F2Partition partition = partitions.getPartition( waitsFor.resourceId );
+            cleanUpErrorWhileWaiting_partitionLockHeld( partition, waitsFor );
 
             return deadlock;
-        } finally {
+        }
+        finally
+        {
             partitions.resumeTheWorld();
         }
     }
 
-    private void cleanUpErrorWhileWaiting(F2Partition partition, F2ClientEntry entry) {
+    private void cleanUpErrorWhileWaiting( F2Partition partition, F2ClientEntry entry )
+    {
         long stamp = partition.partitionLock.writeLock();
-        try {
-            cleanUpErrorWhileWaiting_partitionLockHeld(partition, entry);
-        } finally {
-            partition.partitionLock.unlock(stamp);
+        try
+        {
+            cleanUpErrorWhileWaiting_partitionLockHeld( partition, entry );
+        }
+        finally
+        {
+            partition.partitionLock.unlock( stamp );
         }
     }
 
     /**
      * NOTE: Must hold at least partition lock
      */
-    private void cleanUpErrorWhileWaiting_partitionLockHeld(F2Partition partition, F2ClientEntry entry) {
+    private void cleanUpErrorWhileWaiting_partitionLockHeld( F2Partition partition, F2ClientEntry entry )
+    {
         ResourceType resourceType = entry.resourceType;
         long resourceId = entry.resourceId;
 
-        F2Lock.ReleaseOutcome outcome = entry.lock.errorCleanup(entry);
-        if(outcome == F2Lock.ReleaseOutcome.LOCK_IDLE) {
+        F2Lock.ReleaseOutcome outcome = entry.lock.errorCleanup( entry );
+        if ( outcome == F2Lock.ReleaseOutcome.LOCK_IDLE )
+        {
             // If the lock ended up idle, we need to remove it from the lock table before wrapping up
-            partition.removeLock(resourceType, resourceId);
+            partition.removeLock( resourceType, resourceId );
         }
-        partition.releaseClientEntry(entry);
+        partition.releaseClientEntry( entry );
     }
 }

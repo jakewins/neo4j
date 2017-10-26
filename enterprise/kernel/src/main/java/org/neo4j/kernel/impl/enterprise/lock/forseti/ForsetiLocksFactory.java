@@ -40,6 +40,6 @@ public class ForsetiLocksFactory extends Locks.Factory
     public Locks newInstance( Config config, Clock clock, ResourceType[] resourceTypes )
     {
 //        return new ForsetiLockManager( config, clock, ResourceTypes.values() );
-        return new F2Locks(ResourceTypes.values(), 256);
+        return new F2Locks( ResourceTypes.values(), 256 );
     }
 }

@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2002-2017 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.impl.enterprise.lock.f2;
 
 import org.neo4j.kernel.impl.locking.Locks;
@@ -7,38 +26,44 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-enum LockMode {
+enum LockMode
+{
     /** Client wants to ensure exclusive access to the resource */
-    EXCLUSIVE(0),
+    EXCLUSIVE( 0 ),
     /** Client wants to ensure nobody access to the resource, willing to share it with others who feel the same way. */
-    SHARED(1),
+    SHARED( 1 ),
     /** Client holds a share lock, wants to upgrade it to exclusive access */
-    UPGRADE(2),
+    UPGRADE( 2 ),
     /** Client holds no lock, useful for some control flows */
-    NONE(4);
+    NONE( 4 );
 
     final int index;
 
-    LockMode(int index) {
+    LockMode( int index )
+    {
         this.index = index;
     }
 
-    public static int numberOfModes() {
+    public static int numberOfModes()
+    {
         return LockMode.values().length;
     }
 }
 
-enum AcquireMode {
+enum AcquireMode
+{
     BLOCKING,
     NONBLOCKING
 }
 
-class LockGraphDump {
+class LockGraphDump
+{
 
     private static Set<F2Partitions> lockManagers = new HashSet<>();
     private static Set<F2Client> clients = new HashSet<>();
 
-    static {
+    static
+    {
 //        Signal.handle(new Signal("URG"), signal -> {
 //            for(F2Partitions partitions : lockManagers) {
 //                partitions.stopTheWorld();
@@ -79,49 +104,57 @@ class LockGraphDump {
 //        });
     }
 
-    static synchronized void register(F2Partitions partitions) {
-        lockManagers.add(partitions);
+    static synchronized void register( F2Partitions partitions )
+    {
+        lockManagers.add( partitions );
     }
 
-    static synchronized void register(F2Client client) {
-        clients.add(client);
+    static synchronized void register( F2Client client )
+    {
+        clients.add( client );
     }
 
-    static synchronized void unregister(F2Partitions partitions) {
-        lockManagers.remove(partitions);
+    static synchronized void unregister( F2Partitions partitions )
+    {
+        lockManagers.remove( partitions );
     }
 }
 
-public class F2Locks implements Locks {
+public class F2Locks implements Locks
+{
     private final F2Partitions partitions;
     private final DeadlockDetector deadlockDetector;
     private final ResourceType[] resourceTypes;
     private AtomicLong clientCounter = new AtomicLong();
 
-    public F2Locks(ResourceType[] resourceTypes, int numPartitions) {
+    public F2Locks( ResourceType[] resourceTypes, int numPartitions )
+    {
         this.resourceTypes = resourceTypes;
-        this.partitions = new F2Partitions(resourceTypes.length, numPartitions);
+        this.partitions = new F2Partitions( resourceTypes.length, numPartitions );
         this.deadlockDetector = new DeadlockDetector();
 
-        LockGraphDump.register(this.partitions);
+        LockGraphDump.register( this.partitions );
     }
 
     @Override
-    public Client newClient() {
-        F2Client client = new F2Client(resourceTypes.length, partitions, deadlockDetector);
-        client.setName(String.format("%d", clientCounter.getAndIncrement()));
-        LockGraphDump.register(client);
+    public Client newClient()
+    {
+        F2Client client = new F2Client( resourceTypes.length, partitions, deadlockDetector );
+        client.setName( String.format( "%d", clientCounter.getAndIncrement() ) );
+        LockGraphDump.register( client );
         return client;
     }
 
     @Override
-    public void accept(Visitor visitor) {
+    public void accept( Visitor visitor )
+    {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void close() {
-        LockGraphDump.unregister(this.partitions);
+    public void close()
+    {
+        LockGraphDump.unregister( this.partitions );
     }
 }
 
