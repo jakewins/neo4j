@@ -21,5 +21,21 @@ package org.neo4j.bolt.v1.runtime;
 
 public interface Job
 {
+    abstract class WithName implements Job
+    {
+        private final String description;
+
+        protected WithName( String description )
+        {
+            this.description = description;
+        }
+
+        @Override
+        public String toString()
+        {
+            return description;
+        }
+    }
+
     void perform( BoltStateMachine machine ) throws BoltConnectionFatality;
 }

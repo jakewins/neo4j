@@ -19,10 +19,10 @@
  */
 package org.neo4j.bolt.v1.runtime.concurrent;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.bolt.v1.runtime.BoltConnectionAuthFatality;
@@ -40,8 +40,9 @@ import org.neo4j.logging.Log;
 class RunnableBoltWorker implements Runnable, BoltWorker
 {
     private static final int workQueueSize = Integer.getInteger( "org.neo4j.bolt.workQueueSize", 100 );
+    private static final long workQueueTimeout = Long.getLong( "org.neo4j.bolt.workQueueTimeoutMillis", TimeUnit.SECONDS.toMillis( 300 ) );
 
-    private final BlockingQueue<Job> jobQueue = new ArrayBlockingQueue<>( workQueueSize );
+    private final ArrayBlockingQueue<Job> jobQueue = new ArrayBlockingQueue<>( workQueueSize );
     private final BoltStateMachine machine;
     private final Log log;
     private final Log userLog;
@@ -66,13 +67,49 @@ class RunnableBoltWorker implements Runnable, BoltWorker
     {
         try
         {
-            jobQueue.put( job );
+            if ( !keepRunning )
+            {
+                throw new RuntimeException( String.format( "Session %s has been halted, " + "cannot deliver message: %s", machine.key(), job ) );
+            }
+            boolean enqueued = jobQueue.offer( job, workQueueTimeout, TimeUnit.MILLISECONDS );
+            if ( !enqueued )
+            {
+                // Very bad: the work queue for this worker has filled up. We *can't*
+                // block on this queue any longer because this IO thread needs to get
+                // back to processing other jobs, and we *cant* save the inbound message
+                // because, well, the queue is bound for a reason - otherwise we'd run out
+                // of RAM.
+                // Hence:
+                // We can't block here
+                // We can't save the message
+                // If we throw the message away, we can't accept more messages on this session,
+                // since bolt does not handle message loss.
+                // Hence, the session must die.
+
+                // A better solution would be to provide TCP-level push-back; eg. not pulling
+                // these message off of the network buffer at all..
+
+                // The session will get killed, so to help debug, get the messages in the queue.
+                // This is safe because no-one will put new messages on the queue other than the
+                // IO thread that is executing this code path; as long as we ensure we never put
+                // new message on the queue; we don't because the `halt` caused by the exception
+                // thrown below will cause `keepRunning` to be false, which will cause the
+                // branch at the beginning of this function to trigger.
+                String queueContents = ArrayBlockingQueueDescriber.describe( jobQueue );
+                log.error( "Session %s, currently in state %s has reached workQueueSize (%d) and " +
+                                "adding to the queue timed out; message  must be dropped to keep from " +
+                                "unbound memory growth, meaning the session must be terminated. " + "New message was: %s. " + "Messages in queue were: %s",
+                        machine.key(), machine.state(), workQueueSize, job.toString(), queueContents );
+                // TODO Why are we not throwing KernelExceptions or some other checked exception here?
+                // This will be caught by BoltProtocolV1#handle, which will call #halt on this worker
+                throw new RuntimeException( String.format( "Enqueuing message on Session %s timed out, " + "see log for details.", machine.key() ) );
+            }
         }
         catch ( InterruptedException e )
         {
             Thread.currentThread().interrupt();
-            throw new RuntimeException( "Worker interrupted while queueing request, the session may have been " +
-                                        "forcibly closed, or the database may be shutting down." );
+            throw new RuntimeException( String.format( "Worker interrupted while queueing request on session %s, the session may have been " +
+                    "forcibly closed, or the database may be shutting down.", machine.key() ) );
         }
     }
 
@@ -90,8 +127,7 @@ class RunnableBoltWorker implements Runnable, BoltWorker
                 {
                     execute( job );
 
-                    for ( int jobCount = jobQueue.drainTo( batch ); keepRunning && jobCount > 0;
-                          jobCount = jobQueue.drainTo( batch ) )
+                    for ( int jobCount = jobQueue.drainTo( batch ); keepRunning && jobCount > 0; jobCount = jobQueue.drainTo( batch ) )
                     {
                         executeBatch( batch );
                     }
@@ -162,6 +198,57 @@ class RunnableBoltWorker implements Runnable, BoltWorker
         catch ( Throwable t )
         {
             log.error( "Unable to close Bolt session '" + machine.key() + "'", t );
+        }
+    }
+}
+
+class ArrayBlockingQueueDescriber
+{
+    // Best-effort introspection to describe contents of queue; I don't think
+    // we should move this into the main code base as the effect of this
+    // on JVM optimizations are presumably bad. Want it in here to find out
+    // what is in this queue.
+    static String describe( ArrayBlockingQueue<Job> queue )
+    {
+        StringBuilder out = new StringBuilder();
+        try
+        {
+            Field itemsField = ArrayBlockingQueue.class.getDeclaredField( "items" );
+            Field countField = ArrayBlockingQueue.class.getDeclaredField( "count" );
+            Field takeIndexField = ArrayBlockingQueue.class.getDeclaredField( "takeIndex" );
+
+            itemsField.setAccessible( true );
+            countField.setAccessible( true );
+            takeIndexField.setAccessible( true );
+
+            Object[] items = (Object[]) itemsField.get( queue );
+            int n = countField.getInt( queue );
+            int take = takeIndexField.getInt( queue );
+            int i = 0;
+            out.append( "[" );
+            while ( i < n )
+            {
+                if ( i > 0 )
+                {
+                    out.append( ", " );
+                }
+
+                Object x = items[take];
+
+                out.append( x );
+
+                if ( ++take == items.length )
+                {
+                    take = 0;
+                }
+                i++;
+            }
+            out.append( "]" );
+            return out.toString();
+        }
+        catch ( Throwable e )
+        {
+            return String.format( "[Unable to describe queue: %s]", e.getMessage() );
         }
     }
 }

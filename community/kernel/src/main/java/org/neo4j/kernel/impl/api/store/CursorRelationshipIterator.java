@@ -32,6 +32,7 @@ import org.neo4j.storageengine.api.RelationshipItem;
 public class CursorRelationshipIterator implements RelationshipIterator, Resource
 {
     private Cursor<RelationshipItem> cursor;
+    private final Runnable assertOpen;
     private boolean hasDeterminedNext;
     private boolean hasNext;
 
@@ -40,13 +41,15 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
     private long startNode;
     private long endNode;
 
-    public CursorRelationshipIterator( Cursor<RelationshipItem> resourceCursor )
+    public CursorRelationshipIterator( Cursor<RelationshipItem> resourceCursor, Runnable assertOpen )
     {
-        cursor = resourceCursor;
+        this.cursor = resourceCursor;
+        this.assertOpen = assertOpen;
     }
 
     private boolean nextCursor()
     {
+        this.assertOpen.run();
         if ( cursor != null )
         {
             boolean hasNext = cursor.next();

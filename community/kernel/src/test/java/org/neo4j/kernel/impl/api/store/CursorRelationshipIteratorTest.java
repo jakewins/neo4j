@@ -57,7 +57,7 @@ public class CursorRelationshipIteratorTest
             }
         } ) );
 
-        try ( CursorRelationshipIterator iterator = new CursorRelationshipIterator( cursor ) )
+        try ( CursorRelationshipIterator iterator = new CursorRelationshipIterator( cursor, () -> {} ) )
         {
             verifyZeroInteractions( cursor );
 

@@ -22,7 +22,10 @@ package org.neo4j.bolt.v1.messaging;
 import java.io.IOException;
 import java.util.Map;
 
+import org.neo4j.bolt.v1.runtime.BoltConnectionFatality;
+import org.neo4j.bolt.v1.runtime.BoltStateMachine;
 import org.neo4j.bolt.v1.runtime.BoltWorker;
+import org.neo4j.bolt.v1.runtime.Job;
 import org.neo4j.bolt.v1.runtime.Neo4jError;
 import org.neo4j.bolt.v1.runtime.spi.BoltResult;
 import org.neo4j.bolt.v1.runtime.spi.Record;
@@ -43,8 +46,7 @@ public class BoltMessageRouter implements BoltRequestMessageHandler<RuntimeExcep
 
     private BoltWorker worker;
 
-    public BoltMessageRouter( Log log, BoltWorker worker, BoltResponseMessageHandler<IOException> output,
-            Runnable onEachCompletedRequest )
+    public BoltMessageRouter( Log log, BoltWorker worker, BoltResponseMessageHandler<IOException> output, Runnable onEachCompletedRequest )
     {
         this.initHandler = new InitHandler( output, onEachCompletedRequest, worker, log );
         this.runHandler = new RunHandler( output, onEachCompletedRequest, worker, log );
@@ -58,44 +60,93 @@ public class BoltMessageRouter implements BoltRequestMessageHandler<RuntimeExcep
     public void onInit( String userAgent, Map<String,Object> authToken ) throws RuntimeException
     {
         // TODO: make the client transmit the version for now it is hardcoded to -1 to ensure current behaviour
-        worker.enqueue( session -> session.init( userAgent, authToken, initHandler ) );
+        worker.enqueue( new Job.WithName( String.format( "INIT %s, %s", userAgent, authToken ) )
+        {
+            @Override
+            public void perform( BoltStateMachine session ) throws BoltConnectionFatality
+            {
+                session.init( userAgent, authToken, initHandler );
+            }
+        } );
     }
 
     @Override
     public void onAckFailure() throws RuntimeException
     {
-        worker.enqueue( session -> session.ackFailure( defaultHandler ) );
+        worker.enqueue( new Job.WithName( String.format( "ACK_FAILURE" ) )
+        {
+            @Override
+            public void perform( BoltStateMachine session ) throws BoltConnectionFatality
+            {
+                session.ackFailure( defaultHandler );
+            }
+        } );
     }
 
     @Override
     public void onReset() throws RuntimeException
     {
         worker.interrupt();
-        worker.enqueue( session -> session.reset( defaultHandler ) );
+        worker.enqueue( new Job.WithName( String.format( "RESET" ) )
+        {
+            @Override
+            public void perform( BoltStateMachine session ) throws BoltConnectionFatality
+            {
+                session.reset( defaultHandler );
+            }
+        } );
     }
 
     @Override
     public void onRun( String statement, Map<String,Object> params )
     {
-        worker.enqueue( session -> session.run( statement, params, runHandler ) );
+        worker.enqueue( new Job.WithName( String.format( "RUN %s, %s", statement, params ) )
+        {
+            @Override
+            public void perform( BoltStateMachine session ) throws BoltConnectionFatality
+            {
+                session.run( statement, params, runHandler );
+            }
+        } );
     }
 
     @Override
-    public void onExternalError( Neo4jError error)
+    public void onExternalError( Neo4jError error )
     {
-        worker.enqueue( session -> session.externalError( error, defaultHandler ) );
+        worker.enqueue( new Job.WithName( String.format( "EXTERNAL_ERROR %s", error ) )
+        {
+            @Override
+            public void perform( BoltStateMachine session ) throws BoltConnectionFatality
+            {
+                session.externalError( error, defaultHandler );
+            }
+        } );
     }
 
     @Override
     public void onDiscardAll()
     {
-        worker.enqueue( session -> session.discardAll( resultHandler ) );
+        worker.enqueue( new Job.WithName( String.format( "DISCARD_ALL" ) )
+        {
+            @Override
+            public void perform( BoltStateMachine session ) throws BoltConnectionFatality
+            {
+                session.discardAll( resultHandler );
+            }
+        } );
     }
 
     @Override
     public void onPullAll()
     {
-        worker.enqueue( session -> session.pullAll( resultHandler ) );
+        worker.enqueue( new Job.WithName( String.format( "PULL_ALL" ) )
+        {
+            @Override
+            public void perform( BoltStateMachine session ) throws BoltConnectionFatality
+            {
+                session.pullAll( resultHandler );
+            }
+        } );
     }
 
     private static class InitHandler extends MessageProcessingHandler
@@ -104,7 +155,6 @@ public class BoltMessageRouter implements BoltRequestMessageHandler<RuntimeExcep
         {
             super( handler, onCompleted, worker, log );
         }
-
     }
 
     private static class RunHandler extends MessageProcessingHandler
@@ -113,13 +163,11 @@ public class BoltMessageRouter implements BoltRequestMessageHandler<RuntimeExcep
         {
             super( handler, onCompleted, worker, log );
         }
-
     }
 
     private static class ResultHandler extends MessageProcessingHandler
     {
-        ResultHandler( BoltResponseMessageHandler<IOException> handler, Runnable onCompleted, BoltWorker worker,
-                Log log )
+        ResultHandler( BoltResponseMessageHandler<IOException> handler, Runnable onCompleted, BoltWorker worker, Log log )
         {
             super( handler, onCompleted, worker, log );
         }
@@ -143,9 +191,7 @@ public class BoltMessageRouter implements BoltRequestMessageHandler<RuntimeExcep
                 {
                     metadata.put( key, value );
                 }
-
             } );
         }
-
     }
 }
