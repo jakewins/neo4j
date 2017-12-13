@@ -177,8 +177,7 @@ public class ExecutingQuery
                 status.name(),
                 status.toMap( currentTimeNanos ),
                 activeLockCount,
-                heapAllocatedBytes
-        );
+                heapAllocatedBytes, threadExecutingTheQuery.getName() );
     }
 
     // basic methods

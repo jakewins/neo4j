@@ -93,6 +93,8 @@ public class KernelStatement implements TxStateHolder, Statement, AssertOpen
         this.facade = new OperationsFacade( transaction, this, procedures );
         this.executingQueryList = ExecutingQueryList.EMPTY;
         this.systemLockTracer = systemLockTracer;
+
+        storeStatement.setAssertOpen(this::assertOpen);
     }
 
     @Override

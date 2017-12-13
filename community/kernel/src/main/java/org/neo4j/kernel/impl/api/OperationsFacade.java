@@ -334,8 +334,8 @@ public class OperationsFacade
         statement.assertOpen();
         try ( Cursor<NodeItem> node = dataRead().nodeCursorById( statement, nodeId ) )
         {
-            return new CursorRelationshipIterator(
-                    dataRead().nodeGetRelationships( statement, node.get(), direction( direction ) ), statement::assertOpen );
+            Cursor<RelationshipItem> resourceCursor = dataRead().nodeGetRelationships( statement, node.get(), direction( direction ) );
+            return new CursorRelationshipIterator( resourceCursor, statement::assertOpen );
         }
     }
 

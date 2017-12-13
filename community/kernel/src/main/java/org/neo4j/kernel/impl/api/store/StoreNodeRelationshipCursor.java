@@ -48,6 +48,7 @@ public class StoreNodeRelationshipCursor extends StoreAbstractRelationshipCursor
     private long fromNodeId;
     private Direction direction;
     private IntPredicate allowedTypes;
+    private Runnable assertOpen;
     private int groupChainIndex;
     private boolean end;
     private final RecordCursors cursors;
@@ -63,18 +64,28 @@ public class StoreNodeRelationshipCursor extends StoreAbstractRelationshipCursor
         this.instanceCache = instanceCache;
         this.cursors = cursors;
     }
-
     public StoreNodeRelationshipCursor init( boolean isDense,
             long firstRelId,
             long fromNodeId,
             Direction direction,
             IntPredicate allowedTypes )
     {
+        return init(isDense, firstRelId, fromNodeId, direction, allowedTypes, () -> {});
+    }
+
+    public StoreNodeRelationshipCursor init( boolean isDense,
+            long firstRelId,
+            long fromNodeId,
+            Direction direction,
+            IntPredicate allowedTypes,
+            Runnable assertOpen )
+    {
         this.isDense = isDense;
         this.relationshipId = firstRelId;
         this.fromNodeId = fromNodeId;
         this.direction = direction;
         this.allowedTypes = allowedTypes;
+        this.assertOpen = assertOpen;
         this.end = false;
 
         if ( isDense && relationshipId != Record.NO_NEXT_RELATIONSHIP.intValue() )
@@ -95,6 +106,7 @@ public class StoreNodeRelationshipCursor extends StoreAbstractRelationshipCursor
     {
         while ( relationshipId != NO_NEXT_RELATIONSHIP.intValue() )
         {
+            assertOpen.run();
             relationshipRecordCursor.next( relationshipId, relationshipRecord, FORCE );
 
             // If we end up on a relationship record that isn't in use there's a good chance there

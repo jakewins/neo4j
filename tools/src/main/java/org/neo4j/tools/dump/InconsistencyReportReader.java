@@ -61,7 +61,7 @@ public class InconsistencyReportReader
             line = line.trim();
             if ( state == 0 )
             {
-                if ( !line.contains( " ERROR " ) && !line.contains( " WARNING " ) )
+                if ( !line.contains( "ERROR" ) && !line.contains( " WARNING " ) )
                 {
                     continue;
                 }
@@ -86,10 +86,18 @@ public class InconsistencyReportReader
     private void tryPropagate( String line )
     {
         String entityType = entityType( line );
-        long id = id( line );
-        if ( entityType != null && id != -1 )
+        try
         {
-            propagate( entityType, id );
+            long id = id( line );
+
+            if ( entityType != null && id != -1 )
+            {
+                propagate( entityType, id );
+            }
+        }
+        catch( NumberFormatException e)
+        {
+            System.err.printf( "Failed to parse line: '%s', error='%s'\n", line, e.getMessage() );
         }
     }
 

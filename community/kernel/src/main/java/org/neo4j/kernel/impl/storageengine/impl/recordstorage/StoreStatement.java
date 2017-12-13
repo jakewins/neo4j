@@ -78,13 +78,13 @@ public class StoreStatement implements StorageStatement
 
     private IndexReaderFactory indexReaderFactory;
     private LabelScanReader labelScanReader;
+    private Runnable assertOpen;
 
     private boolean acquired;
     private boolean closed;
 
-    public StoreStatement( NeoStores neoStores, Supplier<IndexReaderFactory> indexReaderFactory,
-            Supplier<LabelScanReader> labelScanReaderSupplier, LockService lockService,
-            RecordStorageCommandCreationContext commandCreationContext )
+    public StoreStatement( NeoStores neoStores, Supplier<IndexReaderFactory> indexReaderFactory, Supplier<LabelScanReader> labelScanReaderSupplier,
+            LockService lockService, RecordStorageCommandCreationContext commandCreationContext )
     {
         this.neoStores = neoStores;
         this.indexReaderFactorySupplier = indexReaderFactory;
@@ -108,8 +108,7 @@ public class StoreStatement implements StorageStatement
             @Override
             protected StoreSingleRelationshipCursor create()
             {
-                return new StoreSingleRelationshipCursor( relationshipStore.newRecord(), this, recordCursors,
-                        lockService );
+                return new StoreSingleRelationshipCursor( relationshipStore.newRecord(), this, recordCursors, lockService );
             }
         };
         iteratorRelationshipCursor = new InstanceCache<StoreIteratorRelationshipCursor>()
@@ -117,8 +116,7 @@ public class StoreStatement implements StorageStatement
             @Override
             protected StoreIteratorRelationshipCursor create()
             {
-                return new StoreIteratorRelationshipCursor( relationshipStore.newRecord(), this, recordCursors,
-                        lockService );
+                return new StoreIteratorRelationshipCursor( relationshipStore.newRecord(), this, recordCursors, lockService );
             }
         };
         nodeRelationshipsCursor = new InstanceCache<StoreNodeRelationshipCursor>()
@@ -126,8 +124,7 @@ public class StoreStatement implements StorageStatement
             @Override
             protected StoreNodeRelationshipCursor create()
             {
-                return new StoreNodeRelationshipCursor( relationshipStore.newRecord(),
-                        relationshipGroupStore.newRecord(), this, recordCursors, lockService );
+                return new StoreNodeRelationshipCursor( relationshipStore.newRecord(), relationshipGroupStore.newRecord(), this, recordCursors, lockService );
             }
         };
 
@@ -147,6 +144,11 @@ public class StoreStatement implements StorageStatement
                 return new StorePropertyCursor( recordCursors, this );
             }
         };
+    }
+
+    public void setAssertOpen( Runnable assertOpen )
+    {
+        this.assertOpen = assertOpen;
     }
 
     @Override
@@ -172,11 +174,18 @@ public class StoreStatement implements StorageStatement
     }
 
     @Override
-    public Cursor<RelationshipItem> acquireNodeRelationshipCursor( boolean isDense, long nodeId, long relationshipId,
-            Direction direction, IntPredicate relTypeFilter )
+    public Cursor<RelationshipItem> acquireNodeRelationshipCursor( boolean isDense, long nodeId, long relationshipId, Direction direction,
+            IntPredicate relTypeFilter )
     {
         neoStores.assertOpen();
-        return nodeRelationshipsCursor.get().init( isDense, relationshipId, nodeId, direction, relTypeFilter );
+        Runnable assertOpen = this.assertOpen;
+        if ( assertOpen == null )
+        {
+            assertOpen = () ->
+            {
+            };
+        }
+        return nodeRelationshipsCursor.get().init( isDense, relationshipId, nodeId, direction, relTypeFilter, assertOpen );
     }
 
     @Override
@@ -193,8 +202,7 @@ public class StoreStatement implements StorageStatement
     }
 
     @Override
-    public Cursor<PropertyItem> acquireSinglePropertyCursor( long propertyId, int propertyKeyId, Lock lock,
-            AssertOpen assertOpen )
+    public Cursor<PropertyItem> acquireSinglePropertyCursor( long propertyId, int propertyKeyId, Lock lock, AssertOpen assertOpen )
     {
         return singlePropertyCursorCache.get().init( propertyId, propertyKeyId, lock, assertOpen );
     }
@@ -204,6 +212,9 @@ public class StoreStatement implements StorageStatement
     {
         assert !closed;
         assert acquired;
+        assertOpen = () ->
+        {
+        };
         closeSchemaResources();
         acquired = false;
     }
@@ -235,14 +246,12 @@ public class StoreStatement implements StorageStatement
     @Override
     public LabelScanReader getLabelScanReader()
     {
-        return labelScanReader != null ?
-                labelScanReader : (labelScanReader = labelScanStore.get());
+        return labelScanReader != null ? labelScanReader : (labelScanReader = labelScanStore.get());
     }
 
     private IndexReaderFactory indexReaderFactory()
     {
-        return indexReaderFactory != null ?
-                indexReaderFactory : (indexReaderFactory = indexReaderFactorySupplier.get());
+        return indexReaderFactory != null ? indexReaderFactory : (indexReaderFactory = indexReaderFactorySupplier.get());
     }
 
     @Override

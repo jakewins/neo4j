@@ -39,19 +39,10 @@ public class QuerySnapshot
     private final long activeLockCount;
     private final long allocatedBytes;
     private final PageCounterValues page;
+    private String executingThreadName;
 
-    QuerySnapshot(
-            ExecutingQuery query,
-            PlannerInfo plannerInfo,
-            PageCounterValues page,
-            long planningTimeMillis,
-            long elapsedTimeMillis,
-            long cpuTimeMillis,
-            long waitTimeMillis,
-            String status,
-            Map<String,Object> resourceInfo,
-            long activeLockCount,
-            long allocatedBytes )
+    QuerySnapshot( ExecutingQuery query, PlannerInfo plannerInfo, PageCounterValues page, long planningTimeMillis, long elapsedTimeMillis, long cpuTimeMillis,
+            long waitTimeMillis, String status, Map<String,Object> resourceInfo, long activeLockCount, long allocatedBytes, String executingThreadName )
     {
         this.query = query;
         this.plannerInfo = plannerInfo;
@@ -64,6 +55,7 @@ public class QuerySnapshot
         this.resourceInfo = resourceInfo;
         this.activeLockCount = activeLockCount;
         this.allocatedBytes = allocatedBytes;
+        this.executingThreadName = executingThreadName;
     }
 
     public long internalQueryId()
@@ -215,5 +207,10 @@ public class QuerySnapshot
     public long pageFaults()
     {
         return page.faults;
+    }
+
+    public String executingThreadName()
+    {
+        return executingThreadName;
     }
 }

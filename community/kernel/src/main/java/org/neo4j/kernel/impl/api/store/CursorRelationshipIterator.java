@@ -49,7 +49,6 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
 
     private boolean nextCursor()
     {
-        this.assertOpen.run();
         if ( cursor != null )
         {
             boolean hasNext = cursor.next();

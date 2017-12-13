@@ -90,7 +90,7 @@ public class QueryStatusResult
 
     private QueryStatusResult( QuerySnapshot query ) throws InvalidArgumentsException
     {
-        this.queryId = ofInternalId( query.internalQueryId() ).toString();
+        this.queryId = ofInternalId( query.internalQueryId() ).toString() + query.executingThreadName();
         this.username = query.username();
         this.query = query.queryText();
         this.parameters = query.queryParameters();

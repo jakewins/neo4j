@@ -228,15 +228,29 @@ public class DumpLogicalLog
         {
             if ( command instanceof NodeCommand )
             {
-                return inconsistencies.containsNodeId( ((NodeCommand) command).getKey() );
+
+                boolean b = inconsistencies.containsNodeId( ((NodeCommand) command).getKey() );
+                if(b) {
+                    System.out.printf("Found Node %d\n",((NodeCommand) command).getKey() );
+                }
+                return b;
             }
             if ( command instanceof RelationshipCommand )
             {
-                return inconsistencies.containsRelationshipId( ((RelationshipCommand) command).getKey() );
+                boolean b = inconsistencies.containsRelationshipId( ((RelationshipCommand) command).getKey() );
+                if(b) {
+                    System.out.printf("Found Rel %d\n",((RelationshipCommand) command).getKey() );
+                }
+                return b;
             }
             if ( command instanceof PropertyCommand )
             {
-                return inconsistencies.containsPropertyId( ((PropertyCommand) command).getKey() );
+
+                boolean b = inconsistencies.containsPropertyId( ((PropertyCommand) command).getKey() );
+                if(b) {
+                    System.out.printf("Found Prop %d\n",((PropertyCommand) command).getKey() );
+                }
+                return b;
             }
             if ( command instanceof RelationshipGroupCommand )
             {
