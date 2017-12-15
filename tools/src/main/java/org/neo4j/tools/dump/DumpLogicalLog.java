@@ -83,8 +83,7 @@ public class DumpLogicalLog
         this.fileSystem = fileSystem;
     }
 
-    public void dump( String filenameOrDirectory, PrintStream out,
-            Predicate<LogEntry[]> filter, Function<LogEntry,String> serializer,
+    public void dump( String filenameOrDirectory, PrintStream out, Predicate<LogEntry[]> filter, Function<LogEntry,String> serializer,
             InvalidLogEntryHandler invalidLogEntryHandler ) throws IOException
     {
         File file = new File( filenameOrDirectory );
@@ -132,20 +131,17 @@ public class DumpLogicalLog
             fileChannel.close();
             throw ex;
         }
-        out.println( "Logical log format: " + logHeader.logFormatVersion + " version: " + logHeader.logVersion +
-                " with prev committed tx[" + logHeader.lastCommittedTxId + "]" );
+        out.println( "Logical log format: " + logHeader.logFormatVersion + " version: " + logHeader.logVersion + " with prev committed tx[" +
+                logHeader.lastCommittedTxId + "]" );
 
-        PhysicalLogVersionedStoreChannel channel = new PhysicalLogVersionedStoreChannel(
-                fileChannel, logHeader.logVersion, logHeader.logFormatVersion );
-        ReadableClosablePositionAwareChannel logChannel = new ReadAheadLogChannel( channel, bridge,
-                DEFAULT_READ_AHEAD_SIZE );
-        LogEntryReader<ReadableClosablePositionAwareChannel> entryReader = new VersionAwareLogEntryReader<>(
-                new RecordStorageCommandReaderFactory(), invalidLogEntryHandler );
+        PhysicalLogVersionedStoreChannel channel = new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.logVersion, logHeader.logFormatVersion );
+        ReadableClosablePositionAwareChannel logChannel = new ReadAheadLogChannel( channel, bridge, DEFAULT_READ_AHEAD_SIZE );
+        LogEntryReader<ReadableClosablePositionAwareChannel> entryReader =
+                new VersionAwareLogEntryReader<>( new RecordStorageCommandReaderFactory(), invalidLogEntryHandler );
 
         IOCursor<LogEntry> entryCursor = new LogEntryCursor( entryReader, logChannel );
         TransactionLogEntryCursor transactionCursor = new TransactionLogEntryCursor( entryCursor );
-        try ( IOCursor<LogEntry[]> cursor = filter == null ? transactionCursor
-                                                           : new FilteringIOCursor<>( transactionCursor, filter ) )
+        try ( IOCursor<LogEntry[]> cursor = filter == null ? transactionCursor : new FilteringIOCursor<>( transactionCursor, filter ) )
         {
             while ( cursor.next() )
             {
@@ -216,7 +212,7 @@ public class DumpLogicalLog
         {
             if ( logEntry instanceof LogEntryCommand )
             {
-                if ( matches( ((LogEntryCommand)logEntry).getXaCommand() ) )
+                if ( matches( ((LogEntryCommand) logEntry).getXaCommand() ) )
                 {
                     return true;
                 }
@@ -230,16 +226,18 @@ public class DumpLogicalLog
             {
 
                 boolean b = inconsistencies.containsNodeId( ((NodeCommand) command).getKey() );
-                if(b) {
-                    System.out.printf("Found Node %d\n",((NodeCommand) command).getKey() );
+                if ( b )
+                {
+                    System.out.printf( "Found Node %d\n", ((NodeCommand) command).getKey() );
                 }
                 return b;
             }
             if ( command instanceof RelationshipCommand )
             {
                 boolean b = inconsistencies.containsRelationshipId( ((RelationshipCommand) command).getKey() );
-                if(b) {
-                    System.out.printf("Found Rel %d\n",((RelationshipCommand) command).getKey() );
+                if ( b )
+                {
+                    System.out.printf( "Found Rel %d\n", ((RelationshipCommand) command).getKey() );
                 }
                 return b;
             }
@@ -247,8 +245,9 @@ public class DumpLogicalLog
             {
 
                 boolean b = inconsistencies.containsPropertyId( ((PropertyCommand) command).getKey() );
-                if(b) {
-                    System.out.printf("Found Prop %d\n",((PropertyCommand) command).getKey() );
+                if ( b )
+                {
+                    System.out.printf( "Found Prop %d\n", ((PropertyCommand) command).getKey() );
                 }
                 return b;
             }
@@ -277,19 +276,19 @@ public class DumpLogicalLog
 
     /**
      * Usage: [--txfilter "regex"] [--ccfilter cc-report-file] [--tofile] [--lenient] storeDirOrFile1 storeDirOrFile2 ...
-     *
+     * <p>
      * --txfilter
      * Will match regex against each {@link LogEntry} and if there is a match,
      * include transaction containing the LogEntry in the dump.
      * regex matching is done with {@link Pattern}
-     *
+     * <p>
      * --ccfilter
      * Will look at an inconsistency report file from consistency checker and
      * include transactions that are relevant to them
-     *
+     * <p>
      * --tofile
      * Redirects output to dump-logical-log.txt in the store directory
-     *
+     * <p>
      * --lenient
      * Will attempt to read log entries even if some look broken along the way
      */
@@ -300,14 +299,12 @@ public class DumpLogicalLog
         Predicate<LogEntry[]> filter = parseFilter( arguments, timeZone );
         Function<LogEntry,String> serializer = parseSerializer( filter, timeZone );
         Function<PrintStream,InvalidLogEntryHandler> invalidLogEntryHandler = parseInvalidLogEntryHandler( arguments );
-        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
-              Printer printer = getPrinter( arguments ) )
+        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction(); Printer printer = getPrinter( arguments ) )
         {
             for ( String fileAsString : arguments.orphans() )
             {
                 PrintStream out = printer.getFor( fileAsString );
-                new DumpLogicalLog( fileSystem ).dump( fileAsString, out, filter, serializer,
-                        invalidLogEntryHandler.apply( out ) );
+                new DumpLogicalLog( fileSystem ).dump( fileAsString, out, filter, serializer, invalidLogEntryHandler.apply( out ) );
             }
         }
     }

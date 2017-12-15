@@ -25,11 +25,11 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslContext;
 
-import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.logging.LogProvider;
-
 import java.util.Map;
 import java.util.function.BiFunction;
+
+import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.logging.LogProvider;
 
 /**
  * Implements a transport for the Neo4j Messaging Protocol that uses good old regular sockets.
@@ -60,6 +60,7 @@ public class SocketTransport implements NettyServer.ProtocolInitializer
             @Override
             public void initChannel( SocketChannel ch ) throws Exception
             {
+                logging.getLog( "ConnectionInfo" ).info( "Accepted connection at " + ch.localAddress() + " from " + ch.remoteAddress() );
                 ch.config().setAllocator( PooledByteBufAllocator.DEFAULT );
                 ch.pipeline().addLast(
                         new TransportSelectionHandler( sslCtx, encryptionRequired, false, logging, protocolVersions ) );

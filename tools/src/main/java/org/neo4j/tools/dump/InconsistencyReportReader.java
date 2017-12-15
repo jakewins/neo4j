@@ -28,7 +28,7 @@ import org.neo4j.tools.dump.inconsistency.Inconsistencies;
 
 /**
  * Reads CC inconsistency reports. Example of entry:
- *
+ * <p>
  * <pre>
  * ERROR: The referenced relationship record is not in use.
  *     Node[3496089,used=true,rel=14833798,prop=13305361,labels=Inline(0x1000000006:[6]),light,secondaryUnitId=-1]
@@ -46,7 +46,7 @@ public class InconsistencyReportReader
 
     public void read( File file ) throws IOException
     {
-        try ( BufferedReader reader = new BufferedReader( new FileReader( file )) )
+        try ( BufferedReader reader = new BufferedReader( new FileReader( file ) ) )
         {
             read( reader );
         }
@@ -95,7 +95,7 @@ public class InconsistencyReportReader
                 propagate( entityType, id );
             }
         }
-        catch( NumberFormatException e)
+        catch ( NumberFormatException e )
         {
             System.err.printf( "Failed to parse line: '%s', error='%s'\n", line, e.getMessage() );
         }
@@ -133,9 +133,7 @@ public class InconsistencyReportReader
         int bracket = line.indexOf( '[' );
         if ( bracket > -1 )
         {
-            int separator = min( getSeparatorIndex( ',', line, bracket ),
-                    getSeparatorIndex( ';', line, bracket ),
-                    getSeparatorIndex( ']', line, bracket ) );
+            int separator = min( getSeparatorIndex( ',', line, bracket ), getSeparatorIndex( ';', line, bracket ), getSeparatorIndex( ']', line, bracket ) );
             int equally = line.indexOf( "=", bracket );
             int startPosition = (isNotPlainId( bracket, separator, equally ) ? equally : bracket) + 1;
             if ( separator > -1 )
@@ -146,7 +144,7 @@ public class InconsistencyReportReader
         return -1;
     }
 
-    private static int min(int... values)
+    private static int min( int... values )
     {
         int min = Integer.MAX_VALUE;
         for ( int value : values )
