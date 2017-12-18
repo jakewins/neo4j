@@ -20,7 +20,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.expressions.PathImpl
+import org.neo4j.cypher.internal.runtime.PathImpl
 import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport.Versions.V3_1
 import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport._
 import org.neo4j.kernel.impl.proc.Procedures
@@ -28,7 +28,7 @@ import org.neo4j.kernel.impl.proc.Procedures
 class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
   val expectedToSucceed = Configs.CommunityInterpreted - Configs.Version2_3
   val expectedToSucceedIncludingSlotted = expectedToSucceed + Configs.SlottedInterpreted
-  val expectedToSucceedRestricted = TestConfiguration(Versions(V3_1, Versions.Default), Planners(Planners.Cost, Planners.Default), Runtimes(Runtimes.Interpreted, Runtimes.Default))
+  val expectedToSucceedRestricted = TestConfiguration(Versions(V3_1, Versions.Default, Versions.V3_3), Planners(Planners.Cost, Planners.Default), Runtimes(Runtimes.Interpreted, Runtimes.Default))
   val expectedToSucceedIncludingSlottedRestricted = expectedToSucceedRestricted + Configs.SlottedInterpreted
 
   test("pattern comprehension nested in pattern comprehension") {
@@ -90,7 +90,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         | ) > 0)
         | RETURN childD.id""".stripMargin
 
-    val result = executeWith(expectedToSucceedRestricted, query)
+    val result = executeWith(expectedToSucceedIncludingSlottedRestricted, query)
 
     result.toList should equal(
       List(
@@ -109,7 +109,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
                |WITH collect(t) AS tweets
                |RETURN test.toSet([ tweet IN tweets | [ (tweet)<-[:POSTED]-(user) | user] ]) AS users""".stripMargin
 
-    val result = executeWith(expectedToSucceedRestricted, query)
+    val result = executeWith(expectedToSucceedIncludingSlottedRestricted, query)
     result.toList should equal(List(Map("users" -> List(List(n2)))))
   }
 
@@ -125,7 +125,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
                   |WITH [ tweet IN tweets | [ (tweet)<-[:POSTED]-(user) | user] ] AS pattern
                   |RETURN test.toSet(pattern) AS users""".stripMargin
 
-    val result = executeWith(expectedToSucceedRestricted, query)
+    val result = executeWith(expectedToSucceedIncludingSlottedRestricted, query)
     result.toList should equal(List(Map("users" -> List(List(n2)))))
   }
 
@@ -176,7 +176,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val query = "MATCH (n:Start) RETURN [p = (n)-->(b) WHERE head([p IN ['foo'] | true ]) | p] AS list"
 
-    val result = executeWith(expectedToSucceedRestricted, query)
+    val result = executeWith(expectedToSucceedIncludingSlottedRestricted, query)
 
     result.toList should equal(List(Map("list" -> List(PathImpl(n1, r, n2)))))
   }
@@ -188,7 +188,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val query = "MATCH (n:Start) RETURN [p = (n)-->() | {path: p, other: [p IN ['foo'] | true ]} ] AS list"
 
-    val result = executeWith(expectedToSucceed, query)
+    val result = executeWith(expectedToSucceedIncludingSlotted, query)
 
     result.toList should equal(List(Map("list" -> List(Map("path" -> PathImpl(n1, r, n2), "other" -> List(true))))))
   }
@@ -359,10 +359,11 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val query = "RETURN size([(:Start)-->() | 1]) AS size"
 
-    val result = executeWith(expectedToSucceedRestricted, query)
+    val result = executeWith(expectedToSucceedIncludingSlottedRestricted, query)
     result.toList should equal(List(Map("size" -> 3)))
   }
 
+  // FAIL: Ouch, no suitable slot for key   UNNAMED58 = -[0]-
   test("pattern comprehension inside list comprehension") {
     val a = createLabeledNode("X", "A")
     val m1 = createLabeledNode("Y")
@@ -376,9 +377,9 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
     relate(m2, createLabeledNode("Y"))
     relate(m2, createNode())
 
-    val query = """MATCH p = (n:X)-->() RETURN n, [x IN nodes(p) | size([(x)-->(y:Y) | 1])] AS list"""
+    val query = """MATCH p = (n:X)-[s]->(apa) RETURN n, [x IN nodes(p) | size([(x)-[r]->(y:Y) | 1])] AS list"""
 
-    val result = executeWith(expectedToSucceedRestricted, query)
+    val result = executeWith(expectedToSucceedIncludingSlottedRestricted, query)
     result.toSet should equal(Set(
       Map("n" -> a, "list" -> Seq(1, 2)),
       Map("n" -> b, "list" -> Seq(0, 1))
@@ -388,7 +389,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
   test("pattern comprehension in RETURN following a WITH") {
     val query = """MATCH (e:X) WITH e LIMIT 5 RETURN [(e) --> (t) | t { .amount }]"""
 
-    executeWith(expectedToSucceedRestricted, query).toList //does not throw
+    executeWith(expectedToSucceedIncludingSlottedRestricted, query).toList //does not throw
   }
 
   test("pattern comprehension play nice with map projections") {

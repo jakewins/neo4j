@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.store.NotCurrentStoreVersionException;
 import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
@@ -62,7 +63,7 @@ public class IndexProviderStore
             }
 
             // Read all the records in the file
-            channel = fileSystem.open( file, "rw" );
+            channel = fileSystem.open( file, OpenMode.READ_WRITE );
             Long[] records = readRecordsWithNullDefaults( channel, RECORD_COUNT, allowUpgrade );
             creationTime = records[0].longValue();
             randomIdentifier = records[1].longValue();
@@ -156,7 +157,7 @@ public class IndexProviderStore
         StoreChannel fileChannel = null;
         try
         {
-            fileChannel = fileSystem.open( file, "rw" );
+            fileChannel = fileSystem.open( file, OpenMode.READ_WRITE );
             write( fileChannel, System.currentTimeMillis(), random.nextLong(),
                     0, 1, indexVersion );
         }
@@ -176,14 +177,8 @@ public class IndexProviderStore
         buf.putLong( time ).putLong( identifier ).putLong( version ).putLong( lastCommittedTxId ).putLong( indexVersion );
         buf.flip();
 
-        int written = channel.write( buf, 0 );
+        channel.writeAll( buf, 0 );
         channel.force( true );
-
-        int expectedLength = RECORD_COUNT * RECORD_SIZE;
-        if ( written != expectedLength )
-        {
-            throw new RuntimeException( "Expected to write " + expectedLength + " bytes, but wrote " + written );
-        }
     }
 
     public File getFile()

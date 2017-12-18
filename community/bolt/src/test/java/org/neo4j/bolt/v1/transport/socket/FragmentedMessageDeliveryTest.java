@@ -30,6 +30,7 @@ import java.util.Arrays;
 
 import org.neo4j.bolt.BoltChannel;
 import org.neo4j.bolt.logging.NullBoltMessageLogger;
+import org.neo4j.bolt.transport.TransportThrottleGroup;
 import org.neo4j.bolt.v1.messaging.BoltRequestMessageWriter;
 import org.neo4j.bolt.v1.messaging.Neo4jPack;
 import org.neo4j.bolt.v1.messaging.RecordingByteChannel;
@@ -45,8 +46,8 @@ import org.neo4j.kernel.impl.util.HexPrinter;
 import org.neo4j.values.virtual.MapValue;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -124,7 +125,7 @@ public class FragmentedMessageDeliveryTest
         when( boltChannel.log() ).thenReturn( NullBoltMessageLogger.getInstance() );
 
         BoltMessagingProtocolV1Handler protocol = new BoltMessagingProtocolV1Handler(
-                boltChannel, new SynchronousBoltWorker( machine ), NullLogService.getInstance() );
+                boltChannel, new SynchronousBoltWorker( machine ), TransportThrottleGroup.NO_THROTTLE, NullLogService.getInstance() );
 
         // When data arrives split up according to the current permutation
         for ( ByteBuf fragment : fragments )

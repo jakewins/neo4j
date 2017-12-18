@@ -21,12 +21,12 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.cypher.internal.util.v3_4.InternalException
-import org.neo4j.cypher.internal.{InternalExecutionResult, RewindableExecutionResult}
-import org.neo4j.cypher.internal.compatibility.ClosingExecutionResult
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.planDescription.InternalPlanDescription
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.planDescription.InternalPlanDescription.Arguments.Rows
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.RewindableExecutionResult
+import org.neo4j.cypher.internal.runtime.InternalExecutionResult
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.Rows
+import org.neo4j.cypher.internal.util.v3_4.InternalException
 import org.neo4j.graphalgo.impl.path.ShortestPath
 import org.neo4j.graphalgo.impl.path.ShortestPath.DataMonitor
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
@@ -109,6 +109,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     results shouldNot executeShortestPathFallbackWith(minRows = 1)
   }
 
+  // FAIL: head of empty list
   test("shortestPath with same start and end node as well as predicates should resort to fallback") {
     val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
@@ -128,6 +129,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     results should executeShortestPathFallbackWith(minRows = 1)
   }
 
+  // FAIL: head of empty list
   test("Shortest path from first to first node via top right (reverts to exhaustive)") {
     val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
@@ -167,7 +169,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Shortest path from first to last node via top right") {
     val start = System.currentTimeMillis
-    val results = executeWith(Configs.CommunityInterpreted,
+    val results = executeWith(Configs.Interpreted,
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE ANY(n in nodes(p) WHERE n:$topRight)
          |RETURN nodes(p) AS nodes""".stripMargin,
@@ -187,7 +189,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Shortest path from first to last node via bottom left") {
     val start = System.currentTimeMillis
-    val results = executeWith(Configs.CommunityInterpreted,
+    val results = executeWith(Configs.Interpreted,
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE ANY(n in nodes(p) WHERE n:$bottomLeft)
          |RETURN nodes(p) AS nodes""".stripMargin,
@@ -207,7 +209,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Fallback expander should take on rel-type predicates") {
     val start = System.currentTimeMillis
-    val results = executeWith(Configs.CommunityInterpreted,
+    val results = executeWith(Configs.Interpreted,
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[rels*]-(dst:$bottomRight))
          |WHERE ALL(r in rels WHERE type(r) = "DOWN")
          |  AND ANY(n in nodes(p) WHERE n:$bottomLeft)
@@ -243,6 +245,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     results should executeShortestPathFallbackWith(minRows = 0, maxRows = 0)
   }
 
+  // FAIL: head of empty list
   test("Shortest path from first to last node via top right and bottom left (reverts to exhaustive)") {
     val start = System.currentTimeMillis
     val query =
@@ -352,6 +355,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     ))
   }
 
+  // FAIL: expected row count 0 was not equal to 8
   test("All shortest paths from first to last node via top right and bottom left (needs to be with fallback)") {
     val start = System.currentTimeMillis
     val result = executeUsingCostPlannerOnly(
@@ -612,7 +616,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
                   |WHERE ALL(id IN wps WHERE id IN EXTRACT(n IN nodes(p) | n.id))
                   |WITH p, size(nodes(p)) as length order by length DESC limit 1
                   |RETURN EXTRACT(n IN nodes(p) | n.id) as nodes""".stripMargin
-    val result = executeWith(Configs.CommunityInterpreted, query,
+    val result = executeWith(Configs.Interpreted, query,
       expectedDifferentResults = Configs.AllRulePlanners + Configs.Cost2_3)
 
     result.toList should equal(List(Map("nodes" -> List(3, 2, 1, 11, 12, 13, 26, 27, 14))))
@@ -707,7 +711,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   }
 
   private def debugResults(nodes: Seq[Node]): Unit = {
-    dprintln
+    dprintln()
     val nodeMap: Map[String, Map[Node, Int]] = nodes.foldLeft(Map[String,Map[Node,Int]]()) { (acc, node) =>
       val row = node.getId / dim
       val col = node.getId - dim * row
@@ -721,9 +725,9 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
         val toPrint = "  " + text
         dprint(toPrint.substring(toPrint.length - 3))
       }
-      dprintln
+      dprintln()
     }
-    dprintln
+    dprintln()
   }
 
   private def evaluateShortestPathResults(results: InternalExecutionResult, startMs: Long, pathLength: Int, expectedNodes: Set[Node]): Unit = {
@@ -747,7 +751,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   }
 
   private def dprintln(s: Any) = if (VERBOSE) println(s)
-  private def dprintln = if (VERBOSE) println
+  private def dprintln() = if (VERBOSE) println
   private def dprint(s: Any) = if (VERBOSE) print(s)
 
   private def evaluateAllShortestPathResults(results: InternalExecutionResult, identifier: String, startMs: Long, expectedPathCount: Int, expectedNodes: Set[Set[Node]]): Unit = {
@@ -807,7 +811,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
       debug(dim, theseVisitedNodes, theseNextNodes, connectingNode)
       dprintln("From end:")
       debug(dim, thoseVisitedNodes, thoseNextNodes, connectingNode)
-      dprintln
+      dprintln()
     }
 
     private def debugNode(dim: Int, matrix: mutable.Map[String, String], cellSize: Int, node: Node,
@@ -842,9 +846,9 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
           val text = matrix.getOrElse(key, "- ")
           printf(s"%${4 + cellSize}s", text)
         }
-        dprintln
+        dprintln()
       }
-      dprintln
+      dprintln()
     }
   }
 }

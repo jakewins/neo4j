@@ -28,22 +28,24 @@ import org.neo4j.collection.primitive.PrimitiveIntCollection;
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.collection.primitive.PrimitiveIntStack;
+import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.NotFoundException;
+import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelException;
+import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
+import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
+import org.neo4j.internal.kernel.api.exceptions.explicitindex.AutoIndexingKernelException;
+import org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.DataWriteOperations;
 import org.neo4j.kernel.api.ExplicitIndex;
 import org.neo4j.kernel.api.ExplicitIndexHits;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
-import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.exceptions.explicitindex.AutoIndexingKernelException;
-import org.neo4j.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
@@ -57,8 +59,8 @@ import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
-import org.neo4j.kernel.api.schema.IndexQuery;
 import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.kernel.api.schema.SchemaDescriptor;
@@ -533,17 +535,17 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public PrimitiveLongIterator nodesGetForLabel( KernelStatement state, int labelId )
+    public PrimitiveLongResourceIterator nodesGetForLabel( KernelStatement state, int labelId )
     {
+        PrimitiveLongResourceIterator committed = storeLayer.nodesGetForLabel( state.getStoreStatement(), labelId );
         if ( state.hasTxStateWithChanges() )
         {
-            PrimitiveLongIterator wLabelChanges =
-                    state.txState().nodesWithLabelChanged( labelId ).augment(
-                            storeLayer.nodesGetForLabel( state.getStoreStatement(), labelId ) );
-            return state.txState().addedAndRemovedNodes().augmentWithRemovals( wLabelChanges );
+            PrimitiveLongIterator wLabelChanges = state.txState().nodesWithLabelChanged( labelId ).augment( committed );
+            return PrimitiveLongCollections
+                    .resourceIterator( state.txState().addedAndRemovedNodes().augmentWithRemovals( wLabelChanges ), committed );
         }
 
-        return storeLayer.nodesGetForLabel( state.getStoreStatement(), labelId );
+        return committed;
     }
 
     @Override
@@ -580,7 +582,7 @@ public class StateHandlingStatementOperations implements
         state.txState().indexDoDrop( descriptor );
     }
 
-    private IndexBackedConstraintDescriptor indexBackedConstraintCreate( KernelStatement state, IndexBackedConstraintDescriptor constraint )
+    private void indexBackedConstraintCreate( KernelStatement state, IndexBackedConstraintDescriptor constraint )
             throws CreateConstraintFailureException
     {
         LabelSchemaDescriptor descriptor = constraint.schema();
@@ -602,13 +604,13 @@ public class StateHandlingStatementOperations implements
                 {
                     if ( it.next().equals( constraint ) )
                     {
-                        return constraint;
+                        return;
                     }
                 }
                 long indexId = constraintIndexCreator.createUniquenessConstraintIndex( state, this, descriptor );
                 state.txState().constraintDoAdd( constraint, indexId );
             }
-            return constraint;
+            return;
         }
         catch ( UniquePropertyValueValidationException |
                 DropIndexFailureException |
@@ -756,6 +758,20 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
+    public SchemaIndexProvider.Descriptor indexGetProviderDescriptor( KernelStatement state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    {
+        if ( state.hasTxStateWithChanges() )
+        {
+            if ( checkIndexState( descriptor,
+                    state.txState().indexDiffSetsByLabel( descriptor.schema().getLabelId() ) ) )
+            {
+                return SchemaIndexProvider.UNDECIDED;
+            }
+        }
+        return storeLayer.indexGetProviderDescriptor( descriptor );
+    }
+
+    @Override
     public PopulationProgress indexGetPopulationProgress( KernelStatement state, IndexDescriptor descriptor ) throws
             IndexNotFoundKernelException
     {
@@ -830,51 +846,57 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public PrimitiveLongIterator indexQuery( KernelStatement state, IndexDescriptor index, IndexQuery... predicates )
+    public PrimitiveLongResourceIterator indexQuery( KernelStatement state, IndexDescriptor index, IndexQuery... predicates )
             throws IndexNotFoundKernelException, IndexNotApplicableKernelException
     {
         StorageStatement storeStatement = state.getStoreStatement();
         IndexReader reader = storeStatement.getIndexReader( index );
-        PrimitiveLongIterator committed = reader.query( predicates );
+        PrimitiveLongResourceIterator committed = reader.query( predicates );
         PrimitiveLongIterator exactMatches = reader.hasFullNumberPrecision( predicates )
                 ? committed : LookupFilter.exactIndexMatches( this, state, committed, predicates );
 
+        PrimitiveLongIterator result;
         IndexQuery firstPredicate = predicates[0];
         switch ( firstPredicate.type() )
         {
         case exact:
             IndexQuery.ExactPredicate[] exactPreds = assertOnlyExactPredicates( predicates );
-            return filterIndexStateChangesForSeek( state, exactMatches, index, IndexQuery.asValueTuple( exactPreds ) );
+            result = filterIndexStateChangesForSeek( state, exactMatches, index, IndexQuery.asValueTuple( exactPreds ) );
+            break;
 
         case stringSuffix:
         case stringContains:
         case exists:
-            return filterIndexStateChangesForScan( state, exactMatches, index );
+            result = filterIndexStateChangesForScan( state, exactMatches, index );
+            break;
 
         case rangeNumeric:
-        {
             assertSinglePredicate( predicates );
             IndexQuery.NumberRangePredicate numPred = (IndexQuery.NumberRangePredicate) firstPredicate;
-            return filterIndexStateChangesForRangeSeekByNumber( state, index, numPred.from(),
+            result = filterIndexStateChangesForRangeSeekByNumber( state, index, numPred.from(),
                     numPred.fromInclusive(), numPred.to(), numPred.toInclusive(), exactMatches );
-        }
+            break;
+
         case rangeString:
         {
             assertSinglePredicate( predicates );
             IndexQuery.StringRangePredicate strPred = (IndexQuery.StringRangePredicate) firstPredicate;
-            return filterIndexStateChangesForRangeSeekByString(
+            result = filterIndexStateChangesForRangeSeekByString(
                     state, index, strPred.from(), strPred.fromInclusive(), strPred.to(),
                     strPred.toInclusive(), committed );
+            break;
         }
         case stringPrefix:
         {
             assertSinglePredicate( predicates );
             IndexQuery.StringPrefixPredicate strPred = (IndexQuery.StringPrefixPredicate) firstPredicate;
-            return filterIndexStateChangesForRangeSeekByPrefix( state, index, strPred.prefix(), committed );
+            result = filterIndexStateChangesForRangeSeekByPrefix( state, index, strPred.prefix(), committed );
+            break;
         }
         default:
             throw new UnsupportedOperationException( "Query not supported: " + Arrays.toString( predicates ) );
         }
+        return PrimitiveLongCollections.resourceIterator( result, committed );
     }
 
     private IndexQuery.ExactPredicate[] assertOnlyExactPredicates( IndexQuery[] predicates )
@@ -1628,7 +1650,7 @@ public class StateHandlingStatementOperations implements
         catch ( EntityNotFoundException e )
         {
             // This is a special case which is still OK. This method is called lazily where deleted relationships
-            // that still are referenced by a explicit index will be added for removal in this transaction.
+            // that still are referenced by an explicit index will be added for removal in this transaction.
             // Ideally we'd want to include start/end node too, but we can't since the relationship doesn't exist.
             // So we do the "normal" remove call on the explicit index transaction changes. The downside is that
             // Some queries on this transaction state that include start/end nodes might produce invalid results.

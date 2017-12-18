@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal.ir.v3_4.helpers
 import org.neo4j.cypher.internal.util.v3_4.{Rewriter, topDown}
 import org.neo4j.cypher.internal.frontend.v3_4.ast.rewriters.{LabelPredicateNormalizer, MatchPredicateNormalizerChain, PropertyPredicateNormalizer, addUniquenessPredicates}
 import org.neo4j.cypher.internal.v3_4.expressions.{Ands, Expression, HasLabels, Not, Ors, PatternComprehension, PatternExpression, RelationshipChain, Variable}
-import org.neo4j.cypher.internal.frontend.v3_4.helpers.UnNamedNameGenerator._
+import org.neo4j.cypher.internal.util.v3_4.UnNamedNameGenerator._
 import org.neo4j.cypher.internal.ir.v3_4._
 import org.neo4j.cypher.internal.ir.v3_4.helpers.PatternConverters._
 import org.neo4j.cypher.internal.ir.v3_4.QueryGraph
@@ -48,7 +48,7 @@ object ExpressionConverters {
         patternRelationships = patternContent.rels.toSet,
         patternNodes = patternContent.nodeIds.toSet
       ).addPredicates(predicates: _*)
-      qg.addArgumentIds(qg.coveredIds.filter(_.name.isNamed).toIndexedSeq)
+      qg.addArgumentIds(qg.idsWithoutOptionalMatchesOrUpdates.filter(_.name.isNamed).toIndexedSeq)
     }
   }
 
@@ -69,7 +69,7 @@ object ExpressionConverters {
         patternRelationships = patternContent.rels.toSet,
         patternNodes = patternContent.nodeIds.toSet
       ).addPredicates(predicates: _*)
-      qg.addArgumentIds(qg.coveredIds.filter(_.name.isNamed).toIndexedSeq)
+      qg.addArgumentIds(qg.idsWithoutOptionalMatchesOrUpdates.filter(_.name.isNamed).toIndexedSeq)
     }
   }
 

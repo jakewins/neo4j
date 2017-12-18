@@ -21,6 +21,7 @@ package org.neo4j.values.storable;
 
 import java.util.Arrays;
 
+import org.neo4j.graphdb.spatial.Geometry;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.SequenceValue;
 
@@ -61,6 +62,12 @@ public abstract class StringArray extends TextArray
     }
 
     @Override
+    public boolean equals( Geometry[] x )
+    {
+        return false;
+    }
+
+    @Override
     public final boolean eq( Object other )
     {
         if ( other == null )
@@ -94,11 +101,13 @@ public abstract class StringArray extends TextArray
     }
 
     @Override
-    public Object getInnerObject()
+    @Deprecated
+    public Object asObject()
     {
         return value();
     }
 
+    @Override
     public int compareTo( TextArray other )
     {
         return TextValues.compareTextArrays( this, other );

@@ -22,18 +22,18 @@ package org.neo4j.cypher.internal
 import java.util.{Map => JavaMap}
 
 import org.neo4j.cypher._
-import org.neo4j.cypher.internal.compatibility.v3_4._
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.helpers.{RuntimeJavaValueConverter, RuntimeScalaValueConverter, ValueConversion}
+import org.neo4j.cypher.internal.compatibility._
 import org.neo4j.cypher.internal.compiler.v3_4.prettifier.Prettifier
 import org.neo4j.cypher.internal.frontend.v3_4.phases.CompilationPhaseTracer
-import org.neo4j.cypher.internal.spi.v3_4.TransactionalContextWrapper
+import org.neo4j.cypher.internal.runtime.interpreted.{LastCommittedTxIdProvider, TransactionalContextWrapper, ValueConversion}
+import org.neo4j.cypher.internal.runtime.{RuntimeJavaValueConverter, RuntimeScalaValueConverter, isGraphKernelResultValue}
 import org.neo4j.cypher.internal.tracing.{CompilationTracer, TimingCompilationTracer}
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
+import org.neo4j.internal.kernel.api.security.AccessMode
 import org.neo4j.kernel.api.query.SchemaIndexUsage
-import org.neo4j.kernel.api.security.AccessMode
-import org.neo4j.kernel.api.{KernelAPI, ReadOperations}
+import org.neo4j.kernel.api.ReadOperations
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.kernel.impl.locking.ResourceTypes
 import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, TransactionalContext}
@@ -57,7 +57,6 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService,
   // true means we run inside REST server
   protected val isServer = false
   private val resolver = queryService.getDependencyResolver
-  private val kernel = resolver.resolveDependency(classOf[KernelAPI])
   private val lastCommittedTxId = LastCommittedTxIdProvider(queryService)
   private val kernelMonitors: KernelMonitors = resolver.resolveDependency(classOf[KernelMonitors])
   private val compilationTracer: CompilationTracer =
@@ -67,8 +66,8 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService,
   private val log = logProvider.getLog( getClass )
   private val cacheMonitor = kernelMonitors.newMonitor(classOf[StringCacheMonitor])
   kernelMonitors.addMonitorListener( new StringCacheMonitor {
-    override def cacheDiscard(ignored: String, query: String) {
-      log.info(s"Discarded stale query from the query cache: $query")
+    override def cacheDiscard(ignored: String, query: String, secondsSinceReplan: Int) {
+      log.info(s"Discarded stale query from the query cache after ${secondsSinceReplan} seconds: $query")
     }
   })
 
@@ -134,6 +133,11 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService,
   private def preParseQuery(queryText: String): PreParsedQuery =
     preParsedQueries.getOrElseUpdate(queryText, queryDispatcher.preParseQuery(queryText))
 
+  def clearQueryCaches(): Long = {
+    Math.max(parsedQueries.clear(),
+      preParsedQueries.clear())
+  }
+
   @throws(classOf[SyntaxException])
   protected def planQuery(transactionalContext: TransactionalContext): (PreparedPlanExecution, TransactionalContextWrapper) = {
     val executingQuery = transactionalContext.executingQuery()
@@ -171,14 +175,15 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService,
           })
 
           def isStale(plan: ExecutionPlan, ignored: Map[String, Any]) = plan.isStale(lastCommittedTxId, tc)
-
-          def producePlan() = {
-            val parsedQuery = parsePreParsedQuery(preParsedQuery, phaseTracer)
-            parsedQuery.plan(tc, phaseTracer)
+          val producePlan = new PlanProducer[(ExecutionPlan, Map[String, Any])] {
+            override def produceWithExistingTX: (ExecutionPlan, Map[String, Any]) = {
+              val parsedQuery = parsePreParsedQuery(preParsedQuery, phaseTracer)
+              parsedQuery.plan(tc, phaseTracer)
+            }
           }
 
           val stateBefore = schemaState(tc)
-          var (plan: (ExecutionPlan, Map[String, Any]), touched: Boolean) = cache.getOrElseUpdate(cacheKey, queryText, (isStale _).tupled, producePlan())
+          var (plan: (ExecutionPlan, Map[String, Any]), touched: Boolean) = cache.getOrElseUpdate(cacheKey, queryText, (isStale _).tupled, producePlan)
           if (!touched) {
             val labelIds: Seq[Long] = extractPlanLabels(plan, preParsedQuery.version, tc)
             if (labelIds.nonEmpty) {
@@ -206,7 +211,7 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService,
           tc.close(success = true)
         } else {
           tc.cleanForReuse()
-          tc.notifyPlanningCompleted(plan)
+          tc.notifyPlanningCompleted(plan.plannerInfo)
           return (PreparedPlanExecution(plan, executionMode, extractedParameters), tc)
         }
 
@@ -301,7 +306,7 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService,
     }
 
     val compatibilityCache = new CompatibilityCache(compatibilityFactory)
-    new CompilerEngineDelegator(queryService, kernel, kernelMonitors, version, planner, runtime,
+    new CompilerEngineDelegator(queryService, kernelMonitors, version, planner, runtime,
       useErrorsOverWarnings, idpMaxTableSize, idpIterationDuration, errorIfShortestPathFallbackUsedAtRuntime,
       errorIfShortestPathHasCommonNodesAtRuntime, legacyCsvQuoteEscaping, logProvider, compatibilityCache)
   }
@@ -316,7 +321,6 @@ class ExecutionEngine(val queryService: GraphDatabaseQueryService,
     val config = graph.getDependencyResolver.resolveDependency(classOf[Config])
     Option(config.get(setting)).getOrElse(defaultValue)
   }
-
 }
 
 object ExecutionEngine {

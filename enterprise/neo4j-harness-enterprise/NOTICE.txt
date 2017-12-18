@@ -46,7 +46,9 @@ Apache Software License, Version 2.0
   Commons Lang
   ConcurrentLinkedHashMap
   Data Mapper for Jackson
+  FindBugs-jsr305
   Graphite Integration for Metrics
+  Guava: Google Core Libraries for Java
   hazelcast-all
   Jackson
   JAX-RS provider for JSON content type
@@ -69,6 +71,10 @@ Apache Software License, Version 2.0
   opencsv
   parboiled-core
   parboiled-scala
+  Prometheus Java Simpleclient
+  Prometheus Java Simpleclient Common
+  Prometheus Java Simpleclient Dropwizard
+  Prometheus Java Simpleclient Httpserver
 
 BSD - Scala License
   Scala Library
@@ -99,10 +105,12 @@ GNU General Public License, version 2 with the Classpath Exception
   Java Servlet API
 
 MIT License
+  scallop
   SLF4J API Module
   SLF4J NOP Binding
 
 Mozilla Public License, Version 2.0
+  kiama
   Mozilla Rhino
 
 Dependencies with multiple licenses

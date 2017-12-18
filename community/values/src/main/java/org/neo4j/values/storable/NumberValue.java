@@ -30,6 +30,15 @@ public abstract class NumberValue extends ScalarValue
     abstract int compareTo( FloatingPointValue other );
 
     @Override
+    public abstract Number asObjectCopy();
+
+    @Override
+    public Number asObject()
+    {
+        return asObjectCopy();
+    }
+
+    @Override
     public boolean equals( boolean x )
     {
         return false;
@@ -47,6 +56,7 @@ public abstract class NumberValue extends ScalarValue
         return false;
     }
 
+    @Override
     public ValueGroup valueGroup()
     {
         return ValueGroup.NUMBER;

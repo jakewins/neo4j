@@ -19,10 +19,11 @@
  */
 package org.neo4j.backup;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import org.neo4j.helpers.OptionalHostnamePort;
+import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 
 public class OnlineBackupRequiredArguments
 {
@@ -36,8 +37,7 @@ public class OnlineBackupRequiredArguments
     private final Path reportDir;
 
     public OnlineBackupRequiredArguments( OptionalHostnamePort address, Path folder, String name, boolean fallbackToFull, boolean doConsistencyCheck,
-            long timeout,
-            Optional<Path> additionalConfig, Path reportDir )
+            long timeout, Optional<Path> additionalConfig, Path reportDir )
     {
         this.address = address;
         this.folder = folder;
@@ -87,5 +87,10 @@ public class OnlineBackupRequiredArguments
     public Path getReportDir()
     {
         return reportDir;
+    }
+
+    public File getResolvedLocationFromName()
+    {
+        return folder.resolve( name ).toFile();
     }
 }

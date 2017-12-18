@@ -27,7 +27,7 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
 
   test("reverse function should work on strings") {
     // When
-    val result = executeWith(Configs.Interpreted, "RETURN reverse('raksO')").columnAs("reverse('raksO')").next().toString
+    val result = executeWith(Configs.Interpreted + Configs.Morsel, "RETURN reverse('raksO')").columnAs("reverse('raksO')").next().toString
 
     // Then
     result should equal("Oskar")
@@ -71,5 +71,19 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
 
     // Then
     results should equal ("[487, 521, abc, 4923]")
+  }
+
+  test("reverse should be able to concatenate to original list") {
+    // When
+    val query =
+      """
+        | WITH range(1, 2) AS xs
+        | RETURN xs + reverse(xs) AS res
+        | """.stripMargin
+
+    val results = graph.execute(query).columnAs("res").next().toString
+
+    // Then
+    results should equal("[1, 2, 2, 1]")
   }
 }

@@ -19,16 +19,14 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.internal.InternalExecutionResult
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.planDescription.InternalPlanDescription.Arguments.{DbHits, EstimatedRows, Rows, Signature}
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.planDescription.{Argument, InternalPlanDescription}
-import org.neo4j.cypher.internal.compiler.v3_4.spi.GraphStatistics
-import org.neo4j.cypher.internal.compiler.v3_4.test_helpers.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.frontend.v3_4.helpers.StringHelper.RichString
-import org.neo4j.cypher.internal.helpers.TxCounts
+import org.neo4j.cypher.internal.planner.v3_4.spi.GraphStatistics
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{DbHits, EstimatedRows, Rows, Signature}
+import org.neo4j.cypher.internal.runtime.planDescription.{Argument, InternalPlanDescription}
+import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, InternalExecutionResult}
 import org.neo4j.cypher.internal.util.v3_4.symbols._
 import org.neo4j.cypher.internal.v3_4.logical.plans.QualifiedName
-import org.neo4j.cypher.{ExecutionEngineFunSuite, ProfilerStatisticsNotReadyException}
+import org.neo4j.cypher.{ExecutionEngineFunSuite, ProfilerStatisticsNotReadyException, TxCounts}
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport.{Configs, TestConfiguration}
 
@@ -40,7 +38,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
     createNode()
-    val result = profileWithExecute(Configs.All, "MATCH (n) RETURN n")
+    val result = profileWithExecute(Configs.All + Configs.Morsel, "MATCH (n) RETURN n")
 
     assertRows(3)(result)("AllNodesScan", "ProduceResults")
     assertDbHits(0)(result)("ProduceResults")
@@ -52,7 +50,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
 
-    val result = profileWithExecute(Configs.All, "MATCH (n) RETURN (n:Foo)")
+    val result = profileWithExecute(Configs.All + Configs.Morsel, "MATCH (n) RETURN (n:Foo)")
 
     assertRows(3)(result)("AllNodesScan", "ProduceResults")
     assertDbHits(0)(result)("ProduceResults")
@@ -104,7 +102,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         relate( createNode(), createNode(), "FOO")
 
         //WHEN
-        val result = profileWithExecute(Configs.Interpreted, "match (n) where (n)-[:FOO]->() return *")
+        val result = profileWithExecute(Configs.Interpreted + Configs.Morsel, "match (n) where (n)-[:FOO]->() return *")
 
         //THEN
         assertRows(1)(result)("Filter")
@@ -147,7 +145,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         relate( createNode(), createNode(), "FOO")
 
         //WHEN
-        val result = profileWithExecute(Configs.Interpreted, "match (n) where not (n)-[:FOO]->() return *")
+        val result = profileWithExecute(Configs.Interpreted + Configs.Morsel, "match (n) where not (n)-[:FOO]->() return *")
 
         //THEN
         assertRows(1)(result)("Filter")
@@ -195,7 +193,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         // due to the cost model, we need a bunch of nodes for the planner to pick a plan that does lookup by id
         (1 to 100).foreach(_ => createNode())
 
-        val result = profileWithExecute(Configs.AllExceptSlotted, "match (n) where id(n) = 0 RETURN n")
+        val result = profileWithExecute(Configs.All, "match (n) where id(n) = 0 RETURN n")
 
         //WHEN THEN
         assertRows(1)(result)("NodeByIdSeek")
@@ -206,7 +204,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         // due to the cost model, we need a bunch of nodes for the planner to pick a plan that does lookup by id
         (1 to 100).foreach(_ => createNode("foo" -> "bar"))
 
-        val result = profileWithExecute(Configs.AllExceptSlotted, "match (n) where id(n) = 0 RETURN n.foo")
+        val result = profileWithExecute(Configs.All, "match (n) where id(n) = 0 RETURN n.foo")
 
         //WHEN THEN
         assertRows(1)(result)("ProduceResults", "Projection", "NodeByIdSeek")
@@ -227,7 +225,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         createNode()
 
         //GIVEN
-        val result = profileWithExecute(Configs.All, "MATCH (n) RETURN n.foo")
+        val result = profileWithExecute(Configs.All + Configs.Morsel, "MATCH (n) RETURN n.foo")
 
         //WHEN THEN
         assertRows(1)(result)("ProduceResults")
@@ -354,7 +352,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         val query = s"USING PERIODIC COMMIT 10 LOAD CSV FROM '$url' AS line CREATE()"
 
         // given
-        executeWith(Configs.CommunityInterpreted - Configs.Cost2_3, query).toList
+        executeWith(Configs.Interpreted - Configs.Cost2_3, query).toList
         deleteAllEntities()
         val initialTxCounts = graph.txCounts
 
@@ -371,7 +369,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       }
 
       test("should not have a problem profiling empty results") {
-        val result = profileWithExecute(Configs.Interpreted, "MATCH (n) WHERE (n)-->() RETURN n")
+        val result = profileWithExecute(Configs.Interpreted + Configs.Morsel, "MATCH (n) WHERE (n)-->() RETURN n")
 
         result shouldBe empty
         result.executionPlanDescription().toString should include("AllNodes")
@@ -426,13 +424,13 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
        }
 
       test("should show expand without types in a simple form") {
-        val a = profileWithExecute(Configs.All, "match (n)-->() return *")
+        val a = profileWithExecute(Configs.All + Configs.Morsel, "match (n)-->() return *")
 
         a.executionPlanDescription().toString should include("()<--(n)")
       }
 
       test("should show expand with types in a simple form") {
-        val result = profileWithExecute(Configs.All, "match (n)-[r:T]->() return *")
+        val result = profileWithExecute(Configs.All + Configs.Morsel, "match (n)-[r:T]->() return *")
 
         result.executionPlanDescription().toString should include("(n)-[r:T]->()")
       }
@@ -454,7 +452,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         relate(createNode(), createNode())
 
         // when
-        val result = profileWithExecute(Configs.All, "match (n)-->(x) return x")
+        val result = profileWithExecute(Configs.All + Configs.Morsel, "match (n)-->(x) return x")
 
         // then
         assertDbHits(3)(result)("Expand(All)")
@@ -463,7 +461,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
       test("should report correct dbhits and rows for literal addition") {
         // when
-        val result = profileWithExecute(Configs.All, "return 5 + 3")
+        val result = profileWithExecute(Configs.All + Configs.Morsel, "return 5 + 3")
 
         // then
         assertDbHits(0)(result)("Projection", "ProduceResults")
@@ -475,7 +473,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         createNode("name" -> "foo")
 
         // when
-        val result = profileWithExecute(Configs.All, "match (n) return n.name + 3")
+        val result = profileWithExecute(Configs.All + Configs.Morsel, "match (n) return n.name + 3")
 
         // then
         assertDbHits(1)(result)("Projection")
@@ -487,7 +485,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         createNode("name" -> 10)
 
         // when
-        val result = profileWithExecute(Configs.All, "match (n) return n.name - 3")
+        val result = profileWithExecute(Configs.All + Configs.Morsel, "match (n) return n.name - 3")
 
         // then
         assertDbHits(1)(result)("Projection")
@@ -648,7 +646,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         relate(anotherNode, createNode(), "HAS_CATEGORY")
 
         // WHEN
-        val result = profileWithExecute(Configs.CommunityInterpreted,
+        val result = profileWithExecute(Configs.Interpreted,
           """MATCH (cat:Category)
             |WITH collect(cat) as categories
             |MATCH (m:Entity)

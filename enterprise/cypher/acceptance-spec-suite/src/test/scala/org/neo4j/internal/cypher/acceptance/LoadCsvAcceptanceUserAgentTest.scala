@@ -21,7 +21,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.frontend.v3_4.helpers.StringHelper.RichString
-import org.neo4j.cypher.internal.spi.v3_4.CSVResources
+import org.neo4j.cypher.internal.runtime.interpreted.CSVResources
 import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport.{Configs, TestConfiguration}
 import org.scalatest.BeforeAndAfterAll
 import sun.net.www.protocol.http.HttpURLConnection
@@ -29,7 +29,7 @@ import sun.net.www.protocol.http.HttpURLConnection
 class LoadCsvAcceptanceUserAgentTest
   extends ExecutionEngineFunSuite with BeforeAndAfterAll with CypherComparisonSupport {
 
-  val expectedToSucceed: TestConfiguration = Configs.CommunityInterpreted - Configs.Version2_3
+  val expectedToSucceed: TestConfiguration = Configs.Interpreted - Configs.Version2_3
 
   test("should be able to download data from the web") {
     val url = s"http://127.0.0.1:$port/test.csv".cypherEscape

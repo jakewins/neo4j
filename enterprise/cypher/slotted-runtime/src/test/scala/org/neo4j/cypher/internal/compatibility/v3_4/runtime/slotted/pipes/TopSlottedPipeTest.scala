@@ -20,11 +20,12 @@
 package org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.pipes
 
 import org.neo4j.cypher.InternalException
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.expressions.Literal
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.pipes.{Pipe, QueryStateHelper}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.pipes.TopSlottedPipeTestSupport._
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{LongSlot, PipelineInformation, RefSlot}
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{LongSlot, SlotConfiguration, RefSlot}
+import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.util.v3_4.symbols._
 import org.neo4j.cypher.internal.util.v3_4.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -95,7 +96,7 @@ class TopSlottedPipeTest extends CypherFunSuite {
   }
 
   test("should handle null input") {
-    val input = Seq(10, null)
+    val input = Seq[Any](10, null)
     val result = singleColumnTopWithInput(
       input, orderBy = AscendingOrder, limit = 5
     )
@@ -162,7 +163,7 @@ class TopSlottedPipeTest extends CypherFunSuite {
   }
 
   test("top 1 should handle null input") {
-    val input = Seq(10, null)
+    val input = Seq[Any](10, null)
     val result = singleColumnTopWithInput(
       input, orderBy = AscendingOrder, limit = 1
     )
@@ -217,12 +218,12 @@ object TopSlottedPipeTestSupport {
   }
 
   def singleColumnTopWithInput(data: Traversable[Any], orderBy: TestColumnOrder, limit: Int, withTies: Boolean = false) = {
-    val pipeline = PipelineInformation.empty
+    val slots = SlotConfiguration.empty
       .newReference("a", nullable = true, CTAny)
 
-    val slot = pipeline("a")
+    val slot = slots("a")
 
-    val source = FakeSlottedPipe(data.map(v => Map("a" -> v)).toIterator, pipeline)
+    val source = FakeSlottedPipe(data.map(v => Map("a" -> v)).toIterator, slots)
 
     val topOrderBy = orderBy match {
       case AscendingOrder => List(Ascending(slot))
@@ -235,22 +236,22 @@ object TopSlottedPipeTestSupport {
     results.map {
       case c: PrimitiveExecutionContext =>
         slot match {
-          case RefSlot(offset, _, _, _) =>
+          case RefSlot(offset, _, _) =>
             c.getRefAt(offset)
-          case LongSlot(offset, _, _, _) =>
+          case LongSlot(offset, _, _) =>
             c.getLongAt (offset)
         }
     }.toList
   }
 
   def twoColumnTopWithInput(data: Traversable[(Any, Any)], orderBy: Seq[TestColumnOrder], limit: Int, withTies: Boolean = false) = {
-    val pipeline = PipelineInformation.empty
+    val slotConfiguration = SlotConfiguration.empty
       .newReference("a", nullable = true, CTAny)
       .newReference("b", nullable = true, CTAny)
 
-    val slots = Seq(pipeline("a"), pipeline("b"))
+    val slots = Seq(slotConfiguration("a"), slotConfiguration("b"))
 
-    val source = FakeSlottedPipe(data.map { case (v1, v2) => Map("a" -> v1, "b" -> v2) }.toIterator, pipeline)
+    val source = FakeSlottedPipe(data.map { case (v1, v2) => Map("a" -> v1, "b" -> v2) }.toIterator, slotConfiguration)
 
     val topOrderBy = orderBy.zip(slots).map {
       case (AscendingOrder, slot) => Ascending(slot)
@@ -262,7 +263,7 @@ object TopSlottedPipeTestSupport {
     topPipe.createResults(QueryStateHelper.empty).map {
       case c: PrimitiveExecutionContext =>
         (slots(0), slots(1)) match {
-          case (RefSlot(offset1, _, _, _), RefSlot(offset2, _, _, _)) =>
+          case (RefSlot(offset1, _, _), RefSlot(offset2, _, _)) =>
             (c.getRefAt(offset1), c.getRefAt(offset2))
           case _ =>
             throw new InternalException("LongSlot not yet supported in the test framework")

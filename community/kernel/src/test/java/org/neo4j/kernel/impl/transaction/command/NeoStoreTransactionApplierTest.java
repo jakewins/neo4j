@@ -78,7 +78,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -100,7 +100,7 @@ public class NeoStoreTransactionApplierTest
     private final NodeStore nodeStore = mock( NodeStore.class );
     private final RelationshipStore relationshipStore = mock( RelationshipStore.class );
     private final PropertyStore propertyStore = mock( PropertyStore.class );
-    private final RecordStore<RelationshipGroupRecord> relationshipGroupStore = mock( RelationshipGroupStore.class );
+    private final RelationshipGroupStore relationshipGroupStore = mock( RelationshipGroupStore.class );
     private final RelationshipTypeTokenStore relationshipTypeTokenStore = mock( RelationshipTypeTokenStore.class );
     private final LabelTokenStore labelTokenStore = mock( LabelTokenStore.class );
     private final PropertyKeyTokenStore propertyKeyTokenStore = mock( PropertyKeyTokenStore.class );

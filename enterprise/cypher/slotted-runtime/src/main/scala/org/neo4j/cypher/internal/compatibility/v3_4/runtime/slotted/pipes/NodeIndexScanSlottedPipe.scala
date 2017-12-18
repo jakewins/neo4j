@@ -19,30 +19,32 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.pipes
 
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.helpers.PrimitiveLongHelper
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.pipes._
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.PrimitiveExecutionContext
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{ExecutionContext, PipelineInformation}
-import org.neo4j.cypher.internal.compiler.v3_4.IndexDescriptor
-import org.neo4j.cypher.internal.frontend.v3_4.ast.{LabelToken, PropertyKeyToken}
+import org.neo4j.cypher.internal.planner.v3_4.spi.IndexDescriptor
+import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.v3_4.expressions.{LabelToken, PropertyKeyToken}
 import org.neo4j.cypher.internal.v3_4.logical.plans.LogicalPlanId
 
 case class NodeIndexScanSlottedPipe(ident: String,
                                     label: LabelToken,
                                     propertyKey: PropertyKeyToken,
-                                    pipelineInformation: PipelineInformation)
+                                    slots: SlotConfiguration,
+                                    argumentSize: SlotConfiguration.Size)
                                    (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends Pipe {
 
-  private val offset = pipelineInformation.getLongOffsetFor(ident)
+  private val offset = slots.getLongOffsetFor(ident)
 
   private val descriptor = IndexDescriptor(label.nameId.id, propertyKey.nameId.id)
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
     val nodes = state.query.indexScanPrimitive(descriptor)
     PrimitiveLongHelper.map(nodes, { node =>
-      val context = PrimitiveExecutionContext(pipelineInformation)
-      state.copyArgumentStateTo(context, pipelineInformation.numberOfLongs, pipelineInformation.numberOfReferences)
+      val context = PrimitiveExecutionContext(slots)
+      state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
       context.setLongAt(offset, node)
       context
     })

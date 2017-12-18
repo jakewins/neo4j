@@ -19,14 +19,16 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.pipes.{Pipe, QueryState}
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.PrimitiveExecutionContext
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{ExecutionContext, PipelineInformation}
+import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.v3_4.logical.plans.LogicalPlanId
 
 case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
                                        lhsLongCount: Int, lhsRefCount: Int,
-                                       pipelineInformation: PipelineInformation)
+                                       slots: SlotConfiguration,
+                                       argumentSize: SlotConfiguration.Size)
                                       (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends Pipe {
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
@@ -34,9 +36,11 @@ case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
       lhsCtx =>
         rhs.createResults(state) map {
           rhsCtx =>
-            val context = PrimitiveExecutionContext(pipelineInformation)
+            val context = PrimitiveExecutionContext(slots)
             lhsCtx.copyTo(context)
-            rhsCtx.copyTo(context, lhsLongCount, lhsRefCount)
+            rhsCtx.copyTo(context,
+              fromLongOffset = argumentSize.nLongs, fromRefOffset = argumentSize.nReferences, // Skip over arguments since they should be identical to lhsCtx
+              toLongOffset = lhsLongCount, toRefOffset = lhsRefCount)
             context
         }
     }

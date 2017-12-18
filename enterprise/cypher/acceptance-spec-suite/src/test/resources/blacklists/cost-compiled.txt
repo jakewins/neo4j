@@ -117,7 +117,6 @@ Find a shortest path among paths that fulfill a predicate on all relationships 2
 Find a shortest path among paths that fulfill a predicate
 Find a shortest path without loosing context information at runtime
 Find a shortest path in an expression context
-Find a shortest path among paths that fulfill a predicate on all relationships
 Finds shortest path
 Optionally finds shortest path
 Optionally finds shortest path using previously bound nodes
@@ -132,6 +131,7 @@ LIMIT 0 should stop side effects
 Id on null
 type on null
 Shorthand case with filter should work as expected
+optional equality with boolean lists
 
 //OrderByAcceptance.feature - Unsupported orderability
 ORDER BY nodes should return null results last in ascending order
@@ -165,6 +165,9 @@ Should allow OR with index and regex predicates
 //SkipLimitAcceptance.feature
 Combining LIMIT and aggregation
 Using a optional match after aggregation and before an aggregation
+Limit before sort
+Limit before top
+Limit before distinct
 
 //VarLengthAcceptance.feature
 Handles checking properties on nodes in path - using in-pattern property value
@@ -188,9 +191,18 @@ max() over integers
 min() over integers
 max() over floats
 min() over floats
+Multiple aggregations should work
 
 //MatchAcceptance.feature
 difficult to plan query number 1
 difficult to plan query number 2
 difficult to plan query number 3
 Match on multiple labels with OR
+Variable length path with both sides already bound
+Should handle EXISTS on node property when node is null
+Should handle NOT EXISTS on node property when node is null
+Should handle simple IS NOT NULL on node property when node is null
+Should handle complex IS NOT NULL on node property when node is null
+
+//DeleteAcceptance.feature
+Return properties from deleted node

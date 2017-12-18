@@ -45,6 +45,7 @@ import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.StoreFileChannel;
 import org.neo4j.io.pagecache.PageSwapper;
@@ -80,6 +81,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         IOUtils.closeAll( ephemeralFileSystem, fileSystem );
     }
 
+    @Override
     protected PageSwapperFactory swapperFactory()
     {
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory();
@@ -87,11 +89,13 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         return factory;
     }
 
+    @Override
     protected void mkdirs( File dir ) throws IOException
     {
         getFs().mkdirs( dir );
     }
 
+    @Override
     protected File baseDirectory() throws IOException
     {
         File dir = getFile().getParentFile();
@@ -258,7 +262,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
 
         try
         {
-            StoreChannel channel = fileSystem.open( file, "rw" );
+            StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE );
             expectedException.expect( OverlappingFileLockException.class );
             channel.tryLock();
         }
@@ -333,7 +337,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
 
         createSwapper( factory, file, 4, NO_CALLBACK, false ).close();
 
-        try ( StoreFileChannel channel = fileSystem.open( file, "rw" );
+        try ( StoreFileChannel channel = fileSystem.open( file, OpenMode.READ_WRITE );
               FileLock fileLock = channel.tryLock() )
         {
             assertThat( fileLock, is( not( nullValue() ) ) );
@@ -354,7 +358,7 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
 
         try
         {
-            StoreChannel channel = fileSystem.open( file, "rw" );
+            StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE );
 
             Thread.currentThread().interrupt();
             pageSwapper.force();
@@ -378,10 +382,10 @@ public class SingleFilePageSwapperTest extends PageSwapperTest
         factory.open( new DelegatingFileSystemAbstraction( fileSystem )
         {
             @Override
-            public StoreChannel open( File fileName, String mode ) throws IOException
+            public StoreChannel open( File fileName, OpenMode openMode ) throws IOException
             {
                 openFilesCounter.getAndIncrement();
-                return new DelegatingStoreChannel( super.open( fileName, mode ) )
+                return new DelegatingStoreChannel( super.open( fileName, openMode ) )
                 {
                     @Override
                     public void close() throws IOException

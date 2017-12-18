@@ -19,21 +19,23 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.pipes
 
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.SlotConfiguration.Size
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.helpers.PrimitiveLongHelper
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.PrimitiveExecutionContext
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{ExecutionContext, PipelineInformation}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.v3_4.logical.plans.LogicalPlanId
 
-case class AllNodesScanSlottedPipe(ident: String, pipelineInformation: PipelineInformation)
+case class AllNodesScanSlottedPipe(ident: String, slots: SlotConfiguration, argumentSize: Size)
                                   (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends Pipe {
 
-  private val offset = pipelineInformation.getLongOffsetFor(ident)
+  private val offset = slots.getLongOffsetFor(ident)
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
     PrimitiveLongHelper.map(state.query.nodeOps.allPrimitive, { nodeId =>
-      val context = PrimitiveExecutionContext(pipelineInformation)
-      state.copyArgumentStateTo(context, pipelineInformation.initialNumberOfLongs, pipelineInformation.initialNumberOfReferences)
+      val context = PrimitiveExecutionContext(slots)
+      state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
       context.setLongAt(offset, nodeId)
       context
     })

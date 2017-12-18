@@ -50,9 +50,9 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.helpers.collection.Visitor;
+import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
@@ -90,6 +90,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.IndexSample;
 import org.neo4j.storageengine.api.schema.PopulationProgress;
+import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.mockito.answer.AwaitAnswer;
 import org.neo4j.values.storable.Values;
@@ -104,12 +105,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -227,15 +228,27 @@ public class IndexingServiceTest
         AwaitAnswer<Void> awaitAnswer = afterAwaiting( latch );
         doAnswer( awaitAnswer ).when( populator ).add( any( Collection.class ) );
 
+        Barrier.Control populationStartBarrier = new Barrier.Control();
+        IndexingService.Monitor monitor = new IndexingService.MonitorAdapter()
+        {
+            @Override
+            public void indexPopulationScanStarting()
+            {
+                populationStartBarrier.reached();
+            }
+        };
         IndexingService indexingService =
-                newIndexingServiceWithMockedDependencies( populator, accessor, withData( addNodeUpdate( 1, "value1" ) ) );
+                newIndexingServiceWithMockedDependencies( populator, accessor, withData( addNodeUpdate( 1, "value1" ) ), monitor );
 
         life.start();
 
         // when
+
         indexingService.createIndexes( IndexRule.indexRule( 0, index, PROVIDER_DESCRIPTOR ) );
         IndexProxy proxy = indexingService.getIndexProxy( 0 );
         assertEquals( InternalIndexState.POPULATING, proxy.getState() );
+        populationStartBarrier.await();
+        populationStartBarrier.release();
 
         IndexEntryUpdate<?> value2 = add( 2, "value2" );
         try ( IndexUpdater updater = proxy.newUpdater( IndexUpdateMode.ONLINE ) )

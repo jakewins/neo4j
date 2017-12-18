@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.com.Response;
@@ -43,17 +44,12 @@ import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
-import org.neo4j.kernel.impl.transaction.log.LogFile;
-import org.neo4j.kernel.impl.transaction.log.LogHeaderCache;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
-import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
-import org.neo4j.kernel.impl.transaction.log.ReadOnlyLogVersionRepository;
-import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -208,13 +204,18 @@ public class StoreCopyClient
             graphDatabaseService.shutdown();
             monitor.finishRecoveringStore();
 
+            LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( storeDir, fs, pageCache )
+                    .withConfig( config )
+                    .build();
             // All is well, move the streamed files to the real store directory.
             // Start with the files written through the page cache. Should only be record store files.
             // Note that the stream is lazy, so the file system traversal won't happen until *after* the store files
             // have been moved. Thus we ensure that we only attempt to move them once.
             Stream<FileMoveAction> moveActionStream = Stream.concat(
                     storeFileMoveActions.stream(), traverseGenerateMoveActions( tempStore, tempStore ) );
-            moveAfterCopy.move( moveActionStream, tempStore, storeDir );
+            Function<File,File> destinationMapper =
+                    file  -> logFiles.isLogFile( file ) ? logFiles.logFilesDirectory() : storeDir;
+            moveAfterCopy.move( moveActionStream, tempStore, destinationMapper );
         }
         finally
         {
@@ -253,22 +254,15 @@ public class StoreCopyClient
         try
         {
             // Start the log and appender
-            PhysicalLogFiles logFiles = new PhysicalLogFiles( tempStoreDir, fs );
-            LogHeaderCache logHeaderCache = new LogHeaderCache( 10 );
-            ReadOnlyLogVersionRepository logVersionRepository =
-                    new ReadOnlyLogVersionRepository( pageCache, tempStoreDir );
-            ReadOnlyTransactionIdStore readOnlyTransactionIdStore = new ReadOnlyTransactionIdStore(
-                    pageCache, tempStoreDir );
-            LogFile logFile = life.add( new PhysicalLogFile( fs, logFiles, Long.MAX_VALUE /*don't rotate*/,
-                    readOnlyTransactionIdStore::getLastCommittedTransactionId, logVersionRepository,
-                    new Monitors().newMonitor( PhysicalLogFile.Monitor.class ), logHeaderCache ) );
+            LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( tempStoreDir, fs, pageCache ).build();
+            life.add( logFiles );
             life.start();
 
             // Just write all transactions to the active log version. Remember that this is after a store copy
             // where there are no logs, and the transaction stream we're about to write will probably contain
             // transactions that goes some time back, before the last committed transaction id. So we cannot
             // use a TransactionAppender, since it has checks for which transactions one can append.
-            FlushableChannel channel = logFile.getWriter();
+            FlushableChannel channel = logFiles.getLogFile().getWriter();
             final TransactionLogWriter writer = new TransactionLogWriter(
                     new LogEntryWriter( channel ) );
             final AtomicLong firstTxId = new AtomicLong( BASE_TX_ID );
@@ -303,7 +297,7 @@ public class StoreCopyClient
                 monitor.finishReceivingTransactions( endTxId );
             }
 
-            long currentLogVersion = logVersionRepository.getCurrentLogVersion();
+            long currentLogVersion = logFiles.getHighestLogVersion();
             writer.checkPoint( new LogPosition( currentLogVersion, LOG_HEADER_SIZE ) );
 
             // And since we write this manually we need to set the correct transaction id in the
@@ -345,6 +339,7 @@ public class StoreCopyClient
                 .setConfig( "dbms.backup.enabled", Settings.FALSE )
                 .setConfig( GraphDatabaseSettings.logs_directory, tempStore.getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.TRUE )
+                .setConfig( GraphDatabaseSettings.logical_logs_location, tempStore.getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade,
                         config.get( GraphDatabaseSettings.allow_upgrade ).toString() )
                 .newGraphDatabase();

@@ -108,7 +108,7 @@ public class FileSystemAbstractionInterruptionTest
     private StoreChannel chan( boolean channelShouldBeClosed ) throws IOException
     {
         this.channelShouldBeClosed = channelShouldBeClosed;
-        channel = fs.open( file, "rw" );
+        channel = fs.open( file, OpenMode.READ_WRITE );
         return channel;
     }
 
@@ -158,12 +158,6 @@ public class FileSystemAbstractionInterruptionTest
     public void ch_writeAll_ByteBuffer_position() throws IOException
     {
         chan( true ).writeAll( ByteBuffer.allocate( 1 ), 1 );
-    }
-
-    @Test( expected = ClosedByInterruptException.class )
-    public void ch_write_ByteBuffer_position() throws IOException
-    {
-        chan( true ).write( ByteBuffer.allocate( 1 ), 1 );
     }
 
     @Test( expected = ClosedByInterruptException.class )

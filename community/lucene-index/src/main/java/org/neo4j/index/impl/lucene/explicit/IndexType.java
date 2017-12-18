@@ -210,6 +210,11 @@ public abstract class IndexType
                 }
                 result = new CustomType( analyzer, toLowerCase, similarity );
             }
+            else
+            {
+                throw new IllegalArgumentException( "The given type was not recognized: " + type +
+                        ". Known types are 'fulltext' and 'exact'" );
+            }
         }
         else
         {
@@ -383,9 +388,12 @@ public abstract class IndexType
         Set<String> names = new HashSet<>();
         for ( IndexableField field : document.getFields() )
         {
-            names.add( field.name() );
+            String name = field.name();
+            if ( LuceneExplicitIndex.isValidKey( name ) )
+            {
+                names.add( name );
+            }
         }
-        names.remove( LuceneExplicitIndex.KEY_DOC_ID );
         for ( String name : names )
         {
             document.removeFields( name );

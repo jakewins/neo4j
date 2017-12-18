@@ -30,26 +30,24 @@ import org.neo4j.cypher.internal.compiler.v2_3._
 import org.neo4j.cypher.internal.compiler.v2_3.ast.convert.commands.DirectionConverter.toGraphDb
 import org.neo4j.cypher.internal.compiler.v2_3.commands.expressions
 import org.neo4j.cypher.internal.compiler.v2_3.commands.expressions.{KernelPredicate, OnlyDirectionExpander, TypeAndDirectionExpander}
-import org.neo4j.cypher.internal.compiler.v2_3.helpers.JavaConversionSupport
-import org.neo4j.cypher.internal.compiler.v2_3.helpers.JavaConversionSupport._
 import org.neo4j.cypher.internal.compiler.v2_3.pipes.matching.PatternNode
 import org.neo4j.cypher.internal.compiler.v2_3.spi._
 import org.neo4j.cypher.internal.frontend.v2_3.{Bound, EntityNotFoundException, FailedIndexException, SemanticDirection}
-import org.neo4j.cypher.internal.spi.BeansAPIRelationshipIterator
-import org.neo4j.cypher.internal.spi.v3_4.TransactionalContextWrapper
-import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.runtime.interpreted.{BeansAPIRelationshipIterator, JavaConversionSupport, TransactionalContextWrapper}
 import org.neo4j.graphalgo.impl.path.ShortestPath
 import org.neo4j.graphalgo.impl.path.ShortestPath.ShortestPathPredicate
 import org.neo4j.graphdb.RelationshipType._
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.security.URLAccessValidationError
 import org.neo4j.graphdb.traversal.{Evaluators, TraversalDescription, Uniqueness}
+import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.exceptions.schema.{AlreadyConstrainedException, AlreadyIndexedException}
 import org.neo4j.kernel.api.index.InternalIndexState
+import org.neo4j.kernel.api.schema.SchemaDescriptorFactory
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory
 import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory
-import org.neo4j.kernel.api.schema.{IndexQuery, SchemaDescriptorFactory}
 import org.neo4j.kernel.api.{exceptions, _}
 import org.neo4j.kernel.impl.core.NodeManager
 import org.neo4j.values.storable.Values
@@ -248,7 +246,7 @@ final class TransactionBoundQueryContext(tc: TransactionalContextWrapper)
   }
 
   def indexScan(index: SchemaTypes.IndexDescriptor) =
-    mapToScalaENFXSafe(tc.statement.readOperations().indexQuery(index, IndexQuery.exists(index.propertyId)))(nodeOps.getById)
+    JavaConversionSupport.mapToScalaENFXSafe(tc.statement.readOperations().indexQuery(index, IndexQuery.exists(index.propertyId)))(nodeOps.getById)
 
   override def lockingExactUniqueIndexSearch(index: SchemaTypes.IndexDescriptor, value: Any): Option[Node] = {
     val nodeId: Long = tc.statement.readOperations().nodeGetFromUniqueIndexSeek(index, IndexQuery.exact(index.propertyId, Values.of(value)))
@@ -300,7 +298,7 @@ final class TransactionBoundQueryContext(tc: TransactionalContextWrapper)
         override def next(): Int = try {
           inner.next()
         } catch {
-          case _: org.neo4j.kernel.api.exceptions.EntityNotFoundException => null.asInstanceOf[Int]
+          case _: exceptions.EntityNotFoundException => null.asInstanceOf[Int]
         }
       }
     } catch {
@@ -308,27 +306,27 @@ final class TransactionBoundQueryContext(tc: TransactionalContextWrapper)
     }
 
     def getProperty(id: Long, propertyKeyId: Int): Any = try {
-      tc.statement.readOperations().nodeGetProperty(id, propertyKeyId).getInnerObject()
+      tc.statement.readOperations().nodeGetProperty(id, propertyKeyId).asObject()
     } catch {
-      case _: org.neo4j.kernel.api.exceptions.EntityNotFoundException => null.asInstanceOf[Int]
+      case _: exceptions.EntityNotFoundException => null.asInstanceOf[Int]
     }
 
     def hasProperty(id: Long, propertyKey: Int): Boolean = try {
       tc.statement.readOperations().nodeHasProperty(id, propertyKey)
     } catch {
-      case _: org.neo4j.kernel.api.exceptions.EntityNotFoundException => false
+      case _: exceptions.EntityNotFoundException => false
     }
 
     def removeProperty(id: Long, propertyKeyId: Int): Unit = try {
       tc.statement.dataWriteOperations().nodeRemoveProperty(id, propertyKeyId)
     } catch {
-      case _: org.neo4j.kernel.api.exceptions.EntityNotFoundException => //ignore
+      case _: exceptions.EntityNotFoundException => //ignore
     }
 
     def setProperty(id: Long, propertyKeyId: Int, value: Any): Unit = try {
       tc.statement.dataWriteOperations().nodeSetProperty(id, propertyKeyId, Values.of(value))
     } catch {
-      case _: org.neo4j.kernel.api.exceptions.EntityNotFoundException => //ignore
+      case _: exceptions.EntityNotFoundException => //ignore
     }
 
     override def getById(id: Long) = try {
@@ -370,7 +368,7 @@ final class TransactionBoundQueryContext(tc: TransactionalContextWrapper)
           override def next(): Int = try {
             inner.next()
           } catch {
-            case _: org.neo4j.kernel.api.exceptions.EntityNotFoundException => null.asInstanceOf[Int]
+            case _: exceptions.EntityNotFoundException => null.asInstanceOf[Int]
           }
         }
       } catch {
@@ -378,7 +376,7 @@ final class TransactionBoundQueryContext(tc: TransactionalContextWrapper)
       }
 
     override def getProperty(id: Long, propertyKeyId: Int): Any = try {
-      tc.statement.readOperations().relationshipGetProperty(id, propertyKeyId).getInnerObject()
+      tc.statement.readOperations().relationshipGetProperty(id, propertyKeyId).asObject()
     } catch {
       case _: exceptions.EntityNotFoundException => null
     }
@@ -572,7 +570,7 @@ final class TransactionBoundQueryContext(tc: TransactionalContextWrapper)
         PathExpanderBuilder.allTypes(toGraphDb(dir))
       case TypeAndDirectionExpander(_, _, typDirs) =>
         typDirs.foldLeft(PathExpanderBuilder.empty()) {
-          case (acc, (typ, dir)) => acc.add(DynamicRelationshipType.withName(typ), toGraphDb(dir))
+          case (acc, (typ, dir)) => acc.add(RelationshipType.withName(typ), toGraphDb(dir))
         }
     }
 

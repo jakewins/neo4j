@@ -55,7 +55,17 @@ public enum Capability
     /**
      * Lucene version 5.x
      */
-    LUCENE_5( CapabilityType.INDEX );
+    LUCENE_5( CapabilityType.INDEX ),
+
+    /**
+     * Point Geometries are an addition to the format, not a change
+     */
+    POINT_PROPERTIES( CapabilityType.STORE ),
+
+    /**
+     * Records can spill over into secondary units (another record with a header saying it's a secondary unit to another record).
+     */
+    SECONDARY_RECORD_UNITS( CapabilityType.FORMAT );
 
     private final CapabilityType[] types;
 

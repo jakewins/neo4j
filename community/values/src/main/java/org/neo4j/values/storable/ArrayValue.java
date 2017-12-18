@@ -20,6 +20,7 @@
 package org.neo4j.values.storable;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.SequenceValue;
@@ -29,13 +30,16 @@ import org.neo4j.values.SequenceValue;
  */
 public abstract class ArrayValue extends Value implements SequenceValue
 {
+    @Override
     public abstract int length();
 
+    @Override
     public IterationPreference iterationPreference()
     {
         return IterationPreference.RANDOM_ACCESS;
     }
 
+    @Override
     public Iterator<AnyValue> iterator()
     {
         return new Iterator<AnyValue>()
@@ -51,13 +55,29 @@ public abstract class ArrayValue extends Value implements SequenceValue
             @Override
             public AnyValue next()
             {
-                return value( offset );
+                if ( !hasNext() )
+                {
+                    throw new NoSuchElementException();
+                }
+                return value( offset++ );
             }
         };
     }
 
     @Override
     public boolean equals( boolean x )
+    {
+        return false;
+    }
+
+    @Override
+    public boolean equals( long x )
+    {
+        return false;
+    }
+
+    @Override
+    public boolean equals( double x )
     {
         return false;
     }

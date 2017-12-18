@@ -51,8 +51,8 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -195,7 +195,7 @@ public class PropertyLoaderTest
     private static PropertyBlock newSingleIntPropertyBlock( int value )
     {
         PropertyBlock block = new PropertyBlock();
-        PropertyStore.encodeValue( block, PROP_KEY_ID, Values.intValue( value ), null, null );
+        PropertyStore.encodeValue( block, PROP_KEY_ID, Values.intValue( value ), null, null, true );
         block.setKeyIndexId( PROP_KEY_ID );
         return block;
     }

@@ -23,9 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -34,10 +33,11 @@ import org.neo4j.kernel.impl.store.format.standard.StandardV3_0;
 import org.neo4j.kernel.impl.storemigration.legacystore.v23.Legacy23Store;
 import org.neo4j.kernel.impl.storemigration.legacystore.v30.Legacy30Store;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.string.UTF8;
@@ -78,21 +78,10 @@ public class MigrationTestUtils
             throws IOException
     {
         byte[] versionBytes = UTF8.encode( versionString );
-        try ( StoreChannel fileChannel = fileSystem.open( storeFile, "rw" ) )
+        try ( StoreChannel fileChannel = fileSystem.open( storeFile, OpenMode.READ_WRITE ) )
         {
             fileChannel.position( fileSystem.getFileSize( storeFile ) - versionBytes.length );
             fileChannel.write( ByteBuffer.wrap( versionBytes ) );
-        }
-    }
-
-    public static void prepareSampleLegacyDatabase( String version, EphemeralFileSystemAbstraction workingFs,
-            File workingDirectory, File realDirForPreparingDatabase ) throws IOException
-    {
-        try ( DefaultFileSystemAbstraction fileSystemAbstraction = new DefaultFileSystemAbstraction() )
-        {
-            File resourceDirectory = findFormatStoreDirectoryForVersion( version, realDirForPreparingDatabase );
-            workingFs.copyRecursivelyFromOtherFs( resourceDirectory, fileSystemAbstraction,
-                    workingDirectory );
         }
     }
 
@@ -152,8 +141,8 @@ public class MigrationTestUtils
             File otherFile = new File( other, originalFile.getName() );
             if ( !fileSystem.isDirectory( originalFile ) )
             {
-                try ( StoreChannel originalChannel = fileSystem.open( originalFile, "r" );
-                      StoreChannel otherChannel = fileSystem.open( otherFile, "r" ) )
+                try ( StoreChannel originalChannel = fileSystem.open( originalFile, OpenMode.READ );
+                      StoreChannel otherChannel = fileSystem.open( otherFile, OpenMode.READ ) )
                 {
                     ByteBuffer buffer = ByteBuffer.allocate( bufferBatchSize );
                     while ( true )
@@ -183,9 +172,9 @@ public class MigrationTestUtils
     public static void removeCheckPointFromTxLog( FileSystemAbstraction fileSystem, File workingDirectory )
             throws IOException
     {
-        PhysicalLogFiles logFiles = new PhysicalLogFiles( workingDirectory, fileSystem );
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( workingDirectory, fileSystem ).build();
         LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = new VersionAwareLogEntryReader<>();
-        LogTailScanner tailScanner = new LogTailScanner( logFiles, fileSystem, logEntryReader, new Monitors() );
+        LogTailScanner tailScanner = new LogTailScanner( logFiles, logEntryReader, new Monitors() );
         LogTailScanner.LogTailInformation logTailInformation = tailScanner.getTailInformation();
 
         if ( logTailInformation.commitsAfterLastCheckpoint() )

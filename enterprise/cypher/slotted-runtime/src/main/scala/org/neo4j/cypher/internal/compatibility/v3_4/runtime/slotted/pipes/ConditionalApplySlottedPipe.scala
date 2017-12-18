@@ -19,15 +19,20 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.pipes.{Pipe, PipeWithSource, QueryState}
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.PrimitiveExecutionContext
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{ExecutionContext, PipelineInformation}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.v3_4.logical.plans.LogicalPlanId
 import org.neo4j.values.storable.Values
 
-case class ConditionalApplySlottedPipe(lhs: Pipe, rhs: Pipe, longOffsets: Seq[Int], refOffsets: Seq[Int], negated: Boolean,
-                                       pipelineInformation: PipelineInformation)
+case class ConditionalApplySlottedPipe(lhs: Pipe,
+                                       rhs: Pipe,
+                                       longOffsets: Seq[Int],
+                                       refOffsets: Seq[Int],
+                                       negated: Boolean,
+                                       slots: SlotConfiguration)
                                       (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends PipeWithSource(lhs) with Pipe {
 
@@ -40,14 +45,14 @@ case class ConditionalApplySlottedPipe(lhs: Pipe, rhs: Pipe, longOffsets: Seq[In
           rhs.createResults(rhsState)
         }
         else {
-          val output = PrimitiveExecutionContext(pipelineInformation)
-          output.copyFrom(lhsContext, pipelineInformation.initialNumberOfLongs, pipelineInformation.initialNumberOfReferences)
+          val output = PrimitiveExecutionContext(slots)
+          lhsContext.copyTo(output)
           Iterator.single(output)
         }
     }
 
   private def condition(context: ExecutionContext) = {
-    val cond = longOffsets.exists(offset => !NullChecker.nodeIsNull(context.getLongAt(offset))) ||
+    val cond = longOffsets.exists(offset => !NullChecker.entityIsNull(context.getLongAt(offset))) ||
       refOffsets.exists(context.getRefAt(_) != Values.NO_VALUE)
     if (negated) !cond else cond
   }

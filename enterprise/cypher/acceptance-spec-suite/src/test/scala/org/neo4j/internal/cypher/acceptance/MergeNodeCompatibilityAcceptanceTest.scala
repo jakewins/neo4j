@@ -20,7 +20,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.helpers.{NodeKeyConstraintCreator, UniquenessConstraintCreator}
-import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.{ExecutionEngineFunSuite, MergeConstraintConflictException, QueryStatisticsTestSupport}
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.config.Setting
@@ -38,6 +38,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   val expectedSucceed: TestConfiguration = Configs.CommunityInterpreted - Configs.Cost2_3
+  val expectedSucceedIncludingSlotted: TestConfiguration = Configs.Interpreted - Configs.Cost2_3
 
   Seq(UniquenessConstraintCreator, NodeKeyConstraintCreator).foreach { constraintCreator =>
 
@@ -50,7 +51,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(expectedSucceed, "merge (a:Person {id: 23, mail: 'emil@neo.com'}) on match set a.country='Sweden' return a")
+        executeWith(expectedSucceedIncludingSlotted, "merge (a:Person {id: 23, mail: 'emil@neo.com'}) on match set a.country='Sweden' return a")
       val result = results.columnAs("a").next().asInstanceOf[Node]
 
       // then
@@ -71,7 +72,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(expectedSucceed, "merge (a:Person:User {id: 23, mail: 'emil@neo.com'}) on match set a.country='Sweden' return a")
+        executeWith(expectedSucceedIncludingSlotted, "merge (a:Person:User {id: 23, mail: 'emil@neo.com'}) on match set a.country='Sweden' return a")
       val result = results.columnAs("a").next().asInstanceOf[Node]
 
       // then
@@ -92,7 +93,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(expectedSucceed, "merge (a:Person:User {id: 23}) on match set a.country='Sweden' return a")
+        executeWith(expectedSucceedIncludingSlotted, "merge (a:Person:User {id: 23}) on match set a.country='Sweden' return a")
       val result = results.columnAs("a").next().asInstanceOf[Node]
 
       // then
@@ -112,7 +113,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       createLabeledNode(Map("id" -> 23), "User")
 
       // when + then
-      failWithError(expectedSucceed + Configs.Procs, "merge (a:Person:User {id: 23}) return a",
+      failWithError(expectedSucceedIncludingSlotted + Configs.Procs, "merge (a:Person:User {id: 23}) return a",
         List("can not create a new node due to conflicts with existing unique nodes"))
       countNodes() should equal(2)
     }
@@ -124,17 +125,10 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(expectedSucceed, "merge (a:Person {id: 23, mail: 'emil@neo.com'}) on create set a.country='Sweden' return a", expectedDifferentResults = Configs.AbsolutelyAll)
-      val result = results.columnAs("a").next().asInstanceOf[Node]
+        executeWith(expectedSucceedIncludingSlotted, "merge (a:Person {id: 23, mail: 'emil@neo.com'}) on create set a.country='Sweden' return a.id, a.mail, a.country, labels(a)")
 
       // then
-      countNodes() should equal(1)
-      labels(result) should equal(Set("Person"))
-      graph.inTx {
-        result.getProperty("id") should equal(23)
-        result.getProperty("country") should equal("Sweden")
-        result.getProperty("mail") should equal("emil@neo.com")
-      }
+      results.toSet should equal(Set(Map("a.id" -> 23, "a.mail" -> "emil@neo.com", "a.country" -> "Sweden", "labels(a)" -> List("Person"))))
     }
 
     test(s"$constraintCreator: should_create_on_merge_using_multiple_unique_indexes_and_labels_if_found_no_nodes") {
@@ -144,17 +138,10 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(expectedSucceed, "merge (a:Person:User {id: 23, mail: 'emil@neo.com'}) on create set a.country='Sweden' return a", expectedDifferentResults = Configs.AbsolutelyAll)
-      val result = results.columnAs("a").next().asInstanceOf[Node]
+        executeWith(expectedSucceedIncludingSlotted, "merge (a:Person:User {id: 23, mail: 'emil@neo.com'}) on create set a.country='Sweden' return a.id, a.mail, a.country, labels(a)")
 
       // then
-      countNodes() should equal(1)
-      labels(result) should equal(Set("Person", "User"))
-      graph.inTx {
-        result.getProperty("id") should equal(23)
-        result.getProperty("country") should equal("Sweden")
-        result.getProperty("mail") should equal("emil@neo.com")
-      }
+      results.toSet should equal(Set(Map("a.id" -> 23, "a.mail" -> "emil@neo.com", "a.country" -> "Sweden", "labels(a)" -> List("Person", "User"))))
     }
 
     test(s"$constraintCreator: should_fail_on_merge_using_multiple_unique_indexes_if_found_different_nodes") {

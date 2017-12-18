@@ -47,13 +47,13 @@ import org.neo4j.storageengine.api.schema.IndexSample;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -61,6 +61,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.kernel.api.IndexCapability.NO_CAPABILITY;
 import static org.neo4j.kernel.api.index.IndexQueryHelper.add;
 
 @RunWith( MockitoJUnitRunner.class )
@@ -431,9 +432,9 @@ public class MultipleIndexPopulatorTest
             IndexDescriptor descriptor, IndexPopulator indexPopulator,
             FlippableIndexProxy flippableIndexProxy, FailedIndexProxyFactory failedIndexProxyFactory )
     {
-        return multipleIndexPopulator.addPopulator( indexPopulator, indexId, descriptor,
-                mock( SchemaIndexProvider.Descriptor.class ), flippableIndexProxy,
-                failedIndexProxyFactory, "userIndexDescription" );
+        return multipleIndexPopulator.addPopulator( indexPopulator, indexId,
+                new IndexMeta( descriptor, mock( SchemaIndexProvider.Descriptor.class ), NO_CAPABILITY ),
+                flippableIndexProxy, failedIndexProxyFactory, "userIndexDescription" );
     }
 
     private IndexPopulation addPopulator( IndexPopulator indexPopulator, int id )

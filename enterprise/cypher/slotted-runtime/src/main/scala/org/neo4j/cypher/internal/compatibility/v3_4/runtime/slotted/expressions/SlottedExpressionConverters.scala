@@ -19,11 +19,11 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.convert.{ExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.{expressions => commands}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.expressions.SlottedProjectedPath._
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.{expressions => runtimeExpression}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{ast => runtimeAst}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commands}
 import org.neo4j.cypher.internal.v3_4.expressions._
 import org.neo4j.cypher.internal.v3_4.{expressions => ast}
 
@@ -34,7 +34,7 @@ object SlottedExpressionConverters extends ExpressionConverter {
         Some(runtimeExpression.NodeFromSlot(offset))
       case runtimeAst.RelationshipFromSlot(offset, _) =>
         Some(runtimeExpression.RelationshipFromSlot(offset))
-      case runtimeAst.ReferenceFromSlot(offset) =>
+      case runtimeAst.ReferenceFromSlot(offset, _) =>
         Some(runtimeExpression.ReferenceFromSlot(offset))
       case runtimeAst.NodeProperty(offset, token, _) =>
         Some(runtimeExpression.NodeProperty(offset, token))
@@ -63,7 +63,16 @@ object SlottedExpressionConverters extends ExpressionConverter {
       case runtimeAst.NullCheck(offset, inner) =>
         val a = self.toCommandExpression(inner)
         Some(runtimeExpression.NullCheck(offset, a))
-      case e: ast.PathExpression => Some(toCommandProjectedPath(e, self))
+      case runtimeAst.NullCheckVariable(offset, inner) =>
+        val a = self.toCommandExpression(inner)
+        Some(runtimeExpression.NullCheck(offset, a))
+      case runtimeAst.NullCheckProperty(offset, inner) =>
+        val a = self.toCommandExpression(inner)
+        Some(runtimeExpression.NullCheck(offset, a))
+      case e: ast.PathExpression =>
+        Some(toCommandProjectedPath(e, self))
+      case runtimeAst.IsPrimitiveNull(offset) =>
+        Some(runtimeExpression.IsPrimitiveNull(offset))
       case _ =>
         None
     }

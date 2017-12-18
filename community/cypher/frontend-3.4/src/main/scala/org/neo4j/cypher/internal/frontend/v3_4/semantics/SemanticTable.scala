@@ -17,9 +17,8 @@
 package org.neo4j.cypher.internal.frontend.v3_4.semantics
 
 import org.neo4j.cypher.internal.util.v3_4.symbols._
-import org.neo4j.cypher.internal.util.v3_4.{ASTNode, InternalException}
+import org.neo4j.cypher.internal.util.v3_4._
 import org.neo4j.cypher.internal.frontend.v3_4.ast.ASTAnnotationMap
-import org.neo4j.cypher.internal.frontend.v3_4.{LabelId, PropertyKeyId, RelTypeId}
 import org.neo4j.cypher.internal.v3_4.expressions._
 
 import scala.collection.mutable
@@ -52,6 +51,9 @@ class SemanticTable(
       throw new InternalException(s"Did not find any type information for variable $s", e)
   }
 
+  def getActualTypeFor(expr: Expression): TypeSpec =
+    types.getOrElse(expr, throw new InternalException(s"Did not find any type information for expression $expr")).actual
+
   def containsNode(expr: String): Boolean = types.exists {
     case (v@Variable(name), _) => name == expr && isNode(v) // NOTE: Profiling showed that checking node type last is better
     case _ => false
@@ -73,9 +75,9 @@ class SemanticTable(
 
   def isNodeCollection(expr: String) = getTypeFor(expr) == CTList(CTNode).invariant
 
-  def isNode(expr: Variable) = types(expr).specified == CTNode.invariant
+  def isNode(expr: LogicalVariable) = types(expr).specified == CTNode.invariant
 
-  def isRelationship(expr: Variable) = types(expr).specified == CTRelationship.invariant
+  def isRelationship(expr: LogicalVariable) = types(expr).specified == CTRelationship.invariant
 
   def addNode(expr: Variable) =
     copy(types = types.updated(expr, ExpressionTypeInfo(CTNode.invariant, None)))
@@ -83,8 +85,12 @@ class SemanticTable(
   def addRelationship(expr: Variable) =
     copy(types = types.updated(expr, ExpressionTypeInfo(CTRelationship.invariant, None)))
 
-  def replaceVariables(replacements: (Variable, Variable)*): SemanticTable =
+  def replaceExpressions(rewriter: Rewriter): SemanticTable = {
+    val replacements = types.keys.toIndexedSeq.map { keyExpression =>
+      keyExpression -> keyExpression.endoRewrite(rewriter)
+    }
     copy(types = types.replaceKeys(replacements: _*), recordedScopes = recordedScopes.replaceKeys(replacements: _*))
+  }
 
   def replaceNodes(replacements: (ASTNode, ASTNode)*): SemanticTable =
     copy(recordedScopes = recordedScopes.replaceKeys(replacements: _*))

@@ -25,8 +25,44 @@ sealed trait Slot {
   def offset: Int
   def nullable: Boolean
   def typ: CypherType
-  def name: String
+  def isTypeCompatibleWith(other: Slot): Boolean
+  def isLongSlot: Boolean
 }
 
-case class LongSlot(offset: Int, nullable: Boolean, typ: CypherType, name: String) extends Slot
-case class RefSlot(offset: Int, nullable: Boolean, typ: CypherType, name: String) extends Slot
+case class LongSlot(offset: Int, nullable: Boolean, typ: CypherType) extends Slot {
+  override def isTypeCompatibleWith(other: Slot): Boolean = other match {
+    case LongSlot(_, _, otherTyp) =>
+      typ.isAssignableFrom(otherTyp) || otherTyp.isAssignableFrom(typ)
+    case _ => false
+  }
+
+  override def isLongSlot: Boolean = true
+}
+
+case class RefSlot(offset: Int, nullable: Boolean, typ: CypherType) extends Slot {
+  override def isTypeCompatibleWith(other: Slot): Boolean = other match {
+    case RefSlot(_, _, otherTyp) =>
+      typ.isAssignableFrom(otherTyp) || otherTyp.isAssignableFrom(typ)
+    case _ => false
+  }
+
+  override def isLongSlot: Boolean = false
+}
+
+sealed trait SlotWithAliases {
+  def slot: Slot
+  def aliases: Set[String]
+
+  protected def makeString: String = {
+    val aliasesString = s"${aliases.mkString("'", "','", "'")}"
+    f"$slot%-30s $aliasesString%-10s"
+  }
+}
+
+case class LongSlotWithAliases(slot: LongSlot, aliases: Set[String]) extends SlotWithAliases {
+  override def toString: String = makeString
+}
+
+case class RefSlotWithAliases(slot: RefSlot, aliases: Set[String]) extends SlotWithAliases {
+  override def toString: String = makeString
+}

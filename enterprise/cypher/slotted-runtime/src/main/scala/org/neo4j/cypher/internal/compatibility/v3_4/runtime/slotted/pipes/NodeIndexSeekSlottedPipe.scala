@@ -19,13 +19,14 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.expressions.Expression
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.indexQuery
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.pipes._
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.PrimitiveExecutionContext
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{ExecutionContext, PipelineInformation}
-import org.neo4j.cypher.internal.compiler.v3_4.IndexDescriptor
-import org.neo4j.cypher.internal.frontend.v3_4.ast.{LabelToken, PropertyKeyToken}
+import org.neo4j.cypher.internal.planner.v3_4.spi.IndexDescriptor
+import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.indexQuery
+import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.v3_4.expressions.{LabelToken, PropertyKeyToken}
 import org.neo4j.cypher.internal.v3_4.logical.plans.{LogicalPlanId, QueryExpression}
 
 case class NodeIndexSeekSlottedPipe(ident: String,
@@ -33,10 +34,11 @@ case class NodeIndexSeekSlottedPipe(ident: String,
                                     propertyKeys: Seq[PropertyKeyToken],
                                     valueExpr: QueryExpression[Expression],
                                     indexMode: IndexSeekMode = IndexSeek,
-                                    pipelineInformation: PipelineInformation)
+                                    slots: SlotConfiguration,
+                                    argumentSize: SlotConfiguration.Size)
                                    (val id: LogicalPlanId = LogicalPlanId.DEFAULT) extends Pipe {
 
-  private val offset = pipelineInformation.getLongOffsetFor(ident)
+  private val offset = slots.getLongOffsetFor(ident)
 
   private val propertyIds: Array[Int] = propertyKeys.map(_.nameId.id).toArray
 
@@ -51,9 +53,9 @@ case class NodeIndexSeekSlottedPipe(ident: String,
     val baseContext = state.initialContext.getOrElse(PrimitiveExecutionContext.empty)
     val resultNodes = indexQuery(valueExpr, baseContext, state, index, label.name, propertyKeys.map(_.name))
     resultNodes.map { node =>
-      val context = PrimitiveExecutionContext(pipelineInformation)
-      state.copyArgumentStateTo(context, pipelineInformation.initialNumberOfLongs, pipelineInformation.initialNumberOfReferences)
-      context.setLongAt(offset, node.getId)
+      val context = PrimitiveExecutionContext(slots)
+      state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
+      context.setLongAt(offset, node.id)
       context
     }
   }

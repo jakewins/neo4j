@@ -71,8 +71,8 @@ public class RaftGroupMembershipTest
 
         // then
         assertThat( fixture.members(), hasCurrentMembers( new RaftTestGroup( new int[0] ) ) );
-        assertEquals( 0, fixture.members().withRole( LEADER ).size() );
-        assertEquals( 3, fixture.members().withRole( FOLLOWER ).size() );
+        assertEquals( fixture.messageLog(), 0, fixture.members().withRole( LEADER ).size() );
+        assertEquals( fixture.messageLog(), 3, fixture.members().withRole( FOLLOWER ).size() );
     }
 
     @Test
@@ -92,7 +92,7 @@ public class RaftGroupMembershipTest
         RaftTestFixture fixture = new RaftTestFixture( net, 3, finalMembers );
         fixture.bootstrap( initialMembers );
 
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader ).timerService().invoke( ELECTION );
         net.processMessages();
 
         // when
@@ -100,13 +100,13 @@ public class RaftGroupMembershipTest
                 .setTargetMembershipSet( new RaftTestGroup( finalMembers ).getMembers() );
         net.processMessages();
 
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader ).timerService().invoke( HEARTBEAT );
         net.processMessages();
 
         // then
         assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
-        assertEquals( 1, fixture.members().withRole( LEADER ).size() );
-        assertEquals( 3, fixture.members().withRole( FOLLOWER ).size() );
+        assertEquals( fixture.messageLog(),1, fixture.members().withRole( LEADER ).size() );
+        assertEquals( fixture.messageLog(),3, fixture.members().withRole( FOLLOWER ).size() );
     }
 
     @Test
@@ -128,7 +128,7 @@ public class RaftGroupMembershipTest
         RaftTestFixture fixture = new RaftTestFixture( net, 3, finalMembers );
         fixture.bootstrap( initialMembers );
 
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader ).timerService().invoke( ELECTION );
         net.processMessages();
 
         // when
@@ -137,17 +137,17 @@ public class RaftGroupMembershipTest
 
         // We need a heartbeat for every member we add. It is necessary to have the new members report their state
         // so their membership change can be processed. We can probably do better here.
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader ).timerService().invoke( HEARTBEAT );
         net.processMessages();
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader ).timerService().invoke( HEARTBEAT );
         net.processMessages();
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader ).timerService().invoke( HEARTBEAT );
         net.processMessages();
 
         // then
-        assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
-        assertEquals( 1, fixture.members().withRole( LEADER ).size() );
-        assertEquals( 5, fixture.members().withRole( FOLLOWER ).size() );
+        assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
+        assertEquals( fixture.messageLog(), 1, fixture.members().withRole( LEADER ).size() );
+        assertEquals( fixture.messageLog(), 5, fixture.members().withRole( FOLLOWER ).size() );
     }
 
     @Test
@@ -166,16 +166,16 @@ public class RaftGroupMembershipTest
         RaftTestFixture fixture = new RaftTestFixture( net, 2, initialMembers );
         fixture.bootstrap( initialMembers );
 
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader ).timerService().invoke( ELECTION );
 
         // when
         fixture.members().setTargetMembershipSet( new RaftTestGroup( finalMembers ).getMembers() );
         net.processMessages();
 
         // then
-        assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
-        assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
-        assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
+        assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
+        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
+        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
     }
 
     @Test
@@ -196,7 +196,7 @@ public class RaftGroupMembershipTest
         RaftTestFixture fixture = new RaftTestFixture( net, 2, initialMembers );
         fixture.bootstrap( initialMembers );
 
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader ).timerService().invoke( ELECTION );
         net.processMessages();
 
         // when
@@ -205,8 +205,8 @@ public class RaftGroupMembershipTest
 
         // then
         assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
-        assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
-        assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
+        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
+        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
     }
 
     @Test
@@ -230,7 +230,7 @@ public class RaftGroupMembershipTest
         RaftTestFixture fixture = new RaftTestFixture( net, 3, everyone );
         fixture.bootstrap( initialMembers );
 
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader ).timerService().invoke( ELECTION );
         net.processMessages();
 
         // when
@@ -238,17 +238,17 @@ public class RaftGroupMembershipTest
                 new RaftTestGroup( finalMembers ).getMembers() );
         net.processMessages();
 
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader ).timerService().invoke( HEARTBEAT );
         net.processMessages();
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader ).timerService().invoke( HEARTBEAT );
         net.processMessages();
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader ).timerService().invoke( HEARTBEAT );
         net.processMessages();
 
         // then
         assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
-        assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
-        assertEquals( 3, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
+        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
+        assertEquals( fixture.messageLog(), 3, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
     }
 
     @Test
@@ -266,19 +266,19 @@ public class RaftGroupMembershipTest
 
         RaftTestFixture fixture = new RaftTestFixture( net, 2, initialMembers );
         fixture.bootstrap( initialMembers );
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader ).timerService().invoke( ELECTION );
         net.processMessages();
 
         // when
         fixture.members().withId( leader ).raftInstance().setTargetMembershipSet( new RaftTestGroup( finalMembers ).getMembers() );
         net.processMessages();
 
-        fixture.members().withId( stable1 ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( stable1 ).timerService().invoke( ELECTION );
         net.processMessages();
 
         // then
-        assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
-        assertTrue( fixture.members().withId( stable1 ).raftInstance().isLeader() ||
+        assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestGroup( finalMembers ) ) );
+        assertTrue( fixture.messageLog(), fixture.members().withId( stable1 ).raftInstance().isLeader() ||
                 fixture.members().withId( stable2 ).raftInstance().isLeader() );
     }
 
@@ -300,26 +300,26 @@ public class RaftGroupMembershipTest
         fixture.bootstrap( allMembers );
 
         // when
-        fixture.members().withId( leader1 ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader1 ).timerService().invoke( ELECTION );
         net.processMessages();
 
         fixture.members().withId( leader1 ).raftInstance().setTargetMembershipSet( new RaftTestGroup( fewerMembers )
                 .getMembers() );
         net.processMessages();
 
-        fixture.members().withId( leader2 ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader2 ).timerService().invoke( ELECTION );
         net.processMessages();
 
         fixture.members().withId( leader2 ).raftInstance().setTargetMembershipSet( new RaftTestGroup( allMembers )
                 .getMembers() );
         net.processMessages();
 
-        fixture.members().withId( leader2 ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader2 ).timerService().invoke( HEARTBEAT );
         net.processMessages();
 
         // then
-        assertTrue( fixture.members().withId( leader2 ).raftInstance().isLeader() );
-        assertThat( fixture.members().withIds( allMembers ), hasCurrentMembers( new RaftTestGroup( allMembers ) ) );
+        assertTrue( fixture.messageLog(), fixture.members().withId( leader2 ).raftInstance().isLeader() );
+        assertThat( fixture.messageLog(), fixture.members().withIds( allMembers ), hasCurrentMembers( new RaftTestGroup( allMembers ) ) );
     }
 
     @Test
@@ -340,7 +340,7 @@ public class RaftGroupMembershipTest
         fixture.bootstrap( allMembers );
 
         // when
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader ).timerService().invoke( ELECTION );
         net.processMessages();
 
         fixture.members().withId( leader ).raftInstance().setTargetMembershipSet( new RaftTestGroup( fewerMembers ).getMembers() );
@@ -352,12 +352,12 @@ public class RaftGroupMembershipTest
         fixture.members().withId( leader ).raftInstance().setTargetMembershipSet( new RaftTestGroup( allMembers ).getMembers() );
         net.processMessages();
 
-        fixture.members().withId( leader ).timeoutService().invokeTimeout( HEARTBEAT );
+        fixture.members().withId( leader ).timerService().invoke( HEARTBEAT );
         net.processMessages();
 
         // then
-        assertTrue( fixture.members().withId( leader ).raftInstance().isLeader() );
-        assertThat( fixture.members().withIds( allMembers ), hasCurrentMembers( new RaftTestGroup( allMembers ) ) );
+        assertTrue( fixture.messageLog(), fixture.members().withId( leader ).raftInstance().isLeader() );
+        assertThat( fixture.messageLog(), fixture.members().withIds( allMembers ), hasCurrentMembers( new RaftTestGroup( allMembers ) ) );
     }
 
     @Test
@@ -375,19 +375,19 @@ public class RaftGroupMembershipTest
         RaftTestFixture fixture = new RaftTestFixture( net, 2, initialMembers );
         fixture.bootstrap( initialMembers );
 
-        fixture.members().withId( leader1 ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader1 ).timerService().invoke( ELECTION );
         net.processMessages();
 
         // when
         net.disconnect( leader1 );
-        fixture.members().withId( leader2 ).timeoutService().invokeTimeout( ELECTION );
+        fixture.members().withId( leader2 ).timerService().invoke( ELECTION );
         net.processMessages();
 
         // then
-        assertTrue( fixture.members().withId( leader2 ).raftInstance().isLeader() );
-        assertFalse( fixture.members().withId( stable ).raftInstance().isLeader() );
-        assertEquals( 1, fixture.members().withIds( leader2, stable ).withRole( LEADER ).size() );
-        assertEquals( 1, fixture.members().withIds( leader2, stable ).withRole( FOLLOWER ).size() );
+        assertTrue( fixture.messageLog(), fixture.members().withId( leader2 ).raftInstance().isLeader() );
+        assertFalse( fixture.messageLog(), fixture.members().withId( stable ).raftInstance().isLeader() );
+        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( leader2, stable ).withRole( LEADER ).size() );
+        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( leader2, stable ).withRole( FOLLOWER ).size() );
     }
 
     private Matcher<? super RaftTestFixture.Members> hasCurrentMembers( final RaftTestGroup raftGroup )

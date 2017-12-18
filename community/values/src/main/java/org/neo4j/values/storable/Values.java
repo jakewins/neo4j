@@ -22,8 +22,10 @@ package org.neo4j.values.storable;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
-import org.neo4j.values.storable.StringValue.UTF8StringValue;
+import org.neo4j.graphdb.spatial.CRS;
+import org.neo4j.graphdb.spatial.Point;
 
 import static java.lang.String.format;
 
@@ -42,15 +44,15 @@ import static java.lang.String.format;
 @SuppressWarnings( "WeakerAccess" )
 public final class Values
 {
-    public static final NumberValue MIN_NUMBER = Values.doubleValue( Double.NEGATIVE_INFINITY );
-    public static final NumberValue MAX_NUMBER = Values.doubleValue( Double.NaN );
-    public static final NumberValue ZERO_FLOAT = Values.doubleValue( 0.0 );
-    public static final IntegralValue ZERO_INT = Values.longValue( 0 );
-    public static final Value MIN_STRING = Values.stringValue( "" );
+    public static final Value MIN_NUMBER = Values.doubleValue( Double.NEGATIVE_INFINITY );
+    public static final Value MAX_NUMBER = Values.doubleValue( Double.NaN );
+    public static final Value ZERO_FLOAT = Values.doubleValue( 0.0 );
+    public static final Value ZERO_INT = Values.longValue( 0 );
+    public static final Value MIN_STRING = StringValue.EMTPY;
     public static final Value MAX_STRING = Values.booleanValue( false );
     public static final BooleanValue TRUE = Values.booleanValue( true );
     public static final BooleanValue FALSE = Values.booleanValue( false );
-    public static final TextValue EMPTY_STRING = Values.stringValue( "" );
+    public static final TextValue EMPTY_STRING = StringValue.EMTPY;
     public static final DoubleValue E = Values.doubleValue( Math.E );
     public static final DoubleValue PI = Values.doubleValue( Math.PI );
     public static final ArrayValue EMPTY_SHORT_ARRAY = Values.shortArray( new short[0] );
@@ -61,6 +63,8 @@ public final class Values
     public static final ArrayValue EMPTY_LONG_ARRAY = Values.longArray( new long[0] );
     public static final ArrayValue EMPTY_FLOAT_ARRAY = Values.floatArray( new float[0] );
     public static final ArrayValue EMPTY_DOUBLE_ARRAY = Values.doubleArray( new double[0] );
+    public static final ArrayValue EMPTY_POINT_ARRAY = Values.pointArray( new PointValue[0] );
+    public static final TextArray EMPTY_TEXT_ARRAY = Values.stringArray();
 
     private Values()
     {
@@ -109,19 +113,33 @@ public final class Values
 
     public static final Value NO_VALUE = NoValue.NO_VALUE;
 
-    public static UTF8StringValue utf8Value( byte[] bytes )
+    public static TextValue utf8Value( byte[] bytes )
     {
+        if ( bytes.length == 0 )
+        {
+            return EMPTY_STRING;
+        }
+
         return utf8Value( bytes, 0, bytes.length );
     }
 
-    public static UTF8StringValue utf8Value( byte[] bytes, int offset, int length )
+    public static TextValue utf8Value( byte[] bytes, int offset, int length )
     {
+        if ( length == 0 )
+        {
+            return EMPTY_STRING;
+        }
+
         return new UTF8StringValue( bytes, offset, length );
     }
 
     public static TextValue stringValue( String value )
     {
-        return new StringValue.Direct( value );
+        if ( value.isEmpty() )
+        {
+            return EMPTY_STRING;
+        }
+        return new StringWrappingStringValue( value );
     }
 
     public static Value stringOrNoValue( String value )
@@ -132,11 +150,11 @@ public final class Values
         }
         else
         {
-            return new StringValue.Direct( value );
+            return stringValue( value );
         }
     }
 
-    public static NumberValue numberValue( Number number )
+    public static Value numberValue( Number number )
     {
         if ( number instanceof Long )
         {
@@ -161,6 +179,10 @@ public final class Values
         if ( number instanceof Short )
         {
             return shortValue( number.shortValue() );
+        }
+        if ( number == null )
+        {
+            return NO_VALUE;
         }
 
         throw new UnsupportedOperationException( "Unsupported type of Number " + number.toString() );
@@ -188,7 +210,7 @@ public final class Values
 
     public static BooleanValue booleanValue( boolean value )
     {
-        return new BooleanValue( value );
+        return value ? BooleanValue.TRUE : BooleanValue.FALSE;
     }
 
     public static CharValue charValue( char value )
@@ -251,6 +273,44 @@ public final class Values
         return new ShortArray.Direct( value );
     }
 
+    public static PointValue pointValue( CoordinateReferenceSystem crs, double... coordinate )
+    {
+        return new PointValue( crs, coordinate );
+    }
+
+    public static PointValue point( Point point )
+    {
+        // An optimization could be to do an instanceof PointValue check here
+        // and in that case just return the casted argument.
+        List<Double> coordinate = point.getCoordinate().getCoordinate();
+        double[] coords = new double[coordinate.size()];
+        for ( int i = 0; i < coords.length; i++ )
+        {
+            coords[i] = coordinate.get( i );
+        }
+        return new PointValue( crs( point.getCRS() ), coords );
+    }
+
+    public static PointArray pointArray( Point[] points )
+    {
+        PointValue[] values = new PointValue[points.length];
+        for ( int i = 0; i < points.length; i++ )
+        {
+            values[i] = Values.point( points[i] );
+        }
+        return new PointArray.Direct( values );
+    }
+
+    public static PointArray pointArray( PointValue[] points )
+    {
+        return new PointArray.Direct( points );
+    }
+
+    public static CoordinateReferenceSystem crs( CRS crs )
+    {
+        return CoordinateReferenceSystem.get( crs );
+    }
+
     // BOXED FACTORY METHODS
 
     /**
@@ -271,6 +331,20 @@ public final class Values
     }
 
     public static Value of( Object value, boolean allowNull )
+    {
+        Value of = unsafeOf( value, allowNull );
+        if ( of != null )
+        {
+            return of;
+        }
+        else
+        {
+            throw new IllegalArgumentException(
+                    format( "[%s:%s] is not a supported property value", value, value.getClass().getName() ) );
+        }
+    }
+
+    public static Value unsafeOf( Object value, boolean allowNull )
     {
         if ( value instanceof String )
         {
@@ -332,6 +406,10 @@ public final class Values
             }
             throw new IllegalArgumentException( "[null] is not a supported property value" );
         }
+        if ( value instanceof Point )
+        {
+            return Values.point( (Point) value );
+        }
         if ( value instanceof Value )
         {
             throw new UnsupportedOperationException(
@@ -339,8 +417,7 @@ public final class Values
         }
 
         // otherwise fail
-        throw new IllegalArgumentException(
-                format( "[%s:%s] is not a supported property value", value, value.getClass().getName() ) );
+       return null;
     }
 
     /**
@@ -358,7 +435,7 @@ public final class Values
     @Deprecated
     public static Object asObject( Value value )
     {
-        return value == null ? null : value.getInnerObject();
+        return value == null ? null : value.asObject();
     }
 
     public static Object[] asObjects( Value[] propertyValues )
@@ -411,9 +488,15 @@ public final class Values
         {
             return shortArray( copy( value, new short[value.length] ) );
         }
-        throw new IllegalArgumentException(
-                format( "%s[] is not a supported property value type",
-                        value.getClass().getComponentType().getName() ) );
+        if ( value instanceof PointValue[] )
+        {
+            return pointArray( copy( value, new PointValue[value.length] ) );
+        }
+        if ( value instanceof Point[] )
+        {
+            return pointArray( copy( value, new Point[value.length] ) );
+        }
+        return null;
     }
 
     private static <T> T copy( Object[] value, T target )

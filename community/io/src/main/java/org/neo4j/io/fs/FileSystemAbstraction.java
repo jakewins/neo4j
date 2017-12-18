@@ -48,7 +48,7 @@ public interface FileSystemAbstraction extends Closeable
      */
     FileWatcher fileWatcher() throws IOException;
 
-    StoreChannel open( File fileName, String mode ) throws IOException;
+    StoreChannel open( File fileName, OpenMode openMode ) throws IOException;
 
     OutputStream openAsOutputStream( File fileName, boolean append ) throws IOException;
 
@@ -82,6 +82,8 @@ public interface FileSystemAbstraction extends Closeable
 
     void moveToDirectory( File file, File toDirectory ) throws IOException;
 
+    void copyToDirectory( File file, File toDirectory ) throws IOException;
+
     void copyFile( File from, File to ) throws IOException;
 
     void copyRecursively( File fromDirectory, File toDirectory ) throws IOException;
@@ -96,6 +98,7 @@ public interface FileSystemAbstraction extends Closeable
 
     interface ThirdPartyFileSystem extends Closeable
     {
+        @Override
         void close();
 
         void dumpToZip( ZipOutputStream zip, byte[] scratchPad ) throws IOException;

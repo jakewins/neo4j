@@ -35,14 +35,9 @@ public class Stage
     private final List<Step<?>> pipeline = new ArrayList<>();
     private final StageExecution execution;
 
-    public Stage( String name, Configuration config )
+    public Stage( String name, String part, Configuration config, int orderingGuarantees )
     {
-        this( name, config, 0 /*no ordering guarantees*/ );
-    }
-
-    public Stage( String name, Configuration config, int orderingGuarantees )
-    {
-        this.execution = new StageExecution( name, config, pipeline, orderingGuarantees );
+        this.execution = new StageExecution( name, part, config, pipeline, orderingGuarantees );
     }
 
     protected StageControl control()
@@ -79,34 +74,27 @@ public class Stage
     public void close()
     {
         Exception exception = null;
-        try
+        for ( Step<?> step : pipeline )
         {
-            for ( Step<?> step : pipeline )
+            try
             {
-                try
-                {
-                    step.close();
-                }
-                catch ( Exception e )
-                {
-                    if ( exception == null )
-                    {
-                        exception = e;
-                    }
-                    else
-                    {
-                        exception.addSuppressed( e );
-                    }
-                }
+                step.close();
             }
-            if ( exception != null )
+            catch ( Exception e )
             {
-                throw launderedException( exception );
+                if ( exception == null )
+                {
+                    exception = e;
+                }
+                else
+                {
+                    exception.addSuppressed( e );
+                }
             }
         }
-        finally
+        if ( exception != null )
         {
-            pipeline.clear();
+            throw launderedException( exception );
         }
     }
 }

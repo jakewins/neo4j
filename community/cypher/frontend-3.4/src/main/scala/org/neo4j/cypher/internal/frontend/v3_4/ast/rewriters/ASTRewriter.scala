@@ -23,12 +23,13 @@ import org.neo4j.cypher.internal.frontend.v3_4.rewriters.{LiteralExtraction, lit
 import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticState
 import org.neo4j.cypher.internal.v3_4.expressions.NotEquals
 
-class ASTRewriter(rewriterSequencer: (String) => RewriterStepSequencer, literalExtraction: LiteralExtraction) {
+class ASTRewriter(rewriterSequencer: (String) => RewriterStepSequencer,
+                  literalExtraction: LiteralExtraction,
+                  getDegreeRewriting: Boolean) {
 
   import org.neo4j.cypher.internal.frontend.v3_4.helpers.rewriting.RewriterStep._
 
   def rewrite(queryText: String, statement: Statement, semanticState: SemanticState): (Statement, Map[String, Any], Set[RewriterCondition]) = {
-    val (extractParameters, extractedParameters) = literalReplacement(statement, literalExtraction)
 
     val contract = rewriterSequencer("ASTRewriter")(
       recordScopes(semanticState),
@@ -42,12 +43,11 @@ class ASTRewriter(rewriterSequencer: (String) => RewriterStepSequencer, literalE
       expandStar(semanticState),
       enableCondition(containsNoReturnAll),
       foldConstants,
-      ApplyRewriter("extractParameters", extractParameters),
       nameMatchPatternElements,
       enableCondition(noUnnamedPatternElementsInMatch),
       nameGraphOfPatternElements,
       enableCondition(noUnnamedPatternElementsInGraphOf),
-      normalizeMatchPredicates,
+      normalizeMatchPredicates(getDegreeRewriting),
       normalizeNotEquals,
       enableCondition(containsNoNodesOfType[NotEquals]),
       normalizeArgumentOrder,
@@ -63,7 +63,8 @@ class ASTRewriter(rewriterSequencer: (String) => RewriterStepSequencer, literalE
     )
 
     val rewrittenStatement = statement.endoRewrite(contract.rewriter)
+    val (extractParameters, extractedParameters) = literalReplacement(rewrittenStatement, literalExtraction)
 
-    (rewrittenStatement, extractedParameters, contract.postConditions)
+    (rewrittenStatement.endoRewrite(extractParameters), extractedParameters, contract.postConditions)
   }
 }

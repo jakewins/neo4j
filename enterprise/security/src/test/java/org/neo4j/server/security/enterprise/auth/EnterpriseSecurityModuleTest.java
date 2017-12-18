@@ -34,7 +34,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -163,6 +163,7 @@ public class EnterpriseSecurityModuleTest
         when( mockLog.isDebugEnabled() ).thenReturn( true );
         when( config.get( SecuritySettings.auth_cache_ttl ) ).thenReturn( Duration.ZERO );
         when( config.get( SecuritySettings.auth_cache_max_capacity ) ).thenReturn( 10 );
+        when( config.get( SecuritySettings.auth_cache_use_ttl ) ).thenReturn( true );
         when( config.get( SecuritySettings.security_log_successful_authentication ) ).thenReturn( false );
         when( config.get( GraphDatabaseSettings.auth_max_failed_attempts ) ).thenReturn( 3 );
     }

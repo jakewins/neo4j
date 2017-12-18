@@ -39,6 +39,7 @@ import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
@@ -106,10 +107,10 @@ public abstract class NativeSchemaNumberIndexPopulatorTest<KEY extends SchemaNum
         populator.create();
 
         // then
-        try ( StoreChannel r = fs.open( indexFile, "r" ) )
+        try ( StoreChannel r = fs.open( indexFile, OpenMode.READ ) )
         {
             byte[] firstBytes = new byte[someBytes.length];
-            r.read( ByteBuffer.wrap( firstBytes ) );
+            r.readAll( ByteBuffer.wrap( firstBytes ) );
             assertNotEquals( "Expected previous file content to have been cleared but was still there",
                     someBytes, firstBytes );
         }

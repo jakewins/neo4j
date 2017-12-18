@@ -22,6 +22,18 @@ package org.neo4j.values.storable;
 public abstract class IntegralValue extends NumberValue
 {
     @Override
+    public boolean equals( long x )
+    {
+        return longValue() == x;
+    }
+
+    @Override
+    public boolean equals( double x )
+    {
+        return NumberValues.numbersEqual( x, longValue() );
+    }
+
+    @Override
     public final int computeHash()
     {
         return NumberValues.hash( longValue() );
@@ -52,11 +64,13 @@ public abstract class IntegralValue extends NumberValue
         }
     }
 
+    @Override
     public int compareTo( IntegralValue other )
     {
         return Long.compare( longValue(), other.longValue() );
     }
 
+    @Override
     public int compareTo( FloatingPointValue other )
     {
         return NumberValues.compareLongAgainstDouble( longValue(), other.doubleValue() );

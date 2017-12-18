@@ -37,7 +37,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
-import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
@@ -216,8 +216,9 @@ public class EnterpriseSecurityModule extends SecurityModule
     private static CacheManager createCacheManager( Config config )
     {
         long ttl = config.get( SecuritySettings.auth_cache_ttl ).toMillis();
+        boolean useTTL = config.get( SecuritySettings.auth_cache_use_ttl );
         int maxCapacity = config.get( SecuritySettings.auth_cache_max_capacity );
-        return new ShiroCaffeineCache.Manager( Ticker.systemTicker(), ttl, maxCapacity );
+        return new ShiroCaffeineCache.Manager( Ticker.systemTicker(), ttl, maxCapacity, useTTL );
     }
 
     private static List<PluginRealm> createPluginRealms(

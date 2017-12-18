@@ -48,9 +48,9 @@ import org.neo4j.values.storable.Values;
 
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -58,6 +58,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.kernel.api.IndexCapability.NO_CAPABILITY;
 import static org.neo4j.kernel.api.index.IndexQueryHelper.add;
 import static org.neo4j.kernel.impl.api.index.BatchingMultipleIndexPopulator.AWAIT_TIMEOUT_MINUTES_NAME;
 import static org.neo4j.kernel.impl.api.index.BatchingMultipleIndexPopulator.BATCH_SIZE_NAME;
@@ -348,8 +349,8 @@ public class BatchingMultipleIndexPopulatorTest
         flipper.setFlipTarget( indexProxyFactory );
 
         batchingPopulator.addPopulator(
-                populator, descriptor.schema().getLabelId(), descriptor,
-                new SchemaIndexProvider.Descriptor( "foo", "1" ),
+                populator, descriptor.schema().getLabelId(),
+                new IndexMeta( descriptor, new SchemaIndexProvider.Descriptor( "foo", "1" ), NO_CAPABILITY ),
                 flipper, failedIndexProxyFactory, "testIndex" );
 
         return populator;

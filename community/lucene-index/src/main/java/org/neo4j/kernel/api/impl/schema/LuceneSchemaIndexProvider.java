@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.internal.kernel.api.IndexCapability;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.impl.index.IndexWriterConfigs;
@@ -83,9 +84,8 @@ public class LuceneSchemaIndexProvider extends SchemaIndexProvider
     @Override
     public IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor, IndexSamplingConfig samplingConfig )
     {
-        SchemaIndex luceneIndex = LuceneSchemaIndexBuilder.create( descriptor )
+        SchemaIndex luceneIndex = LuceneSchemaIndexBuilder.create( descriptor, config )
                                         .withFileSystem( fileSystem )
-                                        .withConfig( config )
                                         .withOperationalMode( operationalMode )
                                         .withSamplingConfig( samplingConfig )
                                         .withIndexStorage( getIndexStorage( indexId ) )
@@ -109,8 +109,7 @@ public class LuceneSchemaIndexProvider extends SchemaIndexProvider
     public IndexAccessor getOnlineAccessor( long indexId, IndexDescriptor descriptor,
             IndexSamplingConfig samplingConfig ) throws IOException
     {
-        SchemaIndex luceneIndex = LuceneSchemaIndexBuilder.create( descriptor )
-                                            .withConfig( config )
+        SchemaIndex luceneIndex = LuceneSchemaIndexBuilder.create( descriptor, config )
                                             .withOperationalMode( operationalMode )
                                             .withSamplingConfig( samplingConfig )
                                             .withIndexStorage( getIndexStorage( indexId ) )
@@ -145,6 +144,12 @@ public class LuceneSchemaIndexProvider extends SchemaIndexProvider
     }
 
     @Override
+    public IndexCapability getCapability( IndexDescriptor indexDescriptor )
+    {
+        return IndexCapability.NO_CAPABILITY;
+    }
+
+    @Override
     public StoreMigrationParticipant storeMigrationParticipant( final FileSystemAbstraction fs, PageCache pageCache )
     {
         return new SchemaIndexMigrator( fs, this );
@@ -168,7 +173,7 @@ public class LuceneSchemaIndexProvider extends SchemaIndexProvider
 
     private boolean indexIsOnline( PartitionedIndexStorage indexStorage, IndexDescriptor descriptor ) throws IOException
     {
-        try ( SchemaIndex index = LuceneSchemaIndexBuilder.create( descriptor ).withIndexStorage( indexStorage ).build() )
+        try ( SchemaIndex index = LuceneSchemaIndexBuilder.create( descriptor, config ).withIndexStorage( indexStorage ).build() )
         {
             if ( index.exists() )
             {

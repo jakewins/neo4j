@@ -20,46 +20,57 @@
 package org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.pipes
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.predicates.Predicate
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.helpers.PrimitiveLongHelper
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.pipes._
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.PrimitiveExecutionContext
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.helpers.NullChecker.nodeIsNull
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.{ExecutionContext, PipelineInformation}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
+import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.slotted.helpers.SlottedPipeBuilderUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.v3_4.logical.plans.LogicalPlanId
 import org.neo4j.cypher.internal.v3_4.expressions.SemanticDirection
 
 case class OptionalExpandIntoSlottedPipe(source: Pipe,
-                                         fromOffset: Int,
+                                         fromSlot: Slot,
                                          relOffset: Int,
-                                         toOffset: Int,
+                                         toSlot: Slot,
                                          dir: SemanticDirection,
                                          lazyTypes: LazyTypes,
                                          predicate: Predicate,
-                                         pipelineInformation: PipelineInformation)
+                                         slots: SlotConfiguration)
                                         (val id: LogicalPlanId = LogicalPlanId.DEFAULT)
   extends PipeWithSource(source) with PrimitiveCachingExpandInto {
   self =>
-  private final val CACHE_SIZE = 100000
 
+  //===========================================================================
+  // Compile-time initializations
+  //===========================================================================
+  private final val CACHE_SIZE = 100000
+  private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
+  private val getToNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(toSlot)
+
+  //===========================================================================
+  // Runtime code
+  //===========================================================================
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     //cache of known connected nodes
     val relCache = new PrimitiveRelationshipsCache(CACHE_SIZE)
 
     input.flatMap {
       (inputRow: ExecutionContext) =>
-        val fromNode = inputRow.getLongAt(fromOffset)
-        val toNode = inputRow.getLongAt(toOffset)
+        val fromNode = getFromNodeFunction(inputRow)
+        val toNode = getToNodeFunction(inputRow)
 
-        if (nodeIsNull(fromNode) || nodeIsNull(toNode)) {
+        if (entityIsNull(fromNode) || entityIsNull(toNode)) {
           Iterator(withNulls(inputRow))
         } else {
           val relationships: PrimitiveLongIterator = relCache.get(fromNode, toNode, dir)
             .getOrElse(findRelationships(state.query, fromNode, toNode, relCache, dir, lazyTypes.types(state.query)))
 
           val matchIterator = PrimitiveLongHelper.map(relationships, relId => {
-            val outputRow = PrimitiveExecutionContext(pipelineInformation)
-            outputRow.copyFrom(inputRow, pipelineInformation.initialNumberOfLongs, pipelineInformation.initialNumberOfReferences)
+            val outputRow = PrimitiveExecutionContext(slots)
+            inputRow.copyTo(outputRow)
             outputRow.setLongAt(relOffset, relId)
             outputRow
           }).filter(ctx => predicate.isTrue(ctx, state))
@@ -73,8 +84,8 @@ case class OptionalExpandIntoSlottedPipe(source: Pipe,
   }
 
   private def withNulls(inputRow: ExecutionContext) = {
-    val outputRow = PrimitiveExecutionContext(pipelineInformation)
-    outputRow.copyFrom(inputRow, pipelineInformation.initialNumberOfLongs, pipelineInformation.initialNumberOfReferences)
+    val outputRow = PrimitiveExecutionContext(slots)
+    inputRow.copyTo(outputRow)
     outputRow.setLongAt(relOffset, -1)
     outputRow
   }

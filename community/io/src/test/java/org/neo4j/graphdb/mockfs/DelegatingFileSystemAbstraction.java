@@ -33,6 +33,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.StreamFilesRecursive;
 import org.neo4j.io.fs.watcher.FileWatcher;
@@ -53,15 +54,21 @@ public class DelegatingFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public StoreChannel open( File fileName, String mode ) throws IOException
+    public StoreChannel open( File fileName, OpenMode openMode ) throws IOException
     {
-        return delegate.open( fileName, mode );
+        return delegate.open( fileName, openMode );
     }
 
     @Override
     public void moveToDirectory( File file, File toDirectory ) throws IOException
     {
         delegate.moveToDirectory( file, toDirectory );
+    }
+
+    @Override
+    public void copyToDirectory( File file, File toDirectory ) throws IOException
+    {
+        delegate.copyToDirectory( file, toDirectory );
     }
 
     @Override

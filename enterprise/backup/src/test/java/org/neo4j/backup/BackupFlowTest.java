@@ -19,13 +19,11 @@
  */
 package org.neo4j.backup;
 
-import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -34,15 +32,16 @@ import java.util.Collections;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.consistency.ConsistencyCheckService;
-import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.containsString;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -55,26 +54,28 @@ public class BackupFlowTest
     public ExpectedException expectedException = ExpectedException.none();
 
     // dependencies
-    final ConsistencyCheckService consistencyCheckService = mock( ConsistencyCheckService.class );
-    final OutsideWorld outsideWorld = mock( OutsideWorld.class );
-    final LogProvider logProvider = mock( LogProvider.class );
-    final BackupStrategyWrapper firstStrategy = mock( BackupStrategyWrapper.class );
-    final BackupStrategyWrapper secondStrategy = mock( BackupStrategyWrapper.class );
+    private final ConsistencyCheckService consistencyCheckService = mock( ConsistencyCheckService.class );
+    private final OutsideWorld outsideWorld = mock( OutsideWorld.class );
+    private final FileSystemAbstraction fileSystem = mock( FileSystemAbstraction.class );
+    private final LogProvider logProvider = mock( LogProvider.class );
+    private final BackupStrategyWrapper firstStrategy = mock( BackupStrategyWrapper.class );
+    private final BackupStrategyWrapper secondStrategy = mock( BackupStrategyWrapper.class );
 
     BackupFlow subject;
 
     // test method parameter mocks
-    final OnlineBackupContext onlineBackupContext = mock( OnlineBackupContext.class );
-    final OnlineBackupRequiredArguments requiredArguments = mock( OnlineBackupRequiredArguments.class );
+    private final OnlineBackupContext onlineBackupContext = mock( OnlineBackupContext.class );
+    private final OnlineBackupRequiredArguments requiredArguments = mock( OnlineBackupRequiredArguments.class );
 
     // mock returns
-    private ProgressMonitorFactory progressMonitorFactory = mock( ProgressMonitorFactory.class );
-    private Path reportDir = mock( Path.class );
-    private ConsistencyCheckService.Result consistencyCheckResult = mock( ConsistencyCheckService.Result.class );
+    private final ProgressMonitorFactory progressMonitorFactory = mock( ProgressMonitorFactory.class );
+    private final Path reportDir = mock( Path.class );
+    private final ConsistencyCheckService.Result consistencyCheckResult = mock( ConsistencyCheckService.Result.class );
 
     @Before
     public void setup()
     {
+        when( outsideWorld.fileSystem() ).thenReturn( fileSystem );
         when( onlineBackupContext.getRequiredArguments() ).thenReturn( requiredArguments );
         when( requiredArguments.getReportDir() ).thenReturn( reportDir );
         subject = new BackupFlow( consistencyCheckService, outsideWorld, logProvider, progressMonitorFactory,

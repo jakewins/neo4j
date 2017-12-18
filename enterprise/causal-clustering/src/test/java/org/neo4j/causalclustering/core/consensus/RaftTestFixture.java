@@ -20,6 +20,8 @@
 package org.neo4j.causalclustering.core.consensus;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -31,13 +33,15 @@ import org.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import org.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import org.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
-import org.neo4j.causalclustering.core.consensus.schedule.ControlledRenewableTimeoutService;
-import org.neo4j.causalclustering.core.consensus.schedule.RenewableTimeoutService;
+import org.neo4j.causalclustering.core.consensus.schedule.OnDemandTimerService;
+import org.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import org.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
-import org.neo4j.causalclustering.logging.NullMessageLogger;
+import org.neo4j.causalclustering.logging.BetterMessageLogger;
+import org.neo4j.causalclustering.logging.MessageLogger;
 import org.neo4j.causalclustering.messaging.Inbound;
+import org.neo4j.causalclustering.messaging.LoggingInbound;
 import org.neo4j.causalclustering.messaging.LoggingOutbound;
 import org.neo4j.causalclustering.messaging.Outbound;
 import org.neo4j.time.Clocks;
@@ -49,6 +53,8 @@ import static org.neo4j.helpers.collection.Iterators.asSet;
 public class RaftTestFixture
 {
     private Members members = new Members();
+    // Does not need to be closed
+    private StringWriter writer = new StringWriter();
 
     public RaftTestFixture( DirectNetworking net, int expectedClusterSize, MemberId... ids )
     {
@@ -57,14 +63,17 @@ public class RaftTestFixture
             MemberFixture fixtureMember = new MemberFixture();
 
             FakeClock clock = Clocks.fakeClock();
-            fixtureMember.timeoutService = new ControlledRenewableTimeoutService( clock );
+            fixtureMember.timerService = new OnDemandTimerService( clock );
 
             fixtureMember.raftLog = new InMemoryRaftLog();
             fixtureMember.member = id;
 
-            Inbound inbound = net.new Inbound( fixtureMember.member );
+            MessageLogger<MemberId> messageLogger =
+                    new BetterMessageLogger<>( id, new PrintWriter( writer ), Clocks.systemClock() );
+            Inbound<RaftMessages.RaftMessage> inbound =
+                    new LoggingInbound<>( net.new Inbound<>( fixtureMember.member ), messageLogger, fixtureMember.member );
             Outbound<MemberId,RaftMessages.RaftMessage> outbound = new LoggingOutbound<>( net.new Outbound( id ), fixtureMember.member,
-                    new NullMessageLogger<>() );
+                    messageLogger );
 
             fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize,
                     RaftTestMemberSetBuilder.INSTANCE )
@@ -72,7 +81,7 @@ public class RaftTestFixture
                     .outbound( outbound )
                     .raftLog( fixtureMember.raftLog )
                     .clock( clock )
-                    .timeoutService( fixtureMember.timeoutService )
+                    .timerService( fixtureMember.timerService )
                     .build();
 
             members.put( fixtureMember );
@@ -92,6 +101,11 @@ public class RaftTestFixture
             member.raftInstance().installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( members ) ) ) );
             member.raftInstance().postRecoveryActions();
         }
+    }
+
+    public String messageLog()
+    {
+        return writer.toString();
     }
 
     public static class Members implements Iterable<MemberFixture>
@@ -143,11 +157,11 @@ public class RaftTestFixture
             }
         }
 
-        public void invokeTimeout( RenewableTimeoutService.TimeoutName name )
+        public void invokeTimeout( TimerService.TimerName name )
         {
             for ( MemberFixture memberFixture : memberMap.values() )
             {
-                memberFixture.timeoutService.invokeTimeout( name );
+                memberFixture.timerService.invoke( name );
             }
         }
 
@@ -173,7 +187,7 @@ public class RaftTestFixture
     {
         private MemberId member;
         private RaftMachine raftMachine;
-        private ControlledRenewableTimeoutService timeoutService;
+        private OnDemandTimerService timerService;
         private RaftLog raftLog;
 
         public MemberId member()
@@ -186,9 +200,9 @@ public class RaftTestFixture
             return raftMachine;
         }
 
-        public ControlledRenewableTimeoutService timeoutService()
+        public OnDemandTimerService timerService()
         {
-            return timeoutService;
+            return timerService;
         }
 
         public RaftLog raftLog()
@@ -201,7 +215,7 @@ public class RaftTestFixture
         {
             return "FixtureMember{" +
                     "raftInstance=" + raftMachine +
-                    ", timeoutService=" + timeoutService +
+                    ", timeoutService=" + timerService +
                     ", raftLog=" + raftLog +
                     '}';
         }

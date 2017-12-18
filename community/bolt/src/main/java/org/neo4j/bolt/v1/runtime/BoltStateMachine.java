@@ -34,8 +34,8 @@ import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.graphdb.security.AuthProviderTimeoutException;
 import org.neo4j.graphdb.security.AuthorizationExpiredException;
-import org.neo4j.kernel.api.bolt.ManagedBoltStateMachine;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.api.bolt.ManagedBoltStateMachine;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.values.AnyValue;
@@ -264,6 +264,16 @@ public class BoltStateMachine implements AutoCloseable, ManagedBoltStateMachine
     {
         ctx.interruptCounter.incrementAndGet();
         ctx.statementProcessor.markCurrentTransactionForTermination();
+    }
+
+    /**
+     * When this is invoked, the machine will check whether the related transaction is
+     * marked for termination and will reset the TransactionStateMachine to AUTO_COMMIT mode
+     * while releasing the related transactional resources.
+     */
+    public void validateTransaction() throws KernelException
+    {
+        ctx.statementProcessor.validateTransaction();
     }
 
     public void externalError( Neo4jError error, BoltResponseHandler handler ) throws BoltConnectionFatality
@@ -733,6 +743,7 @@ public class BoltStateMachine implements AutoCloseable, ManagedBoltStateMachine
             }
         }
 
+        @Override
         public void onRecords( BoltResult result, boolean pull ) throws Exception
         {
             if ( responseHandler != null )
@@ -822,6 +833,12 @@ public class BoltStateMachine implements AutoCloseable, ManagedBoltStateMachine
         public void markCurrentTransactionForTermination()
         {
             // nothing to mark
+        }
+
+        @Override
+        public void validateTransaction() throws KernelException
+        {
+            // nothing to validate
         }
 
         @Override

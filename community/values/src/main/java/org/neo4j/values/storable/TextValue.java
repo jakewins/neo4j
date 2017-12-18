@@ -19,20 +19,67 @@
  */
 package org.neo4j.values.storable;
 
+import org.neo4j.values.virtual.ListValue;
+
+import static org.neo4j.values.storable.Values.stringArray;
+import static org.neo4j.values.virtual.VirtualValues.fromArray;
+
 public abstract class TextValue extends ScalarValue
 {
+    protected static final ListValue EMPTY_SPLIT = fromArray( stringArray( "", "" ) );
+
     TextValue()
     {
     }
 
     public abstract String stringValue();
 
+    /**
+     * The length of a TextValue is the number of Unicode code points in the text.
+     *
+     * @return The number of Unicode code points.
+     */
     public abstract int length();
 
-    abstract int compareTo( TextValue other );
+    public abstract TextValue substring( int start, int length );
+
+    public TextValue substring( int start )
+    {
+        return substring( start, Math.max( length() - start, start ) );
+    }
+
+    public abstract TextValue trim();
+
+    public abstract TextValue ltrim();
+
+    public abstract TextValue rtrim();
+
+    public abstract TextValue toLower();
+
+    public abstract TextValue toUpper();
+
+    public abstract ListValue split( String separator );
+
+    public abstract TextValue replace( String find, String replace );
+
+    public abstract TextValue reverse();
+
+    public abstract int compareTo( TextValue other );
 
     @Override
     public boolean equals( boolean x )
+    {
+        return false;
+    }
+
+    @Override
+    public boolean equals( long x )
+    {
+        return false;
+    }
+
+    @Override
+    public boolean equals( double x )
     {
         return false;
     }

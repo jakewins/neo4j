@@ -22,22 +22,24 @@ package org.neo4j.cypher.internal.compiled_runtime.v3_4.codegen.ir
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.neo4j.collection.primitive.PrimitiveLongIterator
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.ProfileMode
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.compiled.codegen.ir.{AcceptVisitor, ScanAllNodes, WhileLoop}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.Provider
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.planDescription.InternalPlanDescription.Arguments.{DbHits, Rows}
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.planDescription._
-import org.neo4j.cypher.internal.compiler.v3_4.spi.KernelStatisticProvider
+import org.neo4j.cypher.internal.ir.v3_4.{CardinalityEstimation, IdName, PlannerQuery}
+import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.planner.v3_4.spi.KernelStatisticProvider
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{DbHits, Rows}
+import org.neo4j.cypher.internal.runtime.planDescription.{InternalPlanDescription, NoChildren, PlanDescriptionImpl, SingleChild}
+import org.neo4j.cypher.internal.runtime.{ProfileMode, QueryContext, QueryTransactionalContext}
+import org.neo4j.cypher.internal.util.v3_4.Cardinality
 import org.neo4j.cypher.internal.util.v3_4.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.ir.v3_4.{Cardinality, CardinalityEstimation, IdName, PlannerQuery}
-import org.neo4j.cypher.internal.spi.v3_4.{QueryContext, QueryTransactionalContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.v3_4.codegen.profiling.ProfilingTracer
-import org.neo4j.cypher.internal.v3_4.logical.plans._
-import org.neo4j.cypher.internal.v3_4.logical.plans
 import org.neo4j.cypher.internal.v3_4.expressions.SignedDecimalIntegerLiteral
-import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans._
+import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api._
 import org.neo4j.kernel.api.security.AnonymousContext
@@ -65,7 +67,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     when(transactionalContext.kernelStatisticProvider).thenReturn(new DelegatingKernelStatisticProvider(new DefaultPageCursorTracer))
     when(transactionalContext.readOperations).thenReturn(readOps)
     when(entityAccessor.newNodeProxyById(anyLong())).thenReturn(mock[NodeProxy])
-    when(queryContext.entityAccessor).thenReturn(entityAccessor.asInstanceOf[queryContext.EntityAccessor])
+    when(queryContext.entityAccessor).thenReturn(entityAccessor)
     when(readOps.nodesGetAll()).thenReturn(new PrimitiveLongIterator {
       private var counter = 0
 
@@ -101,7 +103,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     val database = new TestGraphDatabaseFactory().newImpermanentDatabase()
     try {
       val graphDb = new GraphDatabaseCypherService(database)
-      val tx = graphDb.beginTransaction(KernelTransaction.Type.explicit, AnonymousContext.write())
+      val tx = graphDb.beginTransaction(Type.explicit, AnonymousContext.write())
       graphDb.createNode()
       graphDb.createNode()
       tx.success()

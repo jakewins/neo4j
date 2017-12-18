@@ -35,16 +35,21 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.labelscan.LabelScanWriter;
 import org.neo4j.kernel.api.labelscan.NodeLabelUpdate;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.scan.FullStoreChangeStream;
 import org.neo4j.kernel.impl.index.labelscan.NativeLabelScanStore;
+import org.neo4j.kernel.impl.store.InvalidIdGeneratorException;
 import org.neo4j.kernel.impl.store.MetaDataStore;
+import org.neo4j.kernel.impl.store.StoreFile;
 import org.neo4j.kernel.impl.store.format.standard.StandardV2_3;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_2;
+import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.util.monitoring.ProgressReporter;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -92,14 +97,14 @@ public class NativeLabelScanStoreMigratorTest
 
         fileSystem = fileSystemRule.get();
         pageCache = pageCacheRule.getPageCache( fileSystemRule );
-        indexMigrator = new NativeLabelScanStoreMigrator( fileSystem, pageCache );
+        indexMigrator = new NativeLabelScanStoreMigrator( fileSystem, pageCache, Config.defaults() );
         fileSystem.mkdirs( luceneLabelScanStore );
     }
 
     @Test
     public void skipMigrationIfNativeIndexExist() throws Exception
     {
-        ByteBuffer sourceBuffer = writeNativeIndexFile( nativeLabelIndex, new byte[]{1, 2, 3} );
+        ByteBuffer sourceBuffer = writeFile( nativeLabelIndex, new byte[]{1, 2, 3} );
 
         indexMigrator.migrate( storeDir, migrationDir, progressReporter, StandardV3_2.STORE_VERSION, StandardV3_2.STORE_VERSION );
         indexMigrator.moveMigratedFiles( migrationDir, storeDir, StandardV3_2.STORE_VERSION, StandardV3_2.STORE_VERSION );
@@ -107,6 +112,16 @@ public class NativeLabelScanStoreMigratorTest
         ByteBuffer resultBuffer = readFileContent( nativeLabelIndex, 3 );
         assertEquals( sourceBuffer, resultBuffer );
         assertTrue( fileSystem.fileExists( luceneLabelScanStore ) );
+    }
+
+    @Test( expected = InvalidIdGeneratorException.class )
+    public void failMigrationWhenNodeIdFileIsBroken() throws Exception
+    {
+        prepareEmpty23Database();
+        File nodeIdFile = new File( storeDir, StoreFile.NODE_STORE.storeFileName() + ".id" );
+        writeFile( nodeIdFile, new byte[]{1, 2, 3} );
+
+        indexMigrator.migrate( storeDir, migrationDir, progressReporter, StandardV3_2.STORE_VERSION, StandardV3_2.STORE_VERSION );
     }
 
     @Test
@@ -142,7 +157,7 @@ public class NativeLabelScanStoreMigratorTest
         prepareEmpty23Database();
         indexMigrator.migrate( storeDir, migrationDir, progressReporter, StandardV2_3.STORE_VERSION, StandardV3_2.STORE_VERSION );
         File migrationNativeIndex = new File( migrationDir, NativeLabelScanStore.FILE_NAME );
-        ByteBuffer migratedFileContent = writeNativeIndexFile( migrationNativeIndex, new byte[]{5, 4, 3, 2, 1} );
+        ByteBuffer migratedFileContent = writeFile( migrationNativeIndex, new byte[]{5, 4, 3, 2, 1} );
 
         indexMigrator.moveMigratedFiles( migrationDir, storeDir, StandardV2_3.STORE_VERSION, StandardV3_2.STORE_VERSION );
 
@@ -153,8 +168,8 @@ public class NativeLabelScanStoreMigratorTest
     @Test
     public void populateNativeLabelScanIndexDuringMigration() throws IOException
     {
-        prepare32DatabaseWithNodes();
-        indexMigrator.migrate( storeDir, migrationDir, progressReporter, StandardV3_2.STORE_VERSION, StandardV3_2.STORE_VERSION );
+        prepare34DatabaseWithNodes();
+        indexMigrator.migrate( storeDir, migrationDir, progressReporter, StandardV3_4.STORE_VERSION, StandardV3_4.STORE_VERSION );
         indexMigrator.moveMigratedFiles( migrationDir, storeDir, StandardV2_3.STORE_VERSION, StandardV3_2.STORE_VERSION );
 
         try ( Lifespan lifespan = new Lifespan() )
@@ -176,8 +191,8 @@ public class NativeLabelScanStoreMigratorTest
     @Test
     public void reportProgressOnNativeIndexPopulation() throws IOException
     {
-        prepare32DatabaseWithNodes();
-        indexMigrator.migrate( storeDir, migrationDir, progressReporter, StandardV3_2.STORE_VERSION, StandardV3_2.STORE_VERSION );
+        prepare34DatabaseWithNodes();
+        indexMigrator.migrate( storeDir, migrationDir, progressReporter, StandardV3_4.STORE_VERSION, StandardV3_4.STORE_VERSION );
         indexMigrator.moveMigratedFiles( migrationDir, storeDir, StandardV2_3.STORE_VERSION, StandardV3_2.STORE_VERSION );
 
         verify( progressReporter ).start( 10 );
@@ -218,7 +233,7 @@ public class NativeLabelScanStoreMigratorTest
         }
     }
 
-    private ByteBuffer writeNativeIndexFile( File file, byte[] content ) throws IOException
+    private ByteBuffer writeFile( File file, byte[] content ) throws IOException
     {
         ByteBuffer sourceBuffer = ByteBuffer.wrap( content );
         storeFileContent( file, sourceBuffer );
@@ -226,7 +241,7 @@ public class NativeLabelScanStoreMigratorTest
         return sourceBuffer;
     }
 
-    private void prepare32DatabaseWithNodes()
+    private void prepare34DatabaseWithNodes()
     {
         GraphDatabaseService embeddedDatabase = new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
         try
@@ -257,7 +272,7 @@ public class NativeLabelScanStoreMigratorTest
 
     private ByteBuffer readFileContent( File nativeLabelIndex, int length ) throws IOException
     {
-        try ( StoreChannel storeChannel = fileSystem.open( nativeLabelIndex, "r" ) )
+        try ( StoreChannel storeChannel = fileSystem.open( nativeLabelIndex, OpenMode.READ ) )
         {
             ByteBuffer readBuffer = ByteBuffer.allocate( length );
             //noinspection StatementWithEmptyBody
@@ -270,11 +285,11 @@ public class NativeLabelScanStoreMigratorTest
         }
     }
 
-    private void storeFileContent( File nativeLabelIndex, ByteBuffer sourceBuffer ) throws IOException
+    private void storeFileContent( File file, ByteBuffer sourceBuffer ) throws IOException
     {
-        try ( StoreChannel storeChannel = fileSystem.create( nativeLabelIndex ) )
+        try ( StoreChannel storeChannel = fileSystem.create( file ) )
         {
-            storeChannel.write( sourceBuffer );
+            storeChannel.writeAll( sourceBuffer );
         }
     }
 }

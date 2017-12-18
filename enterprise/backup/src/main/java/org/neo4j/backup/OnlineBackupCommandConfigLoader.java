@@ -19,11 +19,13 @@
  */
 package org.neo4j.backup;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
 import org.neo4j.commandline.admin.CommandFailed;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.configuration.Config;
 
@@ -38,10 +40,12 @@ class OnlineBackupCommandConfigLoader
         this.configDir = configDir;
     }
 
-    Config loadConfig( Optional<Path> additionalConfig ) throws CommandFailed
+    Config loadConfig( Optional<Path> additionalConfig, File folder ) throws CommandFailed
     {
-        return withAdditionalConfig( additionalConfig,
-                Config.fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) ).withHome( homeDir ).withConnectorsDisabled().build() );
+        Config config = Config.fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) ).withHome( homeDir )
+                .withSetting( GraphDatabaseSettings.logical_logs_location, folder.getAbsolutePath() )
+                .withConnectorsDisabled().build();
+        return withAdditionalConfig( additionalConfig, config );
     }
 
     private Config withAdditionalConfig( Optional<Path> additionalConfig, Config config ) throws CommandFailed

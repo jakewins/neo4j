@@ -48,7 +48,7 @@ public class F2Factory extends Locks.Factory
     public Locks newInstance( Config config, Clock clocks, ResourceType[] resourceTypes )
     {
         OptionalInt maxResourceIndex = Stream.of( resourceTypes ).mapToInt( ResourceType::typeId ).max();
-        if(!maxResourceIndex.isPresent())
+        if ( !maxResourceIndex.isPresent() )
         {
             throw new IllegalStateException( "There needs to be at least one lock resource type to user the F2 lock manager." );
         }

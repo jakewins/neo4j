@@ -42,11 +42,11 @@ import org.neo4j.storageengine.api.StoreReadLayer;
 import org.neo4j.values.storable.ValueTuple;
 import org.neo4j.values.storable.Values;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -91,10 +91,18 @@ public class IndexTxStateUpdaterTest
         StoreReadLayer storeReadLayer = mock( StoreReadLayer.class );
         when( storeReadLayer.indexesGetAll() ).thenAnswer( x -> indexes.iterator() );
         when( storeReadLayer.indexesGetForLabel(anyInt() ) )
-                .thenAnswer( x -> filter( hasLabel( x.getArgument( 0 ) ), indexes.iterator() ) );
+                .thenAnswer( x ->
+                {
+                    Integer argument = x.getArgument( 0 );
+                    return filter( hasLabel( argument ), indexes.iterator() );
+                } );
 
         when( storeReadLayer.indexesGetRelatedToProperty( anyInt() ) )
-                .thenAnswer( x -> filter( hasProperty( x.getArgument( 0 ) ), indexes.iterator() ) );
+                .thenAnswer( x ->
+                {
+                    Integer argument = x.getArgument( 0 );
+                    return filter( hasProperty( argument ), indexes.iterator() );
+                } );
 
         PrimitiveIntSet labels = Primitive.intSet();
         labels.add( labelId1 );

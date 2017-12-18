@@ -22,8 +22,6 @@ package org.neo4j.kernel.impl.index;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +30,7 @@ import java.nio.ByteBuffer;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NotCurrentStoreVersionException;
@@ -40,8 +39,8 @@ import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationExce
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -169,9 +168,9 @@ public class TestIndexProviderStore
 
         FileSystemAbstraction fs = spy( fileSystem );
         StoreChannel tempChannel;
-        when( tempChannel = fs.open( file, "rw" ) ).then( ignored ->
+        when( tempChannel = fs.open( file, OpenMode.READ_WRITE ) ).then( ignored ->
         {
-            StoreChannel channel = fileSystem.open( file, "rw" );
+            StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE );
             if ( channelUsedToCreateFile[0] == null )
             {
                 StoreChannel channelSpy = spy( channel );
@@ -191,7 +190,7 @@ public class TestIndexProviderStore
 
         // Then
         StoreChannel channel = channelUsedToCreateFile[0];
-        verify( channel ).write( any( ByteBuffer.class ), eq( 0L ) );
+        verify( channel ).writeAll( any( ByteBuffer.class ), eq( 0L ) );
         verify( channel ).force( true );
         verify( channel ).close();
         verifyNoMoreInteractions( channel );

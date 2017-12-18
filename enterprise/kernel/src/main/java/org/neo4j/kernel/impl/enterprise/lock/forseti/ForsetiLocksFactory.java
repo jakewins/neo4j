@@ -23,7 +23,6 @@ import java.time.Clock;
 
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.lock.f2.F2Locks;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.storageengine.api.lock.ResourceType;
@@ -31,15 +30,16 @@ import org.neo4j.storageengine.api.lock.ResourceType;
 @Service.Implementation( Locks.Factory.class )
 public class ForsetiLocksFactory extends Locks.Factory
 {
+    public static final String KEY = "forseti";
+
     public ForsetiLocksFactory()
     {
-        super( "forseti" );
+        super( KEY );
     }
 
     @Override
     public Locks newInstance( Config config, Clock clock, ResourceType[] resourceTypes )
     {
-//        return new ForsetiLockManager( config, clock, ResourceTypes.values() );
-        return new F2Locks( ResourceTypes.values(), 256 );
+        return new ForsetiLockManager( config, clock, ResourceTypes.values() );
     }
 }

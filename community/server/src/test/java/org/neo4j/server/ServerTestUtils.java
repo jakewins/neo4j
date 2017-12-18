@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
-import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
@@ -68,13 +67,6 @@ public class ServerTestUtils
         return file;
     }
 
-    public static File getRelativeFile( Setting<File> setting ) throws IOException
-    {
-        return getSharedTestTemporaryFolder()
-                .toPath().resolve( setting.getDefaultValue() )
-                .toFile();
-    }
-
     public static String getRelativePath( File folder, Setting<File> setting )
     {
         return folder.toPath().resolve( setting.getDefaultValue() ).toString();
@@ -90,7 +82,7 @@ public class ServerTestUtils
 
     public static void addDefaultRelativeProperties( Map<String,String> properties, File temporaryFolder )
     {
-        addRelativeProperty( temporaryFolder, properties, DatabaseManagementSystemSettings.data_directory );
+        addRelativeProperty( temporaryFolder, properties, GraphDatabaseSettings.data_directory );
         addRelativeProperty( temporaryFolder, properties, GraphDatabaseSettings.logs_directory );
         addRelativeProperty( temporaryFolder, properties, LegacySslPolicyConfig.certificates_directory );
         properties.put( GraphDatabaseSettings.pagecache_memory.name(), "8m" );

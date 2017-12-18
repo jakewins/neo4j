@@ -22,7 +22,7 @@ package org.neo4j.kernel.impl.store.id;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.function.LongSupplier;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.id.configuration.CommunityIdTypeConfigurationProvider;
@@ -48,25 +48,26 @@ public class DefaultIdGeneratorFactory implements IdGeneratorFactory
     }
 
     @Override
-    public IdGenerator open( File filename, IdType idType, Supplier<Long> highId, long maxId )
+    public IdGenerator open( File filename, IdType idType, LongSupplier highId, long maxId )
     {
         IdTypeConfiguration idTypeConfiguration = idTypeConfigurationProvider.getIdTypeConfiguration( idType );
         return open( filename, idTypeConfiguration.getGrabSize(), idType, highId, maxId );
     }
 
     @Override
-    public IdGenerator open( File fileName, int grabSize, IdType idType, Supplier<Long> highId, long maxId )
+    public IdGenerator open( File fileName, int grabSize, IdType idType, LongSupplier highId, long maxId )
     {
         IdTypeConfiguration idTypeConfiguration = idTypeConfigurationProvider.getIdTypeConfiguration( idType );
-        IdGenerator generator = instantiate( fs, fileName, grabSize, maxId, idTypeConfiguration.allowAggressiveReuse(), highId );
+        IdGenerator generator = instantiate( fs, fileName, grabSize, maxId, idTypeConfiguration.allowAggressiveReuse(),
+                idType, highId );
         generators.put( idType, generator );
         return generator;
     }
 
     protected IdGenerator instantiate( FileSystemAbstraction fs, File fileName, int grabSize, long maxValue,
-            boolean aggressiveReuse, Supplier<Long> highId )
+            boolean aggressiveReuse, IdType idType, LongSupplier highId )
     {
-        return new IdGeneratorImpl( fs, fileName, grabSize, maxValue, aggressiveReuse, highId );
+        return new IdGeneratorImpl( fs, fileName, grabSize, maxValue, aggressiveReuse, idType, highId );
     }
 
     @Override

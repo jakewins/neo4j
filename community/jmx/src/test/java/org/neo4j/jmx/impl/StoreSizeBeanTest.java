@@ -42,7 +42,8 @@ import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.ExplicitIndexProviderLookup;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
-import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.transaction.state.DefaultSchemaIndexProviderMap;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -52,7 +53,7 @@ import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.spi.explicitindex.IndexImplementation;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.helpers.collection.Iterables.iterable;
@@ -79,13 +80,17 @@ public class StoreSizeBeanTest
 {
     private final FileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
     private final File storeDir = new File( "" );
-    private final PhysicalLogFiles physicalLogFiles = new PhysicalLogFiles( storeDir, fs );
+    private final LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDir, fs ).build();
     private final ExplicitIndexProviderLookup explicitIndexProviderLookup = mock( ExplicitIndexProviderLookup.class );
     private final SchemaIndexProvider schemaIndexProvider = mockedSchemaIndexProvider( "providah1" );
     private final SchemaIndexProvider schemaIndexProvider2 = mockedSchemaIndexProvider( "providah" );
     private final LabelScanStore labelScanStore = mock( LabelScanStore.class );
     private StoreSize storeSizeBean;
     private File storeDirAbsolute;
+
+    public StoreSizeBeanTest() throws IOException
+    {
+    }
 
     @Before
     public void setUp() throws Throwable
@@ -100,7 +105,7 @@ public class StoreSizeBeanTest
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( fs );
         dependencies.satisfyDependencies( dataSourceManager );
-        dependencies.satisfyDependency( physicalLogFiles );
+        dependencies.satisfyDependency( logFiles );
         dependencies.satisfyDependency( explicitIndexProviderLookup );
         dependencies.satisfyDependency( schemaIndexProviderMap );
         dependencies.satisfyDependency( labelScanStore );
@@ -233,8 +238,8 @@ public class StoreSizeBeanTest
     @Test
     public void shouldCountAllLogFiles() throws Throwable
     {
-        createFileOfSize( physicalLogFiles.getLogFileForVersion( 0 ), 1 );
-        createFileOfSize( physicalLogFiles.getLogFileForVersion( 1 ), 2 );
+        createFileOfSize( logFiles.getLogFileForVersion( 0 ), 1 );
+        createFileOfSize( logFiles.getLogFileForVersion( 1 ), 2 );
 
         assertEquals( 3L, storeSizeBean.getTransactionLogsSize() );
     }

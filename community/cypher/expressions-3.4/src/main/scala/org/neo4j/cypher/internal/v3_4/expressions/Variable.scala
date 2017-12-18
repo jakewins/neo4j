@@ -18,13 +18,13 @@ package org.neo4j.cypher.internal.v3_4.expressions
 
 import org.neo4j.cypher.internal.util.v3_4.InputPosition
 
-case class Variable(name: String)(val position: InputPosition) extends Expression {
+case class Variable(name: String)(val position: InputPosition) extends LogicalVariable {
 
-  def copyId: Variable = copy()(position)
+  override def copyId = copy()(position)
 
-  def renameId(newName: String): Variable = copy(name = newName)(position)
+  override def renameId(newName: String) = copy(name = newName)(position)
 
-  def bumpId: Variable = copy()(position.bumped())
+  override def bumpId = copy()(position.bumped())
 
   override def asCanonicalStringVal: String = name
 }

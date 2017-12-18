@@ -29,18 +29,21 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.function.IntSupplier;
 
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.proc.BasicContext;
 import org.neo4j.kernel.api.proc.Key;
 import org.neo4j.kernel.api.proc.ProcedureSignature;
@@ -48,7 +51,7 @@ import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
-import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProviderFactory;
 import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.proc.TypeMappers;
@@ -63,8 +66,8 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -99,7 +102,13 @@ public class BuiltInProceduresTest
 
         // When/Then
         assertThat( call( "db.indexes" ),
-                contains( record( "INDEX ON :User(name)", "ONLINE", "node_label_property" ) ) );
+                contains( record( "INDEX ON :User(name)", "User", singletonList( "name" ), "ONLINE", "node_label_property",
+                        getIndexProviderDescriptorMap( InMemoryIndexProviderFactory.PROVIDER_DESCRIPTOR ) ) ) );
+    }
+
+    private Map<String,String> getIndexProviderDescriptorMap( SchemaIndexProvider.Descriptor providerDescriptor )
+    {
+        return MapUtil.stringMap( "key", providerDescriptor.getKey(), "version", providerDescriptor.getVersion() );
     }
 
     @Test
@@ -110,7 +119,8 @@ public class BuiltInProceduresTest
 
         // When/Then
         assertThat( call( "db.indexes" ),
-                contains( record( "INDEX ON :User(name)", "ONLINE", "node_unique_property" ) ) );
+                contains( record( "INDEX ON :User(name)", "User", singletonList( "name" ), "ONLINE", "node_unique_property",
+                        getIndexProviderDescriptorMap( InMemoryIndexProviderFactory.PROVIDER_DESCRIPTOR ) ) ) );
     }
 
     @Test
@@ -197,7 +207,8 @@ public class BuiltInProceduresTest
                         "Wait for all indexes to come online (for example: CALL db.awaitIndexes(\"500\"))." ),
                 record( "db.constraints", "db.constraints() :: (description :: STRING?)",
                         "List all constraints in the database." ),
-                record( "db.indexes", "db.indexes() :: (description :: STRING?, state :: STRING?, type :: STRING?)",
+                record( "db.indexes", "db.indexes() :: (description :: STRING?, label :: STRING?, properties :: LIST? OF STRING?, " +
+                                "state :: STRING?, type :: STRING?, provider :: MAP?)",
                         "List all indexes in the database." ),
                 record( "db.labels", "db.labels() :: (label :: STRING?)", "List all labels in the database." ),
                 record( "db.propertyKeys", "db.propertyKeys() :: (propertyKey :: STRING?)",
@@ -213,67 +224,67 @@ public class BuiltInProceduresTest
                         "Show the schema of the data." ),
                 record( "db.index.explicit.searchNodes",
                         "db.index.explicit.searchNodes(indexName :: STRING?, query :: ANY?) :: (node :: NODE?, weight :: FLOAT?)",
-                        "Search nodes from explicit index. Replaces `START n=node:nodes('key:foo*')`"),
+                        "Search nodes in explicit index. Replaces `START n=node:nodes('key:foo*')`"),
                 record( "db.index.explicit.seekNodes",
                         "db.index.explicit.seekNodes(indexName :: STRING?, key :: STRING?, value :: ANY?) :: (node :: NODE?)",
                         "Get node from explicit index. Replaces `START n=node:nodes(key = 'A')`"),
                 record( "db.index.explicit.searchRelationships",
                         "db.index.explicit.searchRelationships(indexName :: STRING?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit index. Replaces `START r=relationship:relIndex('key:foo*')`"),
+                        "Search relationship in explicit index. Replaces `START r=relationship:relIndex('key:foo*')`"),
                 record( "db.index.explicit.searchRelationshipsIn",
                         "db.index.explicit.searchRelationshipsIn(indexName :: STRING?, in :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit index, starting at the node 'in'."),
+                        "Search relationship in explicit index, starting at the node 'in'."),
                 record( "db.index.explicit.searchRelationshipsOut",
                         "db.index.explicit.searchRelationshipsOut(indexName :: STRING?, out :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit index, ending at the node 'out'."),
+                        "Search relationship in explicit index, ending at the node 'out'."),
                 record( "db.index.explicit.searchRelationshipsBetween",
                         "db.index.explicit.searchRelationshipsBetween(indexName :: STRING?, in :: NODE?, out :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit index, starting at the node 'in' and ending at 'out'."),
+                        "Search relationship in explicit index, starting at the node 'in' and ending at 'out'."),
                 record( "db.index.explicit.seekRelationships",
                         "db.index.explicit.seekRelationships(indexName :: STRING?, key :: STRING?, value :: ANY?) :: " +
                         "(relationship :: RELATIONSHIP?)",
                         "Get relationship from explicit index. Replaces `START r=relationship:relIndex(key = 'A')`"),
                 record( "db.index.explicit.auto.searchNodes",
                         "db.index.explicit.auto.searchNodes(query :: ANY?) :: (node :: NODE?, weight :: FLOAT?)",
-                        "Search nodes from explicit automatic index. Replaces `START n=node:node_auto_index('key:foo*')`"),
+                        "Search nodes in explicit automatic index. Replaces `START n=node:node_auto_index('key:foo*')`"),
                 record( "db.index.explicit.auto.seekNodes",
                         "db.index.explicit.auto.seekNodes(key :: STRING?, value :: ANY?) :: (node :: NODE?)",
                         "Get node from explicit automatic index. Replaces `START n=node:node_auto_index(key = 'A')`"),
                 record( "db.index.explicit.auto.searchRelationships",
                         "db.index.explicit.auto.searchRelationships(query :: ANY?) :: (relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index('key:foo*')`"),
+                        "Search relationship in explicit automatic index. Replaces `START r=relationship:relationship_auto_index('key:foo*')`"),
                 record( "db.index.explicit.auto.seekRelationships",
                         "db.index.explicit.auto.seekRelationships(key :: STRING?, value :: ANY?) :: " +
                         "(relationship :: RELATIONSHIP?)",
                         "Get relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index(key = 'A')`"),
                 record( "db.index.explicit.addNode",
                         "db.index.explicit.addNode(indexName :: STRING?, node :: NODE?, key :: STRING?, value :: ANY?) :: (success :: BOOLEAN?)",
-                        "Add a node to a explicit index based on a specified key and value"),
+                        "Add a node to an explicit index based on a specified key and value"),
                 record( "db.index.explicit.addRelationship",
                         "db.index.explicit.addRelationship(indexName :: STRING?, relationship :: RELATIONSHIP?, key :: STRING?, value :: ANY?) :: " +
                         "(success :: BOOLEAN?)",
-                        "Add a relationship to a explicit index based on a specified key and value"),
+                        "Add a relationship to an explicit index based on a specified key and value"),
                 record( "db.index.explicit.removeNode",
                         "db.index.explicit.removeNode(indexName :: STRING?, node :: NODE?, key :: STRING?) :: (success :: BOOLEAN?)",
-                        "Remove a node from a explicit index with an optional key"),
+                        "Remove a node from an explicit index with an optional key"),
                 record( "db.index.explicit.removeRelationship",
                         "db.index.explicit.removeRelationship(indexName :: STRING?, relationship :: RELATIONSHIP?, key :: STRING?) :: " +
                         "(success :: BOOLEAN?)",
-                        "Remove a relationship from a explicit index with an optional key"),
+                        "Remove a relationship from an explicit index with an optional key"),
                 record( "db.index.explicit.drop",
                         "db.index.explicit.drop(indexName :: STRING?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
-                        "Remove a explicit index - YIELD type,name,config"),
+                        "Remove an explicit index - YIELD type,name,config"),
                 record( "db.index.explicit.forNodes",
-                        "db.index.explicit.forNodes(indexName :: STRING?) :: " +
+                        "db.index.explicit.forNodes(indexName :: STRING?, config = {} :: MAP?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
                         "Get or create a node explicit index - YIELD type,name,config"),
                 record( "db.index.explicit.forRelationships",
-                        "db.index.explicit.forRelationships(indexName :: STRING?) :: " +
+                        "db.index.explicit.forRelationships(indexName :: STRING?, config = {} :: MAP?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
                         "Get or create a relationship explicit index - YIELD type,name,config"),
                 record( "db.index.explicit.existsForNodes",
@@ -297,7 +308,10 @@ public class BuiltInProceduresTest
                 record( "dbms.queryJmx",
                         "dbms.queryJmx(query :: STRING?) :: (name :: STRING?, description :: STRING?, attributes :: " +
                         "MAP?)",
-                        "Query JMX management data by domain and name. For instance, \"org.neo4j:*\"" )
+                        "Query JMX management data by domain and name. For instance, \"org.neo4j:*\"" ),
+                record( "dbms.clearQueryCaches",
+                        "dbms.clearQueryCaches() :: (value :: STRING?)",
+                        "Clears all query caches." )
         ) );
     }
 
@@ -437,7 +451,7 @@ public class BuiltInProceduresTest
 
     private Integer token( String name, Map<Integer,String> tokens )
     {
-        Supplier<Integer> allocateFromMap = () ->
+        IntSupplier allocateFromMap = () ->
         {
             int newIndex = tokens.size();
             tokens.put( newIndex, name );
@@ -445,7 +459,7 @@ public class BuiltInProceduresTest
         };
         return tokens.entrySet().stream()
                      .filter( entry -> entry.getValue().equals( name ) )
-                     .map( Map.Entry::getKey )
+                     .mapToInt( Map.Entry::getKey )
                      .findFirst().orElseGet( allocateFromMap );
     }
 
@@ -491,6 +505,8 @@ public class BuiltInProceduresTest
         when( read.countsForNode( anyInt() ) ).thenReturn( 1L );
         when( read.countsForRelationship( anyInt(), anyInt(), anyInt() ) ).thenReturn( 1L );
         when( read.indexGetState( any( IndexDescriptor.class ) ) ).thenReturn( InternalIndexState.ONLINE );
+        when( read.indexGetProviderDescriptor( any( IndexDescriptor.class ) ) )
+                .thenReturn( InMemoryIndexProviderFactory.PROVIDER_DESCRIPTOR );
     }
 
     private Answer<Iterator<Token>> asTokens( Map<Integer,String> tokens )

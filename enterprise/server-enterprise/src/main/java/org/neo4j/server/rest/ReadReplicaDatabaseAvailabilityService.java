@@ -34,6 +34,9 @@ import static javax.ws.rs.core.Response.Status.FORBIDDEN;
 import static javax.ws.rs.core.Response.Status.OK;
 import static javax.ws.rs.core.Response.status;
 
+/**
+ * To be deprecated by {@link org.neo4j.server.rest.causalclustering.CausalClusteringService}.
+ */
 @Path( ReadReplicaDatabaseAvailabilityService.BASE_PATH )
 public class ReadReplicaDatabaseAvailabilityService implements AdvertisableService
 {

@@ -189,8 +189,11 @@ public enum NotificationCode
     START_DEPRECATED(
             SeverityLevel.WARNING,
             Status.Statement.FeatureDeprecationWarning,
-            "START has been deprecated and will be removed in a future version."
-    );
+            "START has been deprecated and will be removed in a future version." ),
+    EXPERIMENTAL_FEATURE(
+            SeverityLevel.WARNING,
+            Status.Statement.ExperimentalFeature,
+            "You are using an experimental feature" );
 
     private final Status status;
     private final String description;
@@ -241,26 +244,31 @@ public enum NotificationCode
             }
         }
 
+        @Override
         public String getCode()
         {
             return status.code().serialize();
         }
 
+        @Override
         public String getTitle()
         {
             return status.code().description();
         }
 
+        @Override
         public String getDescription()
         {
             return detailedDescription;
         }
 
+        @Override
         public InputPosition getPosition()
         {
             return position;
         }
 
+        @Override
         public SeverityLevel getSeverity()
         {
             return severity;

@@ -37,14 +37,19 @@ import java.util.function.Function;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
-import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
+import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
+import org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.ExplicitIndexHits;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -52,26 +57,22 @@ import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.dbms.DbmsOperations;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.IndexBrokenKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.proc.ProcedureSignature;
 import org.neo4j.kernel.api.proc.QualifiedName;
 import org.neo4j.kernel.api.proc.UserFunctionSignature;
 import org.neo4j.kernel.api.query.ExecutingQuery;
-import org.neo4j.kernel.api.schema.IndexQuery;
 import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
-import org.neo4j.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
@@ -80,6 +81,7 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
+import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
@@ -202,7 +204,7 @@ public class QueryExecutionLocksIT
             throws QueryExecutionKernelException
     {
         GraphDatabaseQueryService graph = databaseRule.resolveDependency( GraphDatabaseQueryService.class );
-        ExecutionEngine executionEngine = databaseRule.resolveDependency( ExecutionEngine.class );
+        QueryExecutionEngine executionEngine = databaseRule.resolveDependency( QueryExecutionEngine.class );
         try ( InternalTransaction tx = graph
                 .beginTransaction( KernelTransaction.Type.implicit, SecurityContext.AUTH_DISABLED ) )
         {
@@ -262,6 +264,12 @@ public class QueryExecutionLocksIT
         public DbmsOperations dbmsOperations()
         {
             return delegate.dbmsOperations();
+        }
+
+        @Override
+        public KernelTransaction kernelTransaction()
+        {
+            return delegate.kernelTransaction();
         }
 
         @Override
@@ -448,13 +456,13 @@ public class QueryExecutionLocksIT
         }
 
         @Override
-        public PrimitiveLongIterator nodesGetForLabel( int labelId )
+        public PrimitiveLongResourceIterator nodesGetForLabel( int labelId )
         {
             return readOperations.nodesGetForLabel( labelId );
         }
 
         @Override
-        public PrimitiveLongIterator indexQuery( IndexDescriptor index, IndexQuery... predicates )
+        public PrimitiveLongResourceIterator indexQuery( IndexDescriptor index, IndexQuery... predicates )
                 throws IndexNotFoundKernelException, IndexNotApplicableKernelException
         {
             return readOperations.indexQuery( index, predicates );
@@ -661,6 +669,12 @@ public class QueryExecutionLocksIT
         public InternalIndexState indexGetState( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
         {
             return readOperations.indexGetState( descriptor );
+        }
+
+        @Override
+        public SchemaIndexProvider.Descriptor indexGetProviderDescriptor( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+        {
+            return readOperations.indexGetProviderDescriptor( descriptor );
         }
 
         @Override

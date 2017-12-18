@@ -27,7 +27,7 @@ import org.neo4j.kernel.impl.api.KernelStatement;
  * Component used by {@link KernelStatement} to acquire {@link #pessimistic() pessimistic} and
  * {@link #optimistic() optimistic} locks.
  */
-public interface StatementLocks extends AutoCloseable
+public interface StatementLocks extends AutoCloseable, org.neo4j.internal.kernel.api.Locks
 {
     /**
      * Get {@link Locks.Client} responsible for pessimistic locks. Such locks will be grabbed right away.
@@ -46,7 +46,8 @@ public interface StatementLocks extends AutoCloseable
 
     /**
      * Prepare the underlying {@link Locks.Client client}(s) for commit. This will grab all locks that have
-     * previously been taken {@link #optimistic() optimistically}.
+     * previously been taken {@link #optimistic() optimistically}, and tell the underlying lock client to enter the
+     * <em>prepare</em> state.
      * @param lockTracer lock tracer
      */
     void prepareForCommit( LockTracer lockTracer );

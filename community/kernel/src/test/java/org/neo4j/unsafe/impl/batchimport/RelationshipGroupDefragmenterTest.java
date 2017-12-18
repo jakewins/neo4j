@@ -53,7 +53,7 @@ import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.mock;
@@ -89,11 +89,12 @@ public class RelationshipGroupDefragmenterTest
     private BatchingNeoStores stores;
 
     @Before
-    public void start()
+    public void start() throws IOException
     {
         stores = BatchingNeoStores.batchingNeoStores( fileSystemRule.get(),
                 directory.absolutePath(), format, CONFIG, NullLogService.getInstance(),
                 AdditionalInitialIds.EMPTY, Config.defaults() );
+        stores.createNew();
     }
 
     @After

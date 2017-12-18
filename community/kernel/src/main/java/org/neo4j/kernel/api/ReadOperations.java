@@ -27,23 +27,25 @@ import java.util.function.Function;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.exceptions.LabelNotFoundKernelException;
+import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
+import org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.IndexBrokenKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.proc.ProcedureSignature;
 import org.neo4j.kernel.api.proc.QualifiedName;
 import org.neo4j.kernel.api.proc.UserFunctionSignature;
-import org.neo4j.kernel.api.schema.IndexQuery;
 import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
@@ -61,7 +63,7 @@ import org.neo4j.storageengine.api.schema.PopulationProgress;
 import org.neo4j.values.storable.Value;
 
 /**
- * Defines all types of read operations that can be done from the {@link KernelAPI}.
+ * Defines all types of read operations that can be done from the {@link InwardKernel}.
  */
 public interface ReadOperations
 {
@@ -115,7 +117,7 @@ public interface ReadOperations
      * @param labelId the label id of the label that returned nodes are guaranteed to have
      * @return ids of all nodes that have the given label
      */
-    PrimitiveLongIterator nodesGetForLabel( int labelId );
+    PrimitiveLongResourceIterator nodesGetForLabel( int labelId );
 
     /**
      * Queries the given index with the given index query.
@@ -125,7 +127,7 @@ public interface ReadOperations
      * @return ids of the matching nodes
      * @throws org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException if no such index is found.
      */
-    PrimitiveLongIterator indexQuery( IndexDescriptor index, IndexQuery... predicates )
+    PrimitiveLongResourceIterator indexQuery( IndexDescriptor index, IndexQuery... predicates )
             throws IndexNotFoundKernelException, IndexNotApplicableKernelException;
 
     /**
@@ -236,6 +238,9 @@ public interface ReadOperations
 
     /** Retrieve the state of an index. */
     InternalIndexState indexGetState( IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
+
+    /** Retrieve provider descriptor for an index. */
+    SchemaIndexProvider.Descriptor indexGetProviderDescriptor( IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
 
     /** Retrieve the population progress of an index. */
     PopulationProgress indexGetPopulationProgress( IndexDescriptor descriptor ) throws IndexNotFoundKernelException;

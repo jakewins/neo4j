@@ -21,7 +21,7 @@ package org.neo4j.kernel.impl.store.id;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.function.Supplier;
+import java.util.function.LongSupplier;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
@@ -68,6 +68,7 @@ public class IdGeneratorImpl implements IdGenerator
     private final long max;
     private final IdContainer idContainer;
     private long highId;
+    private final IdType idType;
 
     /**
      * Opens the id generator represented by <CODE>fileName</CODE>. The
@@ -96,10 +97,12 @@ public class IdGeneratorImpl implements IdGenerator
      *             If no such file exist or if the id generator is sticky
      */
     public IdGeneratorImpl( FileSystemAbstraction fs, File file, int grabSize, long max, boolean aggressiveReuse,
-            Supplier<Long> highId )
+            IdType idType, LongSupplier highId )
     {
         this.max = max;
+        this.idType = idType;
         this.idContainer = new IdContainer( fs, file, grabSize, aggressiveReuse );
+
         /*
          * The highId supplier will be called only if the id container tells us that the information found in the
          * id file is not reliable (typically the file had to be created). Calling the supplier can be a potentially
@@ -111,7 +114,7 @@ public class IdGeneratorImpl implements IdGenerator
         }
         else
         {
-            this.highId = highId.get();
+            this.highId = highId.getAsLong();
         }
     }
 
@@ -140,7 +143,7 @@ public class IdGeneratorImpl implements IdGenerator
         {
             highId++;
         }
-        IdValidator.assertValidId( highId, max );
+        IdValidator.assertValidId( idType, highId, max );
         return highId++;
     }
 
@@ -148,29 +151,11 @@ public class IdGeneratorImpl implements IdGenerator
     public synchronized IdRange nextIdBatch( int size )
     {
         assertStillOpen();
-
-        // Get from defrag list
-        int count = 0;
-        long[] defragIds = new long[size];
-        while ( count < size )
-        {
-            long id = idContainer.getReusableId();
-            if ( id == -1 )
-            {
-                break;
-            }
-            defragIds[count++] = id;
-        }
-
-        // Shrink the array to actual size
-        long[] tmpArray = defragIds;
-        defragIds = new long[count];
-        System.arraycopy( tmpArray, 0, defragIds, 0, count );
-
-        int sizeLeftForRange = size - count;
+        long[] reusableIds = idContainer.getReusableIds( size );
+        int sizeLeftForRange = size - reusableIds.length;
         long start = highId;
         setHighId( start + sizeLeftForRange );
-        return new IdRange( defragIds, start, sizeLeftForRange );
+        return new IdRange( reusableIds, start, sizeLeftForRange );
     }
 
     /**
@@ -182,7 +167,7 @@ public class IdGeneratorImpl implements IdGenerator
     @Override
     public synchronized void setHighId( long id )
     {
-        IdValidator.assertIdWithinCapacity( id, max );
+        IdValidator.assertIdWithinCapacity( idType, id, max );
         highId = id;
     }
 
@@ -262,9 +247,36 @@ public class IdGeneratorImpl implements IdGenerator
         IdContainer.createEmptyIdFile( fs, fileName, highId, throwIfFileExists );
     }
 
+    /**
+     * Read the high-id count from the given id-file.
+     *
+     * Note that this method should only be used when the file is not currently in use by an IdGenerator, since this
+     * method does not take any in-memory state into account.
+     *
+     * @param fileSystem The file system to use for accessing the given file.
+     * @param file The path to the id-file from which to read the high-id.
+     * @return The high-id from the given file.
+     * @throws IOException If anything goes wrong when accessing the file, for instance if the file does not exist.
+     */
     public static long readHighId( FileSystemAbstraction fileSystem, File file ) throws IOException
     {
         return IdContainer.readHighId( fileSystem, file );
+    }
+
+    /**
+     * Read the defragmented id count from the given id-file.
+     *
+     * Note that this method should only be used when the file is not currently in use by an IdGenerator, since this
+     * method does not take any in-memory state into account.
+     *
+     * @param fileSystem The file system to use for accessing the given file.
+     * @param file The path to the id-file from which to read the defrag count.
+     * @return The number of defragmented ids in the id-file.
+     * @throws IOException If anything goes wrong when accessing the file, for instance if the file does not exist.
+     */
+    public static long readDefragCount( FileSystemAbstraction fileSystem, File file ) throws IOException
+    {
+        return IdContainer.readDefragCount( fileSystem, file );
     }
 
     @Override

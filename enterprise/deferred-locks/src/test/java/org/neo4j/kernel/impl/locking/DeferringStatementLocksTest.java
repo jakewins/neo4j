@@ -26,9 +26,9 @@ import org.neo4j.storageengine.api.lock.ResourceType;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -59,6 +59,7 @@ public class DeferringStatementLocksTest
         statementLocks.prepareForCommit( LockTracer.NONE );
 
         // THEN
+        verify( client ).prepare();
         verifyNoMoreInteractions( client );
     }
 
@@ -76,6 +77,7 @@ public class DeferringStatementLocksTest
         statementLocks.prepareForCommit( LockTracer.NONE );
 
         // THEN
+        verify( client ).prepare();
         verify( client ).acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 1 );
         verify( client ).acquireExclusive( LockTracer.NONE, ResourceTypes.RELATIONSHIP, 42 );
         verifyNoMoreInteractions( client );

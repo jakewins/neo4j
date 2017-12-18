@@ -51,7 +51,6 @@ import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.kvstore.DataInitializer;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
-import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.info.DiagnosticsManager;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -396,7 +395,12 @@ public class NeoStores implements AutoCloseable
         return (DynamicStringStore) getStore( StoreType.PROPERTY_KEY_TOKEN_NAME );
     }
 
-    public RecordStore<RelationshipGroupRecord> getRelationshipGroupStore()
+    /**
+     * The relationship group store.
+     *
+     * @return The relationship group store.
+     */
+    public RelationshipGroupStore getRelationshipGroupStore()
     {
         return (RelationshipGroupStore) getStore( StoreType.RELATIONSHIP_GROUP );
     }
@@ -529,7 +533,7 @@ public class NeoStores implements AutoCloseable
         }
         File storeFile = getStoreFile( storeName );
         return initialize( new DynamicArrayStore( storeFile, config, idType, idGeneratorFactory, pageCache,
-                logProvider, blockSize, recordFormats.dynamic(), recordFormats.storeVersion(), openOptions ) );
+                logProvider, blockSize, recordFormats, openOptions ) );
     }
 
     CommonAbstractStore createNodeStore( String storeName )
@@ -657,8 +661,15 @@ public class NeoStores implements AutoCloseable
         diagnosticsManager.registerAll( NeoStoresDiagnostics.class, this );
     }
 
+    @SuppressWarnings( "unchecked" )
     public <RECORD extends AbstractBaseRecord> RecordStore<RECORD> getRecordStore( StoreType type )
     {
+        assert type.isRecordStore();
         return (RecordStore<RECORD>) getStore( type );
+    }
+
+    public RecordFormats getRecordFormats()
+    {
+        return recordFormats;
     }
 }

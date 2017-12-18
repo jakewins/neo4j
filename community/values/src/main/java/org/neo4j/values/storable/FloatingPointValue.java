@@ -22,6 +22,18 @@ package org.neo4j.values.storable;
 public abstract class FloatingPointValue extends NumberValue
 {
     @Override
+    public boolean equals( long x )
+    {
+        return NumberValues.numbersEqual( doubleValue(), x );
+    }
+
+    @Override
+    public boolean equals( double x )
+    {
+        return doubleValue() == x;
+    }
+
+    @Override
     public final int computeHash()
     {
         return NumberValues.hash( doubleValue() );
@@ -58,14 +70,22 @@ public abstract class FloatingPointValue extends NumberValue
         return NumberType.FLOATING_POINT;
     }
 
+    @Override
     public int compareTo( IntegralValue other )
     {
         return NumberValues.compareDoubleAgainstLong( doubleValue(), other.longValue() );
     }
 
+    @Override
     public int compareTo( FloatingPointValue other )
     {
         return Double.compare( doubleValue(), other.doubleValue() );
+    }
+
+    @Override
+    public boolean isNaN()
+    {
+        return Double.isNaN( this.doubleValue() );
     }
 
     @Override

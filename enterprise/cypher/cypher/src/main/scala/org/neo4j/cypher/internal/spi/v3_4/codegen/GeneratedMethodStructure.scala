@@ -20,8 +20,7 @@
 package org.neo4j.cypher.internal.spi.v3_4.codegen
 
 import java.util.PrimitiveIterator
-import java.util.{Iterator => JIterator, Map => JMap, HashMap => JHashMap,
-                  Set => JSet, HashSet => JHashSet, ArrayList => JArrayList}
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, HashSet => JHashSet, Iterator => JIterator, Map => JMap, Set => JSet}
 import java.util.stream.{DoubleStream, IntStream, LongStream}
 
 import org.neo4j.codegen.Expression.{invoke, not, or, _}
@@ -33,7 +32,7 @@ import org.neo4j.cypher.internal.util.v3_4.{ParameterNotFoundException, symbols}
 import org.neo4j.cypher.internal.util.v3_4.symbols.{CTInteger, CTNode, CTRelationship, ListType}
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
 import org.neo4j.cypher.internal.codegen._
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.convert.DirectionConverter.toGraphDb
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.DirectionConverter.toGraphDb
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.compiled.codegen.ir.expressions.{BoolType, CodeGenType, CypherCodeGenType, FloatType, ListReferenceType, LongType, ReferenceType, RepresentationType, Parameter => _}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.compiled.codegen.spi._
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.compiled.codegen.{CodeGenContext, QueryExecutionEvent}
@@ -45,9 +44,10 @@ import org.neo4j.cypher.internal.spi.v3_4.codegen.Methods._
 import org.neo4j.cypher.internal.spi.v3_4.codegen.Templates._
 import org.neo4j.cypher.internal.v3_4.expressions.SemanticDirection
 import org.neo4j.graphdb.{Direction, Node, Relationship}
+import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.kernel.api.ReadOperations
 import org.neo4j.kernel.api.schema.index.{IndexDescriptor, IndexDescriptorFactory}
-import org.neo4j.kernel.api.schema.{IndexQuery, LabelSchemaDescriptor}
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.api.store.RelationshipIterator
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -683,7 +683,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def newDistinctSet(name: String, codeGenTypes: Iterable[CodeGenType]) = {
     if (codeGenTypes.size == 1 && codeGenTypes.head.repr == LongType) {
       generator.assign(generator.declare(typeRef[PrimitiveLongSet], name),
-                       invoke(method[Primitive, PrimitiveLongSet]("offHeapLongSet")))
+                       invoke(method[Primitive, PrimitiveLongSet]("longSet")))
       _finalizers.append((_: Boolean) => (block) =>
                            block.expression(
                              invoke(block.load(name), method[PrimitiveLongSet, Unit]("close"))))
@@ -782,7 +782,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def newAggregationMap(name: String, keyTypes: IndexedSeq[CodeGenType]) = {
     if (keyTypes.size == 1 && keyTypes.head.repr == LongType) {
       generator.assign(generator.declare(typeRef[PrimitiveLongLongMap], name),
-                       invoke(method[Primitive, PrimitiveLongLongMap]("offHeapLongLongMap")))
+                       invoke(method[Primitive, PrimitiveLongLongMap]("longLongMap")))
       _finalizers.append((_: Boolean) => (block) =>
                            block.expression(
                              invoke(block.load(name), method[PrimitiveLongLongMap, Unit]("close"))))

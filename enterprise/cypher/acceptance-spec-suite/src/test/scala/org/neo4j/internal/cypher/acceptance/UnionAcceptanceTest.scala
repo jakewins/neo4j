@@ -109,7 +109,7 @@ class UnionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
     result2.toList should equal(expected2)
   }
 
-  test("Should work when doing union of nodes in permutated order") {
+  test("Should work when doing union of nodes in permuted order") {
     val a = createLabeledNode("A")
     val b = createLabeledNode("B")
 
@@ -123,13 +123,14 @@ class UnionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
         |M, N
       """.stripMargin
 
-    val result = executeWith(Configs.Interpreted - Configs.Version3_1 - Configs.Version2_3, query)
+    val result = executeWith(Configs.Interpreted + Configs.Rule3_1 - Configs.Cost3_1 +
+                              Configs.Rule2_3 - Configs.Cost2_3, query)
     val expected = List(Map("M" -> b, "N" -> a), Map("M" -> a, "N" -> b))
 
     result.toList should equal(expected)
   }
 
-  test("Should work when doing union with permutated return varibles") {
+  test("Should work when doing union with permutated return variables") {
     createLabeledNode(Map("a" -> "a", "b" -> "b"), "A")
     createLabeledNode(Map("a" -> "b", "b" -> "a"), "B")
 

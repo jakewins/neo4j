@@ -29,7 +29,9 @@ import org.apache.lucene.search.TotalHitCountCollector;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.helpers.TaskControl;
 import org.neo4j.helpers.TaskCoordinator;
 import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
@@ -38,8 +40,8 @@ import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.schema.LuceneDocumentStructure;
 import org.neo4j.kernel.api.impl.schema.sampler.NonUniqueLuceneIndexSampler;
 import org.neo4j.kernel.api.impl.schema.sampler.UniqueLuceneIndexSampler;
-import org.neo4j.kernel.api.schema.IndexQuery;
-import org.neo4j.kernel.api.schema.IndexQuery.IndexQueryType;
+import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.IndexQuery.IndexQueryType;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.storageengine.api.schema.IndexReader;
@@ -47,7 +49,7 @@ import org.neo4j.storageengine.api.schema.IndexSampler;
 import org.neo4j.values.storable.Value;
 
 import static org.neo4j.kernel.api.impl.schema.LuceneDocumentStructure.NODE_ID_KEY;
-import static org.neo4j.kernel.api.schema.IndexQuery.IndexQueryType.exact;
+import static org.neo4j.internal.kernel.api.IndexQuery.IndexQueryType.exact;
 import static org.neo4j.kernel.api.schema.index.IndexDescriptor.Type.UNIQUE;
 
 /**
@@ -88,9 +90,10 @@ public class SimpleIndexReader implements IndexReader
     }
 
     @Override
-    public PrimitiveLongIterator query( IndexQuery... predicates ) throws IndexNotApplicableKernelException
+    public PrimitiveLongResourceIterator query( IndexQuery... predicates ) throws IndexNotApplicableKernelException
     {
         IndexQuery predicate = predicates[0];
+        PrimitiveLongIterator result;
         switch ( predicate.type() )
         {
         case exact:
@@ -101,7 +104,8 @@ public class SimpleIndexReader implements IndexReader
                         "Exact followed by another query predicate type is not supported at this moment.";
                 values[i] = ((IndexQuery.ExactPredicate) predicates[i]).value();
             }
-            return seek( values );
+            result = seek( values );
+            break;
         case exists:
             for ( IndexQuery p : predicates )
             {
@@ -111,31 +115,38 @@ public class SimpleIndexReader implements IndexReader
                             "Exists followed by another query predicate type is not supported." );
                 }
             }
-            return scan();
+            result = scan();
+            break;
         case rangeNumeric:
             assertNotComposite( predicates );
             IndexQuery.NumberRangePredicate np = (IndexQuery.NumberRangePredicate) predicate;
-            return rangeSeekByNumberInclusive( np.from(), np.to() );
+            result = rangeSeekByNumberInclusive( np.from(), np.to() );
+            break;
         case rangeString:
             assertNotComposite( predicates );
             IndexQuery.StringRangePredicate sp = (IndexQuery.StringRangePredicate) predicate;
-            return rangeSeekByString( sp.from(), sp.fromInclusive(), sp.to(), sp.toInclusive() );
+            result = rangeSeekByString( sp.from(), sp.fromInclusive(), sp.to(), sp.toInclusive() );
+            break;
         case stringPrefix:
             assertNotComposite( predicates );
             IndexQuery.StringPrefixPredicate spp = (IndexQuery.StringPrefixPredicate) predicate;
-            return rangeSeekByPrefix( spp.prefix() );
+            result = rangeSeekByPrefix( spp.prefix() );
+            break;
         case stringContains:
             assertNotComposite( predicates );
             IndexQuery.StringContainsPredicate scp = (IndexQuery.StringContainsPredicate) predicate;
-            return containsString( scp.contains() );
+            result = containsString( scp.contains() );
+            break;
         case stringSuffix:
             assertNotComposite( predicates );
             IndexQuery.StringSuffixPredicate ssp = (IndexQuery.StringSuffixPredicate) predicate;
-            return endsWith( ssp.suffix() );
+            result = endsWith( ssp.suffix() );
+            break;
         default:
             // todo figure out a more specific exception
             throw new RuntimeException( "Index query not supported: " + Arrays.toString( predicates ) );
         }
+        return PrimitiveLongCollections.resourceIterator( result, null);
     }
 
     @Override

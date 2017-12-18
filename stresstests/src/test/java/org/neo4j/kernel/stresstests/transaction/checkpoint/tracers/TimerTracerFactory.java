@@ -25,6 +25,8 @@ import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.monitoring.tracing.TracerFactory;
+import org.neo4j.logging.Log;
+import org.neo4j.time.SystemNanoClock;
 
 public class TimerTracerFactory implements TracerFactory
 {
@@ -37,7 +39,8 @@ public class TimerTracerFactory implements TracerFactory
     }
 
     @Override
-    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler )
+    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock,
+            Log log )
     {
         return PageCacheTracer.NULL;
     }

@@ -30,10 +30,11 @@ import java.util.zip.ZipOutputStream;
 
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
-import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 
 import static java.lang.String.format;
 
@@ -47,14 +48,14 @@ import static java.lang.String.format;
  */
 public class CorruptedLogsTruncator
 {
-    public static final String CORRUPTED_TX_LOGS_BASE_NAME = "corrupted-" + PhysicalLogFile.DEFAULT_NAME;
+    public static final String CORRUPTED_TX_LOGS_BASE_NAME = "corrupted-" + TransactionLogFiles.DEFAULT_NAME;
     private static final String LOG_FILE_ARCHIVE_PATTERN = CORRUPTED_TX_LOGS_BASE_NAME + "-%d-%d-%d.zip";
 
     private final File storeDir;
-    private final PhysicalLogFiles logFiles;
+    private final LogFiles logFiles;
     private final FileSystemAbstraction fs;
 
-    public CorruptedLogsTruncator( File storeDir, PhysicalLogFiles logFiles, FileSystemAbstraction fs )
+    public CorruptedLogsTruncator( File storeDir, LogFiles logFiles, FileSystemAbstraction fs )
     {
         this.storeDir = storeDir;
         this.logFiles = logFiles;
@@ -143,7 +144,7 @@ public class CorruptedLogsTruncator
         }
         ZipEntry zipEntry = new ZipEntry( logFile.getName() );
         destination.putNextEntry( zipEntry );
-        try ( StoreChannel transactionLogChannel = fs.open( logFile, "r" ) )
+        try ( StoreChannel transactionLogChannel = fs.open( logFile, OpenMode.READ ) )
         {
             transactionLogChannel.position( logOffset );
             while ( transactionLogChannel.read( byteBuffer ) >= 0 )

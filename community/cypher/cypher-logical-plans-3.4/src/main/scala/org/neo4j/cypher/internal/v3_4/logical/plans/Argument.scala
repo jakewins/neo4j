@@ -19,25 +19,24 @@
  */
 package org.neo4j.cypher.internal.v3_4.logical.plans
 
-import org.neo4j.cypher.internal.util.v3_4.symbols.{CypherType, _}
 import org.neo4j.cypher.internal.ir.v3_4.{CardinalityEstimation, IdName, PlannerQuery}
+import org.neo4j.cypher.internal.util.v3_4.symbols._
 
 /**
-  * Argument produces a single row with the contents of argument.
+  * Produce a single row with the contents of argument
   */
-case class Argument(argumentIds: Set[IdName])(val solved: PlannerQuery with CardinalityEstimation)
-                    (val typeInfo: Map[String, CypherType] = argumentIds.map( id => id.name -> CTNode).toMap)
+case class Argument(argumentIds: Set[IdName] = Set.empty)(val solved: PlannerQuery with CardinalityEstimation)
   extends LogicalLeafPlan {
 
   def availableSymbols: Set[IdName] = argumentIds
 
   override def updateSolved(newSolved: PlannerQuery with CardinalityEstimation): Argument =
-    copy(argumentIds)(newSolved)(typeInfo)
+    copy(argumentIds)(newSolved)
 
-  override def copyPlan(): LogicalPlan = this.copy(argumentIds)(solved)(typeInfo).asInstanceOf[this.type]
+  override def copyPlan(): LogicalPlan = this.copy(argumentIds)(solved).asInstanceOf[this.type]
 
-  override def dup(children: Seq[AnyRef]): Argument.this.type = children.size match {
+  override def dup(children: Seq[AnyRef]) = children.size match {
     case 1 =>
-      copy(children.head.asInstanceOf[Set[IdName]])(solved)(typeInfo).asInstanceOf[this.type]
+      copy(children.head.asInstanceOf[Set[IdName]])(solved).asInstanceOf[this.type]
   }
 }

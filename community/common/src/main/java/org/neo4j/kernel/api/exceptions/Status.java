@@ -135,8 +135,6 @@ public interface Status
                 "to be terminated, an operator might have asked for the database to be shut down, or the current " +
                 "instance is about to go through a cluster role switch. Simply retry your operation in a new " +
                 "transaction." ),
-        TransactionEventHandlerFailed( ClientError,
-                "A transaction event handler threw an exception. The transaction will be rolled back." ),
         TransactionValidationFailed( ClientError,
                 "Transaction changes did not pass validation checks" ),
         TransactionHookFailed( ClientError,
@@ -267,6 +265,8 @@ public interface Status
                 "This query is not supported by the chosen runtime." ),
         FeatureDeprecationWarning( ClientNotification,
                 "This feature is deprecated and will be removed in future versions." ),
+        ExperimentalFeature( ClientNotification,
+                "This feature is experimental and should not be used in production systems." ),
         JoinHintUnsupportedWarning( ClientNotification,
                 "Queries with join hints are not supported by the RULE planner." ),
 
@@ -367,7 +367,7 @@ public interface Status
     enum LegacyIndex implements Status
     {
         LegacyIndexNotFound( ClientError,
-                "The request (directly or indirectly) referred to a explicit index that does not exist." )
+                "The request (directly or indirectly) referred to an explicit index that does not exist." )
 
         ;
 

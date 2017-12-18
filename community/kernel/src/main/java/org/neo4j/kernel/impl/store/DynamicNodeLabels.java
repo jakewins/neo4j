@@ -81,7 +81,7 @@ public class DynamicNodeLabels implements NodeLabels
             return null;
         }
         return stripNodeId( (long[]) getRightArray( readFullByteArrayFromHeavyRecords(
-                node.getUsedDynamicLabelRecords(), ARRAY ) ).getInnerObject() );
+                node.getUsedDynamicLabelRecords(), ARRAY ) ).asObject() );
     }
 
     @Override
@@ -218,7 +218,8 @@ public class DynamicNodeLabels implements NodeLabels
     {
         long[] storedLongs = LabelIdArray.prependNodeId( nodeId, labels );
         Collection<DynamicRecord> records = new ArrayList<>();
-        DynamicArrayStore.allocateRecords( records, storedLongs, allocator );
+        // since we can't store points in long array we passing false as possibility to store points
+        DynamicArrayStore.allocateRecords( records, storedLongs, allocator, false );
         return records;
     }
 
@@ -226,14 +227,14 @@ public class DynamicNodeLabels implements NodeLabels
             AbstractDynamicStore dynamicLabelStore )
     {
         long[] storedLongs = (long[])
-            DynamicArrayStore.getRightArray( dynamicLabelStore.readFullByteArray( records, PropertyType.ARRAY ) ).getInnerObject();
+            DynamicArrayStore.getRightArray( dynamicLabelStore.readFullByteArray( records, PropertyType.ARRAY ) ).asObject();
         return LabelIdArray.stripNodeId( storedLongs );
     }
 
     public static long[] getDynamicLabelsArrayFromHeavyRecords( Iterable<DynamicRecord> records )
     {
         long[] storedLongs = (long[])
-            DynamicArrayStore.getRightArray( readFullByteArrayFromHeavyRecords( records, PropertyType.ARRAY ) ).getInnerObject();
+            DynamicArrayStore.getRightArray( readFullByteArrayFromHeavyRecords( records, PropertyType.ARRAY ) ).asObject();
         return LabelIdArray.stripNodeId( storedLongs );
     }
 
@@ -241,7 +242,7 @@ public class DynamicNodeLabels implements NodeLabels
             AbstractDynamicStore dynamicLabelStore )
     {
         long[] storedLongs = (long[])
-                DynamicArrayStore.getRightArray( dynamicLabelStore.readFullByteArray( records, PropertyType.ARRAY ) ).getInnerObject();
+                DynamicArrayStore.getRightArray( dynamicLabelStore.readFullByteArray( records, PropertyType.ARRAY ) ).asObject();
         return Pair.of(storedLongs[0], LabelIdArray.stripNodeId( storedLongs ));
     }
 }

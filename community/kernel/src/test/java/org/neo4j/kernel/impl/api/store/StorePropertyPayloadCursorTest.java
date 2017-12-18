@@ -50,8 +50,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -492,7 +492,7 @@ public class StorePropertyPayloadCursorTest
             Object value = values[i];
 
             PropertyBlock block = new PropertyBlock();
-            PropertyStore.encodeValue( block, i, Values.of( value ), stringAllocator, arrayAllocator );
+            PropertyStore.encodeValue( block, i, Values.of( value ), stringAllocator, arrayAllocator, true );
             long[] valueBlocks = block.getValueBlocks();
             System.arraycopy( valueBlocks, 0, blocks, cursor, valueBlocks.length );
             cursor += valueBlocks.length;

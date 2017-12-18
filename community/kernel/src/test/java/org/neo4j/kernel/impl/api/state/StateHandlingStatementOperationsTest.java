@@ -27,15 +27,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.collection.primitive.PrimitiveLongResourceCollections;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.DataWriteOperations;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.explicitindex.AutoIndexOperations;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.properties.PropertyKeyValue;
-import org.neo4j.kernel.api.schema.IndexQuery;
 import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
@@ -63,12 +64,11 @@ import org.neo4j.values.storable.Values;
 import static java.util.Collections.emptyIterator;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyVararg;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -489,7 +489,7 @@ public class StateHandlingStatementOperationsTest
         StoreStatement storeStatement = mock( StoreStatement.class );
         IndexReader indexReader = mock( IndexReader.class );
 
-        when( indexReader.query( any() ) ).thenReturn( PrimitiveLongCollections.emptyIterator() );
+        when( indexReader.query( any() ) ).thenReturn( PrimitiveLongResourceCollections.emptyIterator() );
         when( storeStatement.getFreshIndexReader( any() ) ).thenReturn( indexReader );
         when( kernelStatement.getStoreStatement() ).thenReturn( storeStatement );
 
@@ -611,9 +611,9 @@ public class StateHandlingStatementOperationsTest
         } );
         when( kernelStatement.getStoreStatement() ).thenReturn( storeStatement );
         IndexReader indexReader = mock( IndexReader.class );
-        when( indexReader.hasFullNumberPrecision( anyVararg() ) ).thenReturn( true );
-        when( indexReader.query( anyVararg() ) )
-                .thenAnswer( invocation -> PrimitiveLongCollections.iterator( nodeId ) );
+        when( indexReader.hasFullNumberPrecision( any() ) ).thenReturn( true );
+        when( indexReader.query( any() ) )
+                .thenAnswer( invocation -> PrimitiveLongResourceCollections.iterator( null, nodeId ) );
         when( storeStatement.getFreshIndexReader( any() ) ).thenReturn( indexReader );
         when( storeStatement.getIndexReader( any() ) ).thenReturn( indexReader );
 

@@ -25,9 +25,9 @@ import org.neo4j.cypher.internal.util.v3_4.{CypherException, InputPosition}
 import org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.{PlanFingerprint, PlanFingerprintReference}
 import org.neo4j.cypher.internal.compiler.v3_4.phases.CompilerContext
 import org.neo4j.cypher.internal.compiler.v3_4.planner.logical.{ExpressionEvaluator, Metrics, MetricsFactory, QueryGraphSolver}
-import org.neo4j.cypher.internal.compiler.v3_4.spi.PlanContext
 import org.neo4j.cypher.internal.compiler.v3_4.{ContextCreator, CypherCompilerConfiguration, SyntaxExceptionCreator, UpdateStrategy}
 import org.neo4j.cypher.internal.frontend.v3_4.phases.{CompilationPhaseTracer, InternalNotificationLogger, Monitors}
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
 
 class CommunityRuntimeContext(override val exceptionCreator: (String, InputPosition) => CypherException,
                               override val tracer: CompilationPhaseTracer,
@@ -45,7 +45,7 @@ class CommunityRuntimeContext(override val exceptionCreator: (String, InputPosit
                           config, queryGraphSolver, updateStrategy, debugOptions, clock) {
 
   val createFingerprintReference: (Option[PlanFingerprint]) => PlanFingerprintReference =
-    new PlanFingerprintReference(clock, config.queryPlanTTL, config.statsDivergenceThreshold, _)
+    new PlanFingerprintReference(clock, config.statsDivergenceCalculator, _)
 }
 
 object CommunityRuntimeContextCreator extends ContextCreator[CommunityRuntimeContext] {

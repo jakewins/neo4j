@@ -23,17 +23,20 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.TokenWriteOperations;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProviderFactory;
 import org.neo4j.kernel.internal.Version;
 
 import static java.util.Collections.singletonList;
@@ -121,7 +124,8 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
                 equalTo( new Object[]{"db.constraints", "db.constraints() :: (description :: STRING?)",
                         "List all constraints in the database."} ),
                 equalTo( new Object[]{"db.indexes",
-                        "db.indexes() :: (description :: STRING?, state :: STRING?, type :: STRING?)",
+                        "db.indexes() :: (description :: STRING?, label :: STRING?, properties :: LIST? OF STRING?, state :: STRING?, " +
+                                "type :: STRING?, provider :: MAP?)",
                         "List all indexes in the database."} ),
                 equalTo( new Object[]{"db.awaitIndex",
                         "db.awaitIndex(index :: STRING?, timeOutSeconds = 300 :: INTEGER?) :: VOID",
@@ -166,7 +170,7 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
                 } ),
                 equalTo( new Object[]{"db.index.explicit.searchNodes",
                         "db.index.explicit.searchNodes(indexName :: STRING?, query :: ANY?) :: (node :: NODE?, weight :: FLOAT?)",
-                        "Search nodes from explicit index. Replaces `START n=node:nodes('key:foo*')`"
+                        "Search nodes in explicit index. Replaces `START n=node:nodes('key:foo*')`"
                 } ),
                 equalTo( new Object[]{"db.index.explicit.seekNodes",
                         "db.index.explicit.seekNodes(indexName :: STRING?, key :: STRING?, value :: ANY?) :: (node :: " +
@@ -176,45 +180,45 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
                 equalTo( new Object[]{"db.index.explicit.searchRelationships",
                         "db.index.explicit.searchRelationships(indexName :: STRING?, query :: ANY?) :: (relationship :: " +
                         "RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit index. Replaces `START r=relationship:relIndex('key:foo*')`"
+                        "Search relationship in explicit index. Replaces `START r=relationship:relIndex('key:foo*')`"
                 } ),
                 equalTo( new Object[]{ "db.index.explicit.auto.searchNodes",
                         "db.index.explicit.auto.searchNodes(query :: ANY?) :: (node :: NODE?, weight :: FLOAT?)",
-                        "Search nodes from explicit automatic index. Replaces `START n=node:node_auto_index('key:foo*')`"} ),
+                        "Search nodes in explicit automatic index. Replaces `START n=node:node_auto_index('key:foo*')`"} ),
                 equalTo( new Object[]{ "db.index.explicit.auto.seekNodes",
                         "db.index.explicit.auto.seekNodes(key :: STRING?, value :: ANY?) :: (node :: NODE?)",
                         "Get node from explicit automatic index. Replaces `START n=node:node_auto_index(key = 'A')`"} ),
                 equalTo( new Object[]{ "db.index.explicit.auto.searchRelationships",
                         "db.index.explicit.auto.searchRelationships(query :: ANY?) :: (relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index('key:foo*')`"} ),
+                        "Search relationship in explicit automatic index. Replaces `START r=relationship:relationship_auto_index('key:foo*')`"} ),
                 equalTo( new Object[]{ "db.index.explicit.auto.seekRelationships",
                         "db.index.explicit.auto.seekRelationships(key :: STRING?, value :: ANY?) :: " +
                         "(relationship :: RELATIONSHIP?)",
                         "Get relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index(key = 'A')`"} ),
                 equalTo( new Object[]{ "db.index.explicit.addNode",
                         "db.index.explicit.addNode(indexName :: STRING?, node :: NODE?, key :: STRING?, value :: ANY?) :: (success :: BOOLEAN?)",
-                        "Add a node to a explicit index based on a specified key and value"} ),
+                        "Add a node to an explicit index based on a specified key and value"} ),
                 equalTo( new Object[]{ "db.index.explicit.addRelationship",
                         "db.index.explicit.addRelationship(indexName :: STRING?, relationship :: RELATIONSHIP?, key :: STRING?, value :: ANY?) :: " +
                         "(success :: BOOLEAN?)",
-                        "Add a relationship to a explicit index based on a specified key and value"} ),
+                        "Add a relationship to an explicit index based on a specified key and value"} ),
                 equalTo( new Object[]{ "db.index.explicit.removeNode",
                         "db.index.explicit.removeNode(indexName :: STRING?, node :: NODE?, key :: STRING?) :: (success :: BOOLEAN?)",
-                        "Remove a node from a explicit index with an optional key"} ),
+                        "Remove a node from an explicit index with an optional key"} ),
                 equalTo( new Object[]{ "db.index.explicit.removeRelationship",
                         "db.index.explicit.removeRelationship(indexName :: STRING?, relationship :: RELATIONSHIP?, key :: STRING?) :: " +
                         "(success :: BOOLEAN?)",
-                        "Remove a relationship from a explicit index with an optional key"} ),
+                        "Remove a relationship from an explicit index with an optional key"} ),
                 equalTo( new Object[]{ "db.index.explicit.drop",
                         "db.index.explicit.drop(indexName :: STRING?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
-                        "Remove a explicit index - YIELD type,name,config"} ),
+                        "Remove an explicit index - YIELD type,name,config"} ),
                 equalTo( new Object[]{ "db.index.explicit.forNodes",
-                        "db.index.explicit.forNodes(indexName :: STRING?) :: " +
+                        "db.index.explicit.forNodes(indexName :: STRING?, config = {} :: MAP?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
                         "Get or create a node explicit index - YIELD type,name,config"} ),
                 equalTo( new Object[]{ "db.index.explicit.forRelationships",
-                        "db.index.explicit.forRelationships(indexName :: STRING?) :: " +
+                        "db.index.explicit.forRelationships(indexName :: STRING?, config = {} :: MAP?) :: " +
                         "(type :: STRING?, name :: STRING?, config :: MAP?)",
                         "Get or create a relationship explicit index - YIELD type,name,config"} ),
                 equalTo( new Object[]{ "db.index.explicit.existsForNodes",
@@ -235,17 +239,21 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
                 equalTo( new Object[]{"db.index.explicit.searchRelationshipsBetween",
                         "db.index.explicit.searchRelationshipsBetween(indexName :: STRING?, in :: NODE?, out :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit index, starting at the node 'in' and ending at 'out'."
+                        "Search relationship in explicit index, starting at the node 'in' and ending at 'out'."
                 } ),
                 equalTo( new Object[]{"db.index.explicit.searchRelationshipsIn",
                         "db.index.explicit.searchRelationshipsIn(indexName :: STRING?, in :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit index, starting at the node 'in'."
+                        "Search relationship in explicit index, starting at the node 'in'."
                 } ),
                 equalTo( new Object[]{"db.index.explicit.searchRelationshipsOut",
                         "db.index.explicit.searchRelationshipsOut(indexName :: STRING?, out :: NODE?, query :: ANY?) :: " +
                                 "(relationship :: RELATIONSHIP?, weight :: FLOAT?)",
-                        "Search relationship from explicit index, ending at the node 'out'."
+                        "Search relationship in explicit index, ending at the node 'out'."
+                } ),
+                equalTo( new Object[]{"dbms.clearQueryCaches",
+                        "dbms.clearQueryCaches() :: (value :: STRING?)",
+                        "Clears all query caches."
                 } )
         ) );
         commit();
@@ -291,10 +299,12 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
         Statement statement = statementInNewTransaction( SecurityContext.AUTH_DISABLED );
         int labelId1 = statement.tokenWriteOperations().labelGetOrCreateForName( "Person" );
         int labelId2 = statement.tokenWriteOperations().labelGetOrCreateForName( "Age" );
-        int propertyKeyId = statement.tokenWriteOperations().propertyKeyGetOrCreateForName( "foo" );
+        int propertyKeyId1 = statement.tokenWriteOperations().propertyKeyGetOrCreateForName( "foo" );
+        int propertyKeyId2 = statement.tokenWriteOperations().propertyKeyGetOrCreateForName( "bar" );
         //TODO: Add test support for composite indexes
-        statement.schemaWriteOperations().indexCreate( SchemaDescriptorFactory.forLabel( labelId1, propertyKeyId ) );
-        statement.schemaWriteOperations().uniquePropertyConstraintCreate( forLabel( labelId2, propertyKeyId ) );
+        statement.schemaWriteOperations().indexCreate( forLabel( labelId1, propertyKeyId1 ) );
+        statement.schemaWriteOperations().uniquePropertyConstraintCreate( forLabel( labelId2, propertyKeyId1 ) );
+        statement.schemaWriteOperations().indexCreate( forLabel( labelId1, propertyKeyId1, propertyKeyId2 ) );
         commit();
 
         //let indexes come online
@@ -315,9 +325,13 @@ public class BuiltInProceduresIT extends KernelIntegrationTest
         }
 
         // Then
+        Map<String,String> providerDescriptionMap = MapUtil.stringMap(
+                "key", InMemoryIndexProviderFactory.KEY,
+                "version", InMemoryIndexProviderFactory.VERSION );
         assertThat( result, containsInAnyOrder(
-                new Object[]{"INDEX ON :Age(foo)", "ONLINE", "node_unique_property"},
-                new Object[]{"INDEX ON :Person(foo)", "ONLINE", "node_label_property"}
+                new Object[]{"INDEX ON :Age(foo)", "Age", singletonList("foo" ), "ONLINE", "node_unique_property", providerDescriptionMap},
+                new Object[]{"INDEX ON :Person(foo)", "Person", singletonList( "foo" ), "ONLINE", "node_label_property", providerDescriptionMap},
+                new Object[]{"INDEX ON :Person(foo, bar)", "Person", Arrays.asList( "foo", "bar" ), "ONLINE", "node_label_property", providerDescriptionMap}
         ) );
         commit();
     }

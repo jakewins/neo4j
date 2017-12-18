@@ -23,7 +23,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.Iterator;
@@ -47,8 +46,8 @@ import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -95,7 +94,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), any() );
     }
 
     @Test
@@ -116,7 +115,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), any() );
     }
 
     @Test
@@ -137,7 +136,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), any() );
     }
 
     @Test
@@ -158,7 +157,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), any() );
     }
 
     @Test
@@ -179,7 +178,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), any() );
     }
 
     @Test
@@ -200,7 +199,7 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), any() );
     }
 
     @Test

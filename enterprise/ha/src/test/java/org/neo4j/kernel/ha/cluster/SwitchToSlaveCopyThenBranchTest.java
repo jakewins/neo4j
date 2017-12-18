@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -84,12 +85,12 @@ import org.neo4j.scheduler.JobScheduler;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -231,7 +232,7 @@ public class SwitchToSlaveCopyThenBranchTest
         doAnswer( invocation ->
         {
             MoveAfterCopy moveAfterCopy = invocation.getArgument( 2 );
-            moveAfterCopy.move( Stream.empty(), new File( "" ), new File( "" ) );
+            moveAfterCopy.move( Stream.empty(), new File( "" ), Function.identity() );
             return null;
         } ).when( storeCopyClient ).copyStore(
                 any( StoreCopyClient.StoreCopyRequester.class ),

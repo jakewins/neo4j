@@ -38,6 +38,11 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 public interface PageCache extends AutoCloseable
 {
     /**
+     * The default {@link #pageSize()}.
+     */
+    int PAGE_SIZE = 8192;
+
+    /**
      * Ask for a handle to a paged file, backed by this page cache.
      * <p>
      * Note that this currently asks for the pageSize to use, which is an artifact or records being
@@ -97,6 +102,7 @@ public interface PageCache extends AutoCloseable
      * @throws RuntimeException if the {@link PageSwapperFactory#close()} method throws. In this case the page cache
      * <em>WILL BE</em> considered to have been closed successfully.
      **/
+    @Override
     void close() throws IllegalStateException;
 
     /**

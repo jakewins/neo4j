@@ -26,6 +26,7 @@ import java.io.File;
 import java.time.Clock;
 
 import org.neo4j.kernel.AvailabilityGuard;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.kernel.internal.DatabaseHealth;
@@ -37,7 +38,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -167,7 +168,7 @@ public class LocalDatabaseTest
     private static LocalDatabase newLocalDatabase( AvailabilityGuard availabilityGuard,
             DataSourceManager dataSourceManager, FileSystemWatcherService fileWatcher )
     {
-        return new LocalDatabase( new File( "." ), mock( StoreFiles.class ), dataSourceManager,
+        return new LocalDatabase( new File( "." ), mock( StoreFiles.class ), mock( LogFiles.class ), dataSourceManager,
                 () -> mock( DatabaseHealth.class ), fileWatcher, availabilityGuard,
                 NullLogProvider.getInstance() );
     }

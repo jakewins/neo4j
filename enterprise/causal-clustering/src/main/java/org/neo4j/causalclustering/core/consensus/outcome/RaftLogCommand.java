@@ -21,9 +21,9 @@ package org.neo4j.causalclustering.core.consensus.outcome;
 
 import java.io.IOException;
 
+import org.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
 import org.neo4j.causalclustering.core.consensus.log.RaftLog;
 import org.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import org.neo4j.causalclustering.core.consensus.log.segmented.InFlightMap;
 import org.neo4j.logging.Log;
 
 public interface RaftLogCommand
@@ -39,5 +39,5 @@ public interface RaftLogCommand
 
     void applyTo( RaftLog raftLog, Log log ) throws IOException;
 
-    void applyTo( InFlightMap<RaftLogEntry> inFlightMap, Log log ) throws IOException;
+    void applyTo( InFlightCache inFlightCache, Log log ) throws IOException;
 }

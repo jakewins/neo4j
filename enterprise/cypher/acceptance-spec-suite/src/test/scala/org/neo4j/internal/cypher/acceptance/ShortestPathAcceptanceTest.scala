@@ -19,15 +19,17 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.commands.expressions.PathImpl
-import org.neo4j.cypher.{ExecutionEngineFunSuite}
+
+import org.neo4j.cypher.internal.runtime.PathImpl
+import org.neo4j.cypher.ExecutionEngineFunSuite
+
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.{Node, Path}
 import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport._
 
 class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  val expectedToSucceed = Configs.CommunityInterpreted
+  val expectedToSucceed = Configs.Interpreted
 
   var nodeA: Node = _
   var nodeB: Node = _
@@ -49,6 +51,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
   // TODO The next four tests are expected to work with 3.1 and rule planner (not 2.3!) as soon as the dependencies are updated
   val excludedConfigs = Configs.Version3_1 + Configs.AllRulePlanners
+
   test("shortest path in a with clause") {
 
     relate(nodeA, nodeB)
@@ -352,7 +355,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(nodeB, nodeC)
     relate(nodeC, nodeD)
 
-    val expectedToFail = Configs.All + TestConfiguration(Versions.Default, Planners.Default,
+    val expectedToFail = Configs.All + Configs.Morsel + TestConfiguration(Versions.Default, Planners.Default,
       Runtimes(Runtimes.Default, Runtimes.ProcedureOrSchema, Runtimes.CompiledSource, Runtimes.CompiledBytecode))
 
     failWithError(expectedToFail, "MATCH p = shortestPath((src:A)-[*2..3]->(dst:D)) RETURN nodes(p) AS nodes", List("shortestPath(...) does not support a minimal length different from 0 or 1"))
@@ -494,7 +497,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |RETURN nodes(p) AS nodes
                 """.stripMargin
 
-    val result = executeWith(expectedToSucceed, query)
+    val result = executeWith(expectedToSucceed - Configs.SlottedInterpreted, query)
 
     result.toList should equal(List(Map("nodes" -> List(nodes("source"), nodes("node3"), nodes("node4"), nodes("target")))))
   }
@@ -509,7 +512,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |RETURN nodes(p) as nodes
                 """.stripMargin
 
-    val result = executeWith(expectedToSucceed, query)
+    val result = executeWith(expectedToSucceed - Configs.SlottedInterpreted, query)
 
     result.toList should equal(List(Map("nodes" -> List(nodes("Donald"), nodes("Mickey"))),
       Map("nodes" -> List(nodes("Donald"), nodes("Mickey"), nodes("Minnie"))),
@@ -527,7 +530,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |RETURN nodes(p) as nodes
                 """.stripMargin
 
-    val result = executeWith(expectedToSucceed, query)
+    val result = executeWith(expectedToSucceed - Configs.SlottedInterpreted, query)
 
     result.toList should equal(List(Map("nodes" -> List(nodes("Donald"), nodes("Mickey"))),
       Map("nodes" -> List(nodes("Donald"), nodes("Mickey"), nodes("Minnie"))),

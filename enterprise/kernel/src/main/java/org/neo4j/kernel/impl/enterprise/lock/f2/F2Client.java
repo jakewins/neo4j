@@ -157,6 +157,12 @@ class F2Client implements Locks.Client
     }
 
     @Override
+    public void prepare()
+    {
+        // TODO call into  LockClientStateHolder here
+    }
+
+    @Override
     public boolean trySharedLock( ResourceType resourceType, long resourceId )
     {
         return acquire( AcquireMode.NONBLOCKING, LockMode.SHARED, resourceType, resourceId ) == ClientAcquireOutcome.ACQUIRED;

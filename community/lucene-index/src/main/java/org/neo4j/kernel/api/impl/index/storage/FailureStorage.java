@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.api.impl.index.storage.layout.FolderLayout;
 import org.neo4j.string.UTF8;
@@ -70,7 +71,7 @@ public class FailureStorage
         File failureFile = failureFile();
         try ( StoreChannel channel = fs.create( failureFile ) )
         {
-            channel.write( ByteBuffer.wrap( new byte[MAX_FAILURE_SIZE] ) );
+            channel.writeAll( ByteBuffer.wrap( new byte[MAX_FAILURE_SIZE] ) );
             channel.force( true );
         }
     }
@@ -113,14 +114,14 @@ public class FailureStorage
     public synchronized void storeIndexFailure( String failure ) throws IOException
     {
         File failureFile = failureFile();
-        try ( StoreChannel channel = fs.open( failureFile, "rw" ) )
+        try ( StoreChannel channel = fs.open( failureFile, OpenMode.READ_WRITE ) )
         {
             byte[] existingData = new byte[(int) channel.size()];
-            channel.read( ByteBuffer.wrap( existingData ) );
+            channel.readAll( ByteBuffer.wrap( existingData ) );
             channel.position( lengthOf( existingData ) );
 
             byte[] data = UTF8.encode( failure );
-            channel.write( ByteBuffer.wrap( data, 0, Math.min( data.length, MAX_FAILURE_SIZE ) ) );
+            channel.writeAll( ByteBuffer.wrap( data, 0, Math.min( data.length, MAX_FAILURE_SIZE ) ) );
 
             channel.force( true );
             channel.close();
@@ -135,11 +136,11 @@ public class FailureStorage
 
     private String readFailure( File failureFile ) throws IOException
     {
-        try ( StoreChannel channel = fs.open( failureFile, "r" ) )
+        try ( StoreChannel channel = fs.open( failureFile, OpenMode.READ ) )
         {
             byte[] data = new byte[(int) channel.size()];
-            int readData = channel.read( ByteBuffer.wrap( data ) );
-            return readData <= 0 ? "" : UTF8.decode( withoutZeros( data ) );
+            channel.readAll( ByteBuffer.wrap( data ) );
+            return UTF8.decode( withoutZeros( data ) );
         }
     }
 
@@ -164,10 +165,10 @@ public class FailureStorage
 
     private boolean isFailed( File failureFile ) throws IOException
     {
-        try ( StoreChannel channel = fs.open( failureFile, "r" ) )
+        try ( StoreChannel channel = fs.open( failureFile, OpenMode.READ ) )
         {
             byte[] data = new byte[(int) channel.size()];
-            channel.read( ByteBuffer.wrap( data ) );
+            channel.readAll( ByteBuffer.wrap( data ) );
             channel.close();
             return !allZero( data );
         }

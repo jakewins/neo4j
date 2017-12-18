@@ -19,7 +19,10 @@
  */
 package org.neo4j.values.storable;
 
+import org.neo4j.values.virtual.ListValue;
+
 import static java.lang.String.format;
+import static org.neo4j.values.virtual.VirtualValues.list;
 
 public final class CharValue extends TextValue
 {
@@ -43,12 +46,6 @@ public final class CharValue extends TextValue
     }
 
     @Override
-    public boolean equals( boolean x )
-    {
-        return false;
-    }
-
-    @Override
     public boolean equals( char x )
     {
         return value == x;
@@ -63,7 +60,8 @@ public final class CharValue extends TextValue
     @Override
     public int computeHash()
     {
-        return value;
+        //The 31 is there to give it the same hash as the string equivalent
+        return 31 + value;
     }
 
     @Override
@@ -94,6 +92,88 @@ public final class CharValue extends TextValue
     public int length()
     {
         return 1;
+    }
+
+    @Override
+    public TextValue substring( int start, int length )
+    {
+        if ( length != 1 && start != 0 )
+        {
+            return StringValue.EMTPY;
+        }
+
+        return this;
+    }
+
+    @Override
+    public TextValue trim()
+    {
+        if ( Character.isWhitespace( value ) )
+        {
+            return StringValue.EMTPY;
+        }
+        else
+        {
+            return this;
+        }
+    }
+
+    @Override
+    public TextValue ltrim()
+    {
+        return trim();
+    }
+
+    @Override
+    public TextValue rtrim()
+    {
+        return trim();
+    }
+
+    @Override
+    public TextValue toLower()
+    {
+        return new CharValue( Character.toLowerCase( value ) );
+    }
+
+    @Override
+    public TextValue toUpper()
+    {
+        return new CharValue( Character.toUpperCase( value ) );
+    }
+
+    @Override
+    public ListValue split( String separator )
+    {
+        if ( separator.equals( stringValue() ) )
+        {
+            return EMPTY_SPLIT;
+        }
+        else
+        {
+            return list( Values.stringValue( stringValue() ) );
+        }
+    }
+
+    @Override
+    public TextValue replace( String find, String replace )
+    {
+        assert find != null;
+        assert replace != null;
+        if ( stringValue().equals( find ) )
+        {
+            return Values.stringValue( replace );
+        }
+        else
+        {
+            return this;
+        }
+    }
+
+    @Override
+    public TextValue reverse()
+    {
+        return this;
     }
 
     public char value()

@@ -19,7 +19,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.internal.compatibility.v3_4.runtime.pipes.{IndexSeekByRange, UniqueIndexSeekByRange}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeekByRange, UniqueIndexSeekByRange}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, SyntaxException}
 import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport._
 
@@ -165,7 +165,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
       }, Configs.AllRulePlanners), params = Map("apa" -> 43))
 
     result.toList should equal(List(Map("a" -> a1), Map("a" -> a2)))
-    result.executionPlanDescription().toString should include("prop STARTS WITH www")
+    result.executionPlanDescription().toString should include("prop STARTS WITH \"www\"")
   }
 
   test("should plan an IndexRangeSeek for a STARTS WITH predicate search when index exists") {

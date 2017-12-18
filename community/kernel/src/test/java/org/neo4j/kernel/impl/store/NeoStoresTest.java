@@ -46,6 +46,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
@@ -64,8 +65,10 @@ import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngin
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.standard.DynamicRecordFormat;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
@@ -106,8 +109,8 @@ import static org.junit.Assert.fail;
 import static org.neo4j.function.Predicates.ALWAYS_TRUE_INT;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.counts_store_rotation_timeout;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.kernel.api.security.SecurityContext.AUTH_DISABLED;
 import static org.neo4j.kernel.api.AssertOpen.ALWAYS_OPEN;
-import static org.neo4j.kernel.api.security.SecurityContext.AUTH_DISABLED;
 import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK;
 import static org.neo4j.kernel.impl.store.RecordStore.getRecord;
 import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.FIELD_NOT_PRESENT;
@@ -118,6 +121,7 @@ import static org.neo4j.storageengine.api.Direction.BOTH;
 public class NeoStoresTest
 {
 
+    private static final NullLogProvider LOG_PROVIDER = NullLogProvider.getInstance();
     private final PageCacheRule pageCacheRule = new ConfigurablePageCacheRule();
     private final ExpectedException exception = ExpectedException.none();
     private final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
@@ -537,7 +541,7 @@ public class NeoStoresTest
 
         Config config = Config.defaults();
         StoreFactory sf = new StoreFactory( storeDir, config, new DefaultIdGeneratorFactory( fileSystem ), pageCache,
-                fileSystem, NullLogProvider.getInstance() );
+                fileSystem, LOG_PROVIDER );
 
         NeoStores neoStores = sf.openAllNeoStores();
         assertEquals( 12, neoStores.getMetaDataStore().getCurrentLogVersion() );
@@ -565,7 +569,7 @@ public class NeoStoresTest
         }
 
         File file = new File( neoStoreDir, MetaDataStore.DEFAULT_NAME );
-        try ( StoreChannel channel = fileSystem.open( file, "rw" ) )
+        try ( StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE ) )
         {
             channel.position( 0 );
             channel.write( ByteBuffer.wrap( UTF8.encode( "This is some data that is not a record." ) ) );
@@ -594,7 +598,7 @@ public class NeoStoresTest
         // given
         Config config = Config.defaults();
         StoreFactory sf = new StoreFactory( dir.directory(), config, new DefaultIdGeneratorFactory( fs.get() ),
-                pageCacheRule.getPageCache( fs.get() ), fs.get(), NullLogProvider.getInstance() );
+                pageCacheRule.getPageCache( fs.get() ), fs.get(), LOG_PROVIDER );
 
         // when
         NeoStores neoStores = sf.openAllNeoStores( true );
@@ -623,7 +627,10 @@ public class NeoStoresTest
     public void shouldInitializeTheTxIdToOne()
     {
         StoreFactory factory =
-                new StoreFactory( new File( "graph.db/neostore" ), pageCache, fs.get(), NullLogProvider.getInstance() );
+                new StoreFactory(
+                        new File( "graph.db/neostore" ), Config.defaults(), new DefaultIdGeneratorFactory( fs.get() ),
+                        pageCache, fs.get(),
+                        LOG_PROVIDER );
 
         try ( NeoStores neoStores = factory.openAllNeoStores( true ) )
         {
@@ -642,7 +649,9 @@ public class NeoStoresTest
     {
         FileSystemAbstraction fileSystem = fs.get();
         File neoStoreDir = new File( "/tmp/graph.db/neostore" ).getAbsoluteFile();
-        StoreFactory factory = new StoreFactory( neoStoreDir, pageCache, fileSystem, NullLogProvider.getInstance() );
+        StoreFactory factory = new StoreFactory(
+                neoStoreDir, Config.defaults(), new DefaultIdGeneratorFactory( fileSystem ), pageCache, fileSystem,
+                LOG_PROVIDER );
 
         try ( NeoStores neoStores = factory.openAllNeoStores( true ) )
         {
@@ -719,7 +728,9 @@ public class NeoStoresTest
         // GIVEN
         FileSystemAbstraction fileSystem = fs.get();
         fileSystem.mkdirs( storeDir );
-        StoreFactory factory = new StoreFactory( storeDir, pageCache, fileSystem, NullLogProvider.getInstance() );
+        StoreFactory factory = new StoreFactory(
+                storeDir, Config.defaults(), new DefaultIdGeneratorFactory( fileSystem ), pageCache, fileSystem,
+                LOG_PROVIDER );
 
         try ( NeoStores neoStore = factory.openAllNeoStores( true ) )
         {
@@ -743,7 +754,9 @@ public class NeoStoresTest
         // GIVEN
         FileSystemAbstraction fileSystem = fs.get();
         fileSystem.mkdirs( storeDir );
-        StoreFactory factory = new StoreFactory( storeDir, pageCache, fileSystem, NullLogProvider.getInstance() );
+        StoreFactory factory = new StoreFactory(
+                storeDir, Config.defaults(), new DefaultIdGeneratorFactory( fileSystem ), pageCache, fileSystem,
+                LOG_PROVIDER );
 
         try ( NeoStores neoStore = factory.openAllNeoStores( true ) )
         {
@@ -769,7 +782,7 @@ public class NeoStoresTest
         Config defaults = Config.defaults( counts_store_rotation_timeout, "60m" );
         StoreFactory factory =
                 new StoreFactory( storeDir, defaults, new DefaultIdGeneratorFactory( fileSystem ), pageCache,
-                        fileSystem, NullLogProvider.getInstance() );
+                        fileSystem, LOG_PROVIDER );
         NeoStores neoStore = factory.openAllNeoStores( true );
 
         // let's hack the counts store so it fails to rotate and hence it fails to close as well...
@@ -828,7 +841,7 @@ public class NeoStoresTest
         fileSystem.deleteRecursively( storeDir );
         DefaultIdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fileSystem );
         StoreFactory factory = new StoreFactory( storeDir, Config.defaults(), idFactory, pageCache, fileSystem,
-                NullLogProvider.getInstance() );
+                LOG_PROVIDER );
 
         // when
         try ( NeoStores ignore = factory.openAllNeoStores( true ) )
@@ -846,7 +859,7 @@ public class NeoStoresTest
         fileSystem.deleteRecursively( storeDir );
         DefaultIdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fileSystem );
         StoreFactory factory = new StoreFactory( storeDir, Config.defaults(), idFactory, pageCache, fileSystem,
-                NullLogProvider.getInstance() );
+                LOG_PROVIDER );
         StoreType[] allStoreTypes = StoreType.values();
         StoreType[] allButLastStoreTypes = Arrays.copyOf( allStoreTypes, allStoreTypes.length - 1 );
 
@@ -896,8 +909,10 @@ public class NeoStoresTest
 
     private static StoreFactory newStoreFactory( File neoStoreDir, PageCache pageCache, FileSystemAbstraction fs )
     {
-        return new StoreFactory( neoStoreDir, pageCache, fs, RecordFormatSelector.defaultFormat(),
-                NullLogProvider.getInstance() );
+        RecordFormats recordFormats = RecordFormatSelector.defaultFormat();
+        Config config = Config.defaults();
+        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs );
+        return new StoreFactory( neoStoreDir, config, idGeneratorFactory, pageCache, fs, recordFormats, LOG_PROVIDER );
     }
 
     private Token createDummyIndex( int id, String key )
@@ -990,21 +1005,21 @@ public class NeoStoresTest
             {
                 assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( "string1", data.value().getInnerObject() );
+                assertEquals( "string1", data.value().asObject() );
                 nodeAddProperty( node, prop1.propertyKeyId(), "-string1" );
             }
             else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
                 assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( 1, data.value().getInnerObject() );
+                assertEquals( 1, data.value().asObject() );
                 nodeAddProperty( node, prop2.propertyKeyId(), -1 );
             }
             else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
                 assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( true, data.value().getInnerObject() );
+                assertEquals( true, data.value().asObject() );
                 nodeAddProperty( node, prop3.propertyKeyId(), false );
             }
             else
@@ -1081,21 +1096,21 @@ public class NeoStoresTest
             {
                 assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( "string2", data.value().getInnerObject() );
+                assertEquals( "string2", data.value().asObject() );
                 nodeAddProperty( node, prop1.propertyKeyId(), "-string2" );
             }
             else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
                 assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( 2, data.value().getInnerObject() );
+                assertEquals( 2, data.value().asObject() );
                 nodeAddProperty( node, prop2.propertyKeyId(), -2 );
             }
             else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
                 assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( false, data.value().getInnerObject() );
+                assertEquals( false, data.value().asObject() );
                 nodeAddProperty( node, prop3.propertyKeyId(), true );
             }
             else
@@ -1168,21 +1183,21 @@ public class NeoStoresTest
             {
                 assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( "string1", data.value().getInnerObject() );
+                assertEquals( "string1", data.value().asObject() );
                 relAddProperty( rel, prop1.propertyKeyId(), "-string1" );
             }
             else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
                 assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( 1, data.value().getInnerObject() );
+                assertEquals( 1, data.value().asObject() );
                 relAddProperty( rel, prop2.propertyKeyId(), -1 );
             }
             else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
                 assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( true, data.value().getInnerObject() );
+                assertEquals( true, data.value().asObject() );
                 relAddProperty( rel, prop3.propertyKeyId(), false );
             }
             else
@@ -1230,21 +1245,21 @@ public class NeoStoresTest
             {
                 assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( "string2", data.value().getInnerObject() );
+                assertEquals( "string2", data.value().asObject() );
                 relAddProperty( rel, prop1.propertyKeyId(), "-string2" );
             }
             else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
                 assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( 2, data.value().getInnerObject() );
+                assertEquals( 2, data.value().asObject() );
                 relAddProperty( rel, prop2.propertyKeyId(), -2 );
             }
             else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
                 assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( false, data.value().getInnerObject() );
+                assertEquals( false, data.value().asObject() );
                 relAddProperty( rel, prop3.propertyKeyId(), true );
             }
             else
@@ -1304,19 +1319,19 @@ public class NeoStoresTest
             {
                 assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( "-string1", data.value().getInnerObject() );
+                assertEquals( "-string1", data.value().asObject() );
             }
             else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
                 assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( -1, data.value().getInnerObject() );
+                assertEquals( -1, data.value().asObject() );
             }
             else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
                 assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( false, data.value().getInnerObject() );
+                assertEquals( false, data.value().asObject() );
                 transaction.relationshipDoRemoveProperty( rel, prop3.propertyKeyId(), prop3.value() );
             }
             else
@@ -1365,19 +1380,19 @@ public class NeoStoresTest
             {
                 assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( "-string2", data.value().getInnerObject() );
+                assertEquals( "-string2", data.value().asObject() );
             }
             else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
                 assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( -2, data.value().getInnerObject() );
+                assertEquals( -2, data.value().asObject() );
             }
             else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
                 assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( true, data.value().getInnerObject() );
+                assertEquals( true, data.value().asObject() );
                 transaction.relationshipDoRemoveProperty( rel, prop3.propertyKeyId(), prop3.value() );
             }
             else
@@ -1431,19 +1446,19 @@ public class NeoStoresTest
             {
                 assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( "-string1", data.value().getInnerObject() );
+                assertEquals( "-string1", data.value().asObject() );
             }
             else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
                 assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( -1, data.value().getInnerObject() );
+                assertEquals( -1, data.value().asObject() );
             }
             else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
                 assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( false, data.value().getInnerObject() );
+                assertEquals( false, data.value().asObject() );
                 transaction.nodeDoRemoveProperty( node, prop3.propertyKeyId(), prop3.value() );
             }
             else
@@ -1477,19 +1492,19 @@ public class NeoStoresTest
             {
                 assertEquals( "prop1", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( "-string2", data.value().getInnerObject() );
+                assertEquals( "-string2", data.value().asObject() );
             }
             else if ( data.propertyKeyId() == prop2.propertyKeyId() )
             {
                 assertEquals( "prop2", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( -2, data.value().getInnerObject() );
+                assertEquals( -2, data.value().asObject() );
             }
             else if ( data.propertyKeyId() == prop3.propertyKeyId() )
             {
                 assertEquals( "prop3", MyPropertyKeyToken.getIndexFor(
                         keyId ).name() );
-                assertEquals( true, data.value().getInnerObject() );
+                assertEquals( true, data.value().asObject() );
                 transaction.nodeDoRemoveProperty( node, prop3.propertyKeyId(), prop3.value() );
             }
             else

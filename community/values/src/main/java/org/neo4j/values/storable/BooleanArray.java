@@ -21,6 +21,7 @@ package org.neo4j.values.storable;
 
 import java.util.Arrays;
 
+import org.neo4j.graphdb.spatial.Geometry;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.SequenceValue;
 
@@ -102,6 +103,12 @@ public abstract class BooleanArray extends ArrayValue
     }
 
     @Override
+    public boolean equals( Geometry[] x )
+    {
+        return false;
+    }
+
+    @Override
     public int computeHash()
     {
         return NumberValues.hash( value() );
@@ -120,7 +127,8 @@ public abstract class BooleanArray extends ArrayValue
     }
 
     @Override
-    public Object getInnerObject()
+    @Deprecated
+    public Object asObject()
     {
         return value();
     }

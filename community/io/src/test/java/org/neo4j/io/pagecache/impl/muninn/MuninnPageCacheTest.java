@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 import org.neo4j.graphdb.mockfs.DelegatingFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.DelegatingStoreChannel;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.PageCacheTest;
 import org.neo4j.io.pagecache.PageCursor;
@@ -97,7 +98,7 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
         RecordingPageCursorTracer cursorTracer = new RecordingPageCursorTracer();
         ConfigurablePageCursorTracerSupplier cursorTracerSupplier = new ConfigurablePageCursorTracerSupplier( cursorTracer );
 
-        try ( MuninnPageCache pageCache = createPageCache( fs, 2, 8, blockCacheFlush( tracer ), cursorTracerSupplier );
+        try ( MuninnPageCache pageCache = createPageCache( fs, 2, blockCacheFlush( tracer ), cursorTracerSupplier );
               PagedFile pagedFile = pageCache.map( file( "a" ), 8 ) )
         {
             try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK ) )
@@ -123,7 +124,7 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
         RecordingPageCursorTracer cursorTracer = new RecordingPageCursorTracer();
         ConfigurablePageCursorTracerSupplier cursorTracerSupplier = new ConfigurablePageCursorTracerSupplier( cursorTracer );
 
-        try ( MuninnPageCache pageCache = createPageCache( fs, 2, 8, blockCacheFlush( tracer ), cursorTracerSupplier );
+        try ( MuninnPageCache pageCache = createPageCache( fs, 2, blockCacheFlush( tracer ), cursorTracerSupplier );
               PagedFile pagedFile = pageCache.map( file( "a" ), 8 ) )
         {
 
@@ -155,7 +156,7 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
         RecordingPageCursorTracer cursorTracer = new RecordingPageCursorTracer();
         ConfigurablePageCursorTracerSupplier cursorTracerSupplier = new ConfigurablePageCursorTracerSupplier( cursorTracer );
 
-        try ( MuninnPageCache pageCache = createPageCache( fs, 2, 8, blockCacheFlush( tracer ), cursorTracerSupplier );
+        try ( MuninnPageCache pageCache = createPageCache( fs, 2, blockCacheFlush( tracer ), cursorTracerSupplier );
               PagedFile pagedFile = pageCache.map( file( "a" ), 8 ) )
         {
             try ( PageCursor cursor = pagedFile.io( 1, PF_SHARED_WRITE_LOCK ) )
@@ -186,7 +187,7 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
         RecordingPageCursorTracer cursorTracer = new RecordingPageCursorTracer( Fault.class );
         ConfigurablePageCursorTracerSupplier cursorTracerSupplier = new ConfigurablePageCursorTracerSupplier( cursorTracer );
 
-        try ( MuninnPageCache pageCache = createPageCache( fs, 4, 8, blockCacheFlush( tracer ), cursorTracerSupplier );
+        try ( MuninnPageCache pageCache = createPageCache( fs, 4, blockCacheFlush( tracer ), cursorTracerSupplier );
               PagedFile pagedFile = pageCache.map( file( "a" ), 8 ) )
         {
             try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_WRITE_LOCK | PF_NO_GROW ) )
@@ -219,7 +220,8 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
     {
         writeInitialDataTo( file( "a" ) );
 
-        try ( MuninnPageCache pageCache = createPageCache( fs, 2, 8, PageCacheTracer.NULL, DefaultPageCursorTracerSupplier.INSTANCE );
+        try ( MuninnPageCache pageCache = createPageCache( fs, 2,
+                PageCacheTracer.NULL, DefaultPageCursorTracerSupplier.INSTANCE );
               PagedFile pagedFile = pageCache.map( file( "a" ), 8 ) )
         {
             Future<?> task = executor.submit( () ->
@@ -262,9 +264,9 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
         FileSystemAbstraction fs = new DelegatingFileSystemAbstraction( this.fs )
         {
             @Override
-            public StoreChannel open( File fileName, String mode ) throws IOException
+            public StoreChannel open( File fileName, OpenMode openMode ) throws IOException
             {
-                return new DelegatingStoreChannel( super.open( fileName, mode ) )
+                return new DelegatingStoreChannel( super.open( fileName, openMode ) )
                 {
                     @Override
                     public void writeAll( ByteBuffer src, long position ) throws IOException
@@ -282,7 +284,8 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
             }
         };
 
-        try ( MuninnPageCache pageCache = createPageCache( fs, 2, 8, PageCacheTracer.NULL, DefaultPageCursorTracerSupplier.INSTANCE );
+        try ( MuninnPageCache pageCache = createPageCache( fs, 2,
+                PageCacheTracer.NULL, DefaultPageCursorTracerSupplier.INSTANCE );
               PagedFile pagedFile = pageCache.map( file( "a" ), 8 ) )
         {
             // The basic idea is that this loop, which will encounter a lot of page faults, must not block forever even
@@ -310,7 +313,7 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
     {
         File file = file( "a" );
         writeInitialDataTo( file );
-        try ( MuninnPageCache pageCache = createPageCache( fs, 30, pageCachePageSize, PageCacheTracer.NULL,
+        try ( MuninnPageCache pageCache = createPageCache( fs, 30, PageCacheTracer.NULL,
                 DefaultPageCursorTracerSupplier.NULL ) )
         {
             PagedFile pf = null;
@@ -357,9 +360,9 @@ public class MuninnPageCacheTest extends PageCacheTest<MuninnPageCache>
     private ByteBuffer readIntoBuffer( String fileName ) throws IOException
     {
         ByteBuffer buffer = ByteBuffer.allocate( 16 );
-        try ( StoreChannel channel = fs.open( file( fileName ), "r" ) )
+        try ( StoreChannel channel = fs.open( file( fileName ), OpenMode.READ ) )
         {
-            channel.read( buffer );
+            channel.readAll( buffer );
         }
         buffer.flip();
         return  buffer;

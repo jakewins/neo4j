@@ -20,7 +20,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport.Configs
+import org.neo4j.internal.cypher.acceptance.CypherComparisonSupport._
 
 class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -74,7 +74,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
   test("projecting from a null identifier produces a null value") {
 
-    val result = executeWith(Configs.CommunityInterpreted - Configs.Version2_3, "OPTIONAL MATCH (n) RETURN n{.foo, .bar}")
+    val result = executeWith(Configs.Interpreted - Configs.Version2_3, "OPTIONAL MATCH (n) RETURN n{.foo, .bar}")
 
     result.toList should equal(List(Map("n" -> null)))
   }
@@ -97,7 +97,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("prepending item to a list should behave correctly in all runtimes") {
     val query = "CYPHER WITH {a:[1,2,3]} AS x RETURN 'a:' + x.a AS r"
 
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.All + Configs.Morsel, query)
 
     result.toList.head("r") should equal(List("a:", 1, 2, 3))
   }
@@ -105,19 +105,28 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("appending item to a list should behave correctly in all runtimes") {
     val query = "CYPHER WITH {a:[1,2,3]} AS x RETURN x.a + 'a:' AS r"
 
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.All + Configs.Morsel, query)
 
     result.toList.head("r") should equal(List(1, 2, 3, "a:"))
   }
 
   test("not(), when right of a =, should give a helpful error message") {
-
     val query = "RETURN true = not(42 = 32)"
 
-    // this should have the right error message for 3.1 and 3.2 after the next patch releases
+    // this should have the right error message for 3.1 after the next patch releases
     val config =  Configs.AbsolutelyAll - Configs.Version3_1 - Configs.Version2_3 - Configs.AllRulePlanners
 
-    val result = failWithError(config, query,
+    failWithError(config, query,
       List("Unknown function 'not'. If you intended to use the negation expression, surround it with parentheses."))
+  }
+
+  test("NOT(), when right of a =, should give a helpful error message") {
+    val query = "RETURN true = NOT(42 = 32)"
+
+    // this should have the right error message for 3.1 after the next patch releases
+    val config =  Configs.AbsolutelyAll- Configs.Version3_1 - Configs.Version2_3 - Configs.AllRulePlanners
+
+    failWithError(config, query,
+      List("Unknown function 'NOT'. If you intended to use the negation expression, surround it with parentheses."))
   }
 }

@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
+import java.util.function.LongFunction;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -40,16 +40,18 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.graphdb.index.RelationshipIndex;
+import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.internal.kernel.api.TokenNameLookup;
+import org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.ExplicitIndexHits;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.StatementTokenNameLookup;
-import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
+import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.TokenAccess;
 import org.neo4j.kernel.impl.api.index.IndexingService;
@@ -162,8 +164,11 @@ public class BuiltInProcedures
                         type = IndexType.NODE_LABEL_PROPERTY.typeName();
                     }
 
-                    result.add( new IndexResult( "INDEX ON " + index.schema().userDescription( tokens ),
-                            operations.indexGetState( index ).toString(), type ) );
+                    String label = tokens.labelGetName( index.schema().getLabelId() );
+                    List<String> propertyNames = propertyNames( tokens, index );
+                    result.add( new IndexResult( "INDEX ON " + index.schema().userDescription( tokens ), label, propertyNames,
+                            operations.indexGetState( index ).toString(), type,
+                            indexProviderDescriptorMap( operations.indexGetProviderDescriptor( index ) ) ) );
                 }
                 catch ( IndexNotFoundKernelException e )
                 {
@@ -259,7 +264,7 @@ public class BuiltInProcedures
         }
     }
 
-    @Description( "Search nodes from explicit index. Replaces `START n=node:nodes('key:foo*')`" )
+    @Description( "Search nodes in explicit index. Replaces `START n=node:nodes('key:foo*')`" )
     @Procedure( name = "db.index.explicit.searchNodes", mode = READ )
     public Stream<WeightedNodeResult> nodeManualIndexSearch( @Name( "indexName" ) String manualIndexName,
             @Name( "query" ) Object query )
@@ -298,7 +303,7 @@ public class BuiltInProcedures
         }
     }
 
-    @Description( "Search relationship from explicit index. Replaces `START r=relationship:relIndex('key:foo*')`" )
+    @Description( "Search relationship in explicit index. Replaces `START r=relationship:relIndex('key:foo*')`" )
     @Procedure( name = "db.index.explicit.searchRelationships", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipManualIndexSearch(
             @Name( "indexName" ) String manualIndexName,
@@ -318,7 +323,7 @@ public class BuiltInProcedures
         }
     }
 
-    @Description( "Search relationship from explicit index, starting at the node 'in'." )
+    @Description( "Search relationship in explicit index, starting at the node 'in'." )
     @Procedure( name = "db.index.explicit.searchRelationshipsIn", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipManualIndexSearchWithBoundStartNode(
             @Name( "indexName" ) String indexName,
@@ -339,7 +344,7 @@ public class BuiltInProcedures
         }
     }
 
-    @Description( "Search relationship from explicit index, ending at the node 'out'." )
+    @Description( "Search relationship in explicit index, ending at the node 'out'." )
     @Procedure( name = "db.index.explicit.searchRelationshipsOut", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipManualIndexSearchWithBoundEndNode(
             @Name( "indexName" ) String indexName,
@@ -360,7 +365,7 @@ public class BuiltInProcedures
         }
     }
 
-    @Description( "Search relationship from explicit index, starting at the node 'in' and ending at 'out'." )
+    @Description( "Search relationship in explicit index, starting at the node 'in' and ending at 'out'." )
     @Procedure( name = "db.index.explicit.searchRelationshipsBetween", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipManualIndexSearchWithBoundNodes(
             @Name( "indexName" ) String indexName,
@@ -400,7 +405,7 @@ public class BuiltInProcedures
         }
     }
 
-    @Description( "Search nodes from explicit automatic index. Replaces `START n=node:node_auto_index('key:foo*')`" )
+    @Description( "Search nodes in explicit automatic index. Replaces `START n=node:node_auto_index('key:foo*')`" )
     @Procedure( name = "db.index.explicit.auto.searchNodes", mode = READ )
     public Stream<WeightedNodeResult> nodeAutoIndexSearch( @Name( "query" ) Object query ) throws ProcedureException
     {
@@ -437,7 +442,7 @@ public class BuiltInProcedures
         }
     }
 
-    @Description( "Search relationship from explicit automatic index. Replaces `START r=relationship:relationship_auto_index" +
+    @Description( "Search relationship in explicit automatic index. Replaces `START r=relationship:relationship_auto_index" +
                   "('key:foo*')`" )
     @Procedure( name = "db.index.explicit.auto.searchRelationships", mode = READ )
     public Stream<WeightedRelationshipResult> relationshipAutoIndexSearch( @Name( "query" ) Object query )
@@ -459,19 +464,37 @@ public class BuiltInProcedures
 
     @Description( "Get or create a node explicit index - YIELD type,name,config" )
     @Procedure( name = "db.index.explicit.forNodes", mode = WRITE )
-    public Stream<ExplicitIndexInfo> nodeManualIndex( @Name( "indexName" ) String explicitIndexName )
+    public Stream<ExplicitIndexInfo> nodeManualIndex( @Name( "indexName" ) String explicitIndexName,
+            @Name( value = "config", defaultValue = "" ) Map<String,String> config )
     {
         IndexManager mgr = graphDatabaseAPI.index();
-        Index<Node> index = mgr.forNodes( explicitIndexName );
+        Index<Node> index;
+        if ( config.isEmpty() )
+        {
+            index = mgr.forNodes( explicitIndexName );
+        }
+        else
+        {
+            index = mgr.forNodes( explicitIndexName, config );
+        }
         return Stream.of( new ExplicitIndexInfo( "NODE", explicitIndexName, mgr.getConfiguration( index ) ) );
     }
 
     @Description( "Get or create a relationship explicit index - YIELD type,name,config" )
     @Procedure( name = "db.index.explicit.forRelationships", mode = WRITE )
-    public Stream<ExplicitIndexInfo> relationshipManualIndex( @Name( "indexName" ) String explicitIndexName )
+    public Stream<ExplicitIndexInfo> relationshipManualIndex( @Name( "indexName" ) String explicitIndexName,
+            @Name( value = "config", defaultValue = "" ) Map<String,String> config )
     {
         IndexManager mgr = graphDatabaseAPI.index();
-        Index<Relationship> index = mgr.forRelationships( explicitIndexName );
+        Index<Relationship> index;
+        if ( config.isEmpty() )
+        {
+            index = mgr.forRelationships( explicitIndexName );
+        }
+        else
+        {
+            index = mgr.forRelationships( explicitIndexName, config );
+        }
         return Stream.of( new ExplicitIndexInfo( "RELATIONSHIP", explicitIndexName, mgr.getConfiguration( index ) ) );
     }
 
@@ -508,7 +531,7 @@ public class BuiltInProcedures
         return indexInfos.stream();
     }
 
-    @Description( "Remove a explicit index - YIELD type,name,config" )
+    @Description( "Remove an explicit index - YIELD type,name,config" )
     @Procedure( name = "db.index.explicit.drop", mode = WRITE )
     public Stream<ExplicitIndexInfo> manualIndexDrop( @Name( "indexName" ) String explicitIndexName )
     {
@@ -529,7 +552,7 @@ public class BuiltInProcedures
         return results.stream();
     }
 
-    @Description( "Add a node to a explicit index based on a specified key and value" )
+    @Description( "Add a node to an explicit index based on a specified key and value" )
     @Procedure( name = "db.index.explicit.addNode", mode = WRITE )
     public Stream<BooleanResult> nodeManualIndexAdd( @Name( "indexName" ) String explicitIndexName,
             @Name( "node" ) Node node, @Name( "key" ) String key,
@@ -540,7 +563,7 @@ public class BuiltInProcedures
         return Stream.of( new BooleanResult( true ) );
     }
 
-    @Description( "Add a relationship to a explicit index based on a specified key and value" )
+    @Description( "Add a relationship to an explicit index based on a specified key and value" )
     @Procedure( name = "db.index.explicit.addRelationship", mode = WRITE )
     public Stream<BooleanResult> relationshipManualIndexAdd( @Name( "indexName" ) String explicitIndexName,
             @Name( "relationship" ) Relationship relationship,
@@ -551,7 +574,7 @@ public class BuiltInProcedures
         return Stream.of( new BooleanResult( true ) );
     }
 
-    @Description( "Remove a node from a explicit index with an optional key" )
+    @Description( "Remove a node from an explicit index with an optional key" )
     @Procedure( name = "db.index.explicit.removeNode", mode = WRITE )
     public Stream<BooleanResult> nodeManualIndexRemove( @Name( "indexName" ) String explicitIndexName,
             @Name( "node" ) Node node, @Name( "key" ) String key )
@@ -568,7 +591,7 @@ public class BuiltInProcedures
         return Stream.of( new BooleanResult( true ) );
     }
 
-    @Description( "Remove a relationship from a explicit index with an optional key" )
+    @Description( "Remove a relationship from an explicit index with an optional key" )
     @Procedure( name = "db.index.explicit.removeRelationship", mode = WRITE )
     public Stream<BooleanResult> relationshipManualIndexRemove( @Name( "indexName" ) String explicitIndexName,
             @Name( "relationship" ) Relationship relationship,
@@ -586,7 +609,25 @@ public class BuiltInProcedures
         return Stream.of( new BooleanResult( true ) );
     }
 
-    private <T> Stream<T> toStream( PrimitiveLongResourceIterator iterator, Function<Long,T> mapper )
+    private Map<String,String> indexProviderDescriptorMap( SchemaIndexProvider.Descriptor providerDescriptor )
+    {
+        return MapUtil.stringMap(
+                "key", providerDescriptor.getKey(),
+                "version", providerDescriptor.getVersion() );
+    }
+
+    private List<String> propertyNames( TokenNameLookup tokens, IndexDescriptor index )
+    {
+        int[] propertyIds = index.schema().getPropertyIds();
+        List<String> propertyNames = new ArrayList<>();
+        for ( int i = 0; i < propertyIds.length; i++ )
+        {
+            propertyNames.add( tokens.propertyKeyGetName( propertyIds[i] ) );
+        }
+        return propertyNames;
+    }
+
+    private <T> Stream<T> toStream( PrimitiveLongResourceIterator iterator, LongFunction<T> mapper )
     {
         Iterator<T> it = new Iterator<T>()
         {
@@ -699,14 +740,20 @@ public class BuiltInProcedures
     public class IndexResult
     {
         public final String description;
+        public final String label;
+        public final List<String> properties;
         public final String state;
         public final String type;
+        public final Map<String,String> provider;
 
-        private IndexResult( String description, String state, String type )
+        private IndexResult( String description, String label, List<String> properties, String state, String type, Map<String,String> provider )
         {
             this.description = description;
+            this.label = label;
+            this.properties = properties;
             this.state = state;
             this.type = type;
+            this.provider = provider;
         }
     }
 
