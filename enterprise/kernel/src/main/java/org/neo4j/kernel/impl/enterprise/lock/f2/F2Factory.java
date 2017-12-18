@@ -19,13 +19,15 @@
  */
 package org.neo4j.kernel.impl.enterprise.lock.f2;
 
+import java.time.Clock;
+import java.util.OptionalInt;
+import java.util.stream.Stream;
+
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.storageengine.api.lock.ResourceType;
-
-import java.time.Clock;
 
 import static org.neo4j.kernel.configuration.Settings.setting;
 
@@ -45,6 +47,11 @@ public class F2Factory extends Locks.Factory
     @Override
     public Locks newInstance( Config config, Clock clocks, ResourceType[] resourceTypes )
     {
-        return new F2Locks( resourceTypes, config.get( numPartitions ) );
+        OptionalInt maxResourceIndex = Stream.of( resourceTypes ).mapToInt( ResourceType::typeId ).max();
+        if(!maxResourceIndex.isPresent())
+        {
+            throw new IllegalStateException( "There needs to be at least one lock resource type to user the F2 lock manager." );
+        }
+        return new F2Locks( maxResourceIndex.getAsInt(), config.get( numPartitions ) );
     }
 }

@@ -19,12 +19,11 @@
  */
 package org.neo4j.kernel.impl.enterprise.lock.f2;
 
-import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.storageengine.api.lock.ResourceType;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.neo4j.kernel.impl.locking.Locks;
 
 enum LockMode
 {
@@ -124,13 +123,13 @@ public class F2Locks implements Locks
 {
     private final F2Partitions partitions;
     private final DeadlockDetector deadlockDetector;
-    private final ResourceType[] resourceTypes;
+    private final int numResourceTypes;
     private AtomicLong clientCounter = new AtomicLong();
 
-    public F2Locks( ResourceType[] resourceTypes, int numPartitions )
+    public F2Locks( int numResourceTypes, int numPartitions )
     {
-        this.resourceTypes = resourceTypes;
-        this.partitions = new F2Partitions( resourceTypes.length, numPartitions );
+        this.numResourceTypes = numResourceTypes;
+        this.partitions = new F2Partitions( numResourceTypes, numPartitions );
         this.deadlockDetector = new DeadlockDetector();
 
         LockGraphDump.register( this.partitions );
@@ -139,7 +138,7 @@ public class F2Locks implements Locks
     @Override
     public Client newClient()
     {
-        F2Client client = new F2Client( resourceTypes.length, partitions, deadlockDetector );
+        F2Client client = new F2Client( numResourceTypes, partitions, deadlockDetector );
         client.setName( String.format( "%d", clientCounter.getAndIncrement() ) );
         LockGraphDump.register( client );
         return client;
