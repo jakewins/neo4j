@@ -22,6 +22,7 @@ package org.neo4j.tools.boltalyzer;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -144,28 +145,53 @@ public class Boltalyzer
         @Override
         public Dict apply( Dict packet )
         {
+            AnalyzedSession sess = sessions.session( packet.get( connectionKey ) );
+            packet.put( session, sess );
+            if ( packet.get( dstPort ) == serverPort )
+            {
+                packet.put( description, describeClientPayload( packet.get( payload ), sess ) );
+                packet.put( logicalSource, "Client" );
+            }
+            else
+            {
+                packet.put( description, describeServerPayload( packet.get( payload ), sess ) );
+                packet.put( logicalSource, "Server" );
+            }
+            return packet;
+        }
+
+        private String describeClientPayload( ByteBuffer packet, AnalyzedSession sess ) {
             try
             {
-                if ( packet.get( dstPort ) == serverPort )
-                {
-                    AnalyzedSession sess = sessions.session( packet.get( connectionKey ) );
-                    packet.put( description, sess.describeClientPayload( packet.get( payload ) ) );
-                    packet.put( session, sess );
-                    packet.put( logicalSource, "Client" );
-                }
-                else
-                {
-                    AnalyzedSession sess = sessions.session( packet.get( connectionKey ) );
-                    packet.put( description, sess.describeServerPayload( packet.get( payload ) ) );
-                    packet.put( session, sess );
-                    packet.put( logicalSource, "Server" );
-                }
-                return packet;
+                return sess.describeClientPayload( packet );
             }
-            catch( IOException e )
+            catch ( IOException e )
             {
-                throw new RuntimeException( e );
+                return String.format("[Unparseable] %s", bytesToHex( packet ));
             }
+        }
+
+        private String describeServerPayload( ByteBuffer packet, AnalyzedSession sess ) {
+            try
+            {
+                return sess.describeServerPayload( packet );
+            }
+            catch ( IOException e )
+            {
+                return String.format("[Unparseable] %s", bytesToHex( packet ));
+            }
+        }
+
+
+        private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
+        public static String bytesToHex(ByteBuffer bytes) {
+            char[] hexChars = new char[bytes.remaining() * 2];
+            for ( int j = 0; j < bytes.remaining(); j++ ) {
+                int v = bytes.get(j) & 0xFF;
+                hexChars[j * 2] = hexArray[v >>> 4];
+                hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+            }
+            return new String(hexChars);
         }
     }
 }

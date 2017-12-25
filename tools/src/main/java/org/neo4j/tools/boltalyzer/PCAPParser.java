@@ -71,8 +71,14 @@ public class PCAPParser
             in.skip( 4 );
             return in.read( length - 4 );
         } );
+        // LINKTYPE_ETHERNET
+        physicalFormats.put( 1, ( in, length ) -> {
+            // Ethernet header (Layer 2!, Layer 1 Ethernet is different)
+            int header = 14;
+            in.skip( header );
+            return in.read( length - header );
+        });
     }
-
 
     public Stream<Dict> parse( InputStream rawStream ) throws IOException
     {
@@ -91,7 +97,7 @@ public class PCAPParser
         // Followed by the network type
         int networkType = in.readInt();
         PhysicalFormat physicalFormat = physicalFormats.get( networkType );
-        if( networkType != 0 )
+        if( physicalFormat == null )
         {
             throw new IOException( "Don't know how do decode packets from " + Integer.toHexString( networkType ) + " network type. You need to add a physical format parser for this format to PCAPParser." );
         }

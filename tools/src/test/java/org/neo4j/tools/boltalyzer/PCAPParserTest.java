@@ -22,7 +22,9 @@ package org.neo4j.tools.boltalyzer;
 import org.junit.Test;
 
 import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -45,5 +47,17 @@ public class PCAPParserTest
         assertThat( packets.size(), equalTo( 21 ));
         assertThat( packets.get( 0 ).get( dstPort ), equalTo( 7687 ));
         assertThat( packets.get( 0 ).get( srcPort ), equalTo( 49349 ));
+    }
+
+    @Test
+    public void asd() throws Exception
+    {
+        // Given
+        Stream<Dict> parse = new PCAPParser().parse( new DataInputStream( new FileInputStream( "/home/jake/Downloads/alex/alex.pcap" ) ) );
+
+        parse.limit( 1 ).forEach( System.out::println );
+        // When
+
+        // Then
     }
 }
