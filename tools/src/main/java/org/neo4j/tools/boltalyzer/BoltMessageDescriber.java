@@ -19,8 +19,11 @@
  */
 package org.neo4j.tools.boltalyzer;
 
+import org.codehaus.jackson.map.ObjectMapper;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -28,14 +31,35 @@ import org.neo4j.bolt.v1.messaging.MessageHandler;
 import org.neo4j.bolt.v1.runtime.spi.Record;
 import org.neo4j.kernel.api.exceptions.Status;
 
+import static java.util.Collections.singletonList;
+
 public class BoltMessageDescriber implements MessageHandler<RuntimeException>
 {
+    private final ObjectMapper mapper = new ObjectMapper();
     private final List<String> messages = new ArrayList<>();
+
+    private final boolean describeParams;
+
+    public BoltMessageDescriber( boolean describeParams )
+    {
+        this.describeParams = describeParams;
+    }
 
     @Override
     public void handleRunMessage( String statement, Map<String,Object> params ) throws RuntimeException
     {
-        messages.add( "RUN " + statement );
+        try
+        {
+            if(describeParams) {
+                messages.add( "RUN " + mapper.writeValueAsString( Arrays.asList( statement, params ) ) );
+            } else {
+                messages.add( "RUN " + mapper.writeValueAsString( singletonList( statement ) ) );
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     @Override

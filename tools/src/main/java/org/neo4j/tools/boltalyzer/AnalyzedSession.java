@@ -35,19 +35,23 @@ public class AnalyzedSession
 {
     private final String name;
     private final long id;
-    private final BoltMessageDescriber clientStreamDescriber = new BoltMessageDescriber();
-    private final BoltMessageDescriber serverStreamDescriber = new BoltMessageDescriber();
+    private final BoltMessageDescriber clientStreamDescriber;
+    private final BoltMessageDescriber serverStreamDescriber;
 
-    private final BoltV1Dechunker clientStream = new BoltV1Dechunker( clientStreamDescriber, () -> {} );
-    private final BoltV1Dechunker serverStream = new BoltV1Dechunker( serverStreamDescriber, () -> {} );
+    private final BoltV1Dechunker clientStream;
+    private final BoltV1Dechunker serverStream;
 
     private int clientHandshakeRemaining = 16;
     private int serverHandshakeRemaining = 4;
 
-    public AnalyzedSession( String name, long id )
+    public AnalyzedSession( String name, long id, boolean describeParams)
     {
         this.name = name;
         this.id = id;
+        this.clientStreamDescriber = new BoltMessageDescriber( describeParams );
+        this.serverStreamDescriber = new BoltMessageDescriber( describeParams );
+        this.clientStream = new BoltV1Dechunker( clientStreamDescriber, () -> {} );
+        this.serverStream = new BoltV1Dechunker( serverStreamDescriber, () -> {} );
     }
 
     public String name()

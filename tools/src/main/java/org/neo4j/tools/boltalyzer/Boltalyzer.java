@@ -87,7 +87,9 @@ public class Boltalyzer
 
                             // Decorate each packet with semantic information about what the actual bolt messages were,
                             // what the logical session and logical source of the message was
-                    .map( new AddBoltDescription( args.getNumber( "serverport", 7687 ).intValue() ) )
+                    .map( new AddBoltDescription(
+                            args.getNumber( "serverport", 7687 ).intValue(),
+                            args.getBoolean( "params", false ) ) )
 
                             // Now we can skip things (currently the step above needs to see all packets to maintain message framing alignment, so
                             // we can't skip until after the step above)
@@ -116,7 +118,13 @@ public class Boltalyzer
     public static class SessionRepository
     {
         private final Map<Object,AnalyzedSession> openSessions = new HashMap<>();
+        private final boolean describeParams;
         private int sessionCount = 0;
+
+        public SessionRepository( boolean describeParams )
+        {
+            this.describeParams = describeParams;
+        }
 
         public AnalyzedSession session( Object connectionKey )
         {
@@ -124,7 +132,7 @@ public class Boltalyzer
             if( session == null )
             {
                 int sid = sessionCount++;
-                session = new AnalyzedSession(  String.format("session-%03d", sid ), sid );
+                session = new AnalyzedSession(  String.format("session-%03d", sid ), sid, describeParams );
                 openSessions.put( connectionKey, session );
             }
             return session;
@@ -134,12 +142,13 @@ public class Boltalyzer
     /** Adds a description of the messages in each packet, plus semantic info about who is sending it and attaches a session object to it */
     public static class AddBoltDescription implements Function<Dict, Dict>
     {
-        private final SessionRepository sessions = new SessionRepository();
+        private final SessionRepository sessions;
         private final int serverPort;
 
-        public AddBoltDescription( int serverPort )
+        public AddBoltDescription( int serverPort, boolean describeParams )
         {
             this.serverPort = serverPort;
+            this.sessions = new SessionRepository( describeParams );
         }
 
         @Override
@@ -182,9 +191,8 @@ public class Boltalyzer
             }
         }
 
-
         private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
-        public static String bytesToHex(ByteBuffer bytes) {
+        private static String bytesToHex(ByteBuffer bytes) {
             char[] hexChars = new char[bytes.remaining() * 2];
             for ( int j = 0; j < bytes.remaining(); j++ ) {
                 int v = bytes.get(j) & 0xFF;
