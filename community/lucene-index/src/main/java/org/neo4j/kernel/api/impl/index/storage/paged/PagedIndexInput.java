@@ -24,55 +24,92 @@ import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.RandomAccessInput;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 public class PagedIndexInput extends IndexInput implements RandomAccessInput
 {
-    private final long fileSize;
+    private final long inputSize;
     private final int pageSize;
-    private final long lastPageId;
-    private final int lastPageSize;
 
-    private PagedFile file;
+    // Used when this input is a slice of the full input, pointing to the logical
+    // start point of the input
+    private final long startPosition;
+
+    private final long endPageId;
+    private final int endPageOffset;
+
+    private final PageCache pageCache;
+    private final File file;
+    private PagedFile pagedfile;
     private PageCursor cursor;
 
     private long currentPageId;
     private int currentPageOffset;
 
-    public PagedIndexInput( String resourceDescription, PagedFile file, long fileSize ) throws IOException
+    public static PagedIndexInput newInstance( String resourceDescription, Path path, PageCache pageCache ) throws IOException
+    {
+        File fileToOpen = path.toFile();
+        return newInstance( resourceDescription, pageCache, fileToOpen, 0, pageCache.getCachedFileSystem().getFileSize( fileToOpen ) );
+    }
+
+    private static PagedIndexInput newInstance( String resourceDescription, PageCache pageCache, File file, long startPosition, long size )
+            throws IOException
+    {
+        // We rely on the reference counting in the page cache, associating one PagedFile with each input pointing to that
+        // same file; we may want to optimize this on some level? Not sure if we've spent any cycles on #map() of the same file.
+        PagedFile pagedFile = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.READ );
+        PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK );
+
+        return new PagedIndexInput( resourceDescription, file, pageCache, pagedFile, cursor, startPosition, size );
+    }
+
+    PagedIndexInput( String resourceDescription, File file, PageCache pageCache, PagedFile pagedFile, PageCursor cursor, long startPosition, long size ) throws IOException
     {
         super( resourceDescription );
         this.file = file;
-        this.fileSize = fileSize;
-        this.pageSize = file.pageSize();
-        this.lastPageId = file.getLastPageId();
-        this.lastPageSize = calcLastPageSize(fileSize, this.pageSize);
-        this.cursor = file.io( 0, PagedFile.PF_SHARED_READ_LOCK );
+        this.pageCache = pageCache;
+        this.pagedfile = pagedFile;
+        this.pageSize = pagedFile.pageSize();
+        this.inputSize = size;
+        this.startPosition = startPosition;
+        this.currentPageId = pageId( 0 );
+        this.currentPageOffset = pageOffset( 0 );
+        this.endPageId = pageId( startPosition + size );
+        this.endPageOffset = calcLastPageOffset( startPosition + size, pageSize );
+        this.cursor = cursor;
     }
 
-    private static int calcLastPageSize(long fileSize, int pageSize)
+    private static int calcLastPageOffset( long fileSize, int pageSize )
     {
+        if(fileSize == 0) {
+            return 0;
+        }
         int size = (int) (fileSize % pageSize);
         return size == 0 ? pageSize : size;
     }
 
     private long pageId( long position )
     {
-        return position / pageSize;
+        return (startPosition + position) / pageSize;
     }
 
     private int pageOffset( long position )
     {
-        return (int) (position % pageSize);
+        return (int) ((startPosition + position) % pageSize);
     }
 
     @Override
     public final byte readByte() throws IOException
     {
-        moveCursorToPageAndAssertInBounds(currentPageId, currentPageOffset);
+        moveCursorToPageAndAssertInBounds( currentPageId, currentPageOffset );
 
         byte val;
         do
@@ -308,7 +345,6 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         currentPageOffset = newOffset;
     }
 
-
     private void boundsCheck() throws EOFException
     {
         if ( cursor.checkAndClearBoundsFlag() )
@@ -328,7 +364,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         }
     }
 
-    private void moveCursorToPageAndAssertInBounds(long pageId, int offsetInPage) throws IOException
+    private void moveCursorToPageAndAssertInBounds( long pageId, int offsetInPage ) throws IOException
     {
         if ( !cursor.next( pageId ) || isEOF( pageId, offsetInPage ) )
         {
@@ -338,16 +374,16 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
     private boolean isEOF( long pageId, int offsetInPage )
     {
-        boolean isBeforeLastPage = pageId > lastPageId;
-        boolean isLastPage = pageId == lastPageId;
-        boolean offsetOutsidePage = offsetInPage >= lastPageSize;
+        boolean isBeforeLastPage = pageId > endPageId;
+        boolean isLastPage = pageId == endPageId;
+        boolean offsetOutsidePage = offsetInPage >= endPageOffset;
         return isBeforeLastPage || (isLastPage && offsetOutsidePage);
     }
 
     @Override
     public final long length()
     {
-        return fileSize;
+        return inputSize;
     }
 
     @Override
@@ -363,14 +399,21 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public final PagedIndexInput slice( String sliceDescription, long offset, long length )
     {
-        if ( offset < 0 || length < 0 || offset + length > this.fileSize )
+        if ( offset < 0 || length < 0 || offset + length > this.inputSize )
         {
             throw new IllegalArgumentException(
-                    "slice() " + sliceDescription + " out of bounds: offset=" + offset + ",length=" + length + ",fileLength=" + this.fileSize + ": " + this );
+                    "slice() " + sliceDescription + " out of bounds: offset=" + offset + ",length=" + length + ",fileLength=" + this.inputSize + ": " + this );
         }
 
-        // See BufferedIndexInput
-        throw new UnsupportedOperationException( "Not implemented" );
+        try
+        {
+            return newInstance( sliceDescription, pageCache, file, startPosition + offset, length );
+        }
+        catch ( IOException e )
+        {
+            // Can't throw checked IOException due to the Lucene API
+            throw new UncheckedIOException( e );
+        }
     }
 
     @Override
@@ -378,11 +421,19 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     {
         try
         {
-            file.close();
+            cursor.close();
         }
         finally
         {
-            file = null;
+            cursor = null;
+        }
+        try
+        {
+            pagedfile.close();
+        }
+        finally
+        {
+            pagedfile = null;
         }
     }
 }

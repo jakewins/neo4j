@@ -23,6 +23,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
+import org.apache.lucene.store.RAMOutputStream;
 import org.apache.lucene.store.RandomAccessInput;
 import org.junit.Before;
 import org.junit.Rule;
@@ -59,11 +60,11 @@ public class PagedIndexInputTest
     @Test
     public void shouldReadAndWriteByte() throws Exception
     {
-        test( (byte) 7, IndexOutput::writeByte, IndexInput::readByte, Object::equals,8191 );
-//        test( (byte) 0, IndexOutput::writeByte, IndexInput::readByte );
-//        test( (byte) -1, IndexOutput::writeByte, IndexInput::readByte );
-//        test( Byte.MAX_VALUE, IndexOutput::writeByte, IndexInput::readByte );
-//        test( Byte.MIN_VALUE, IndexOutput::writeByte, IndexInput::readByte );
+        test( (byte) 7, IndexOutput::writeByte, IndexInput::readByte );
+        test( (byte) 0, IndexOutput::writeByte, IndexInput::readByte );
+        test( (byte) -1, IndexOutput::writeByte, IndexInput::readByte );
+        test( Byte.MAX_VALUE, IndexOutput::writeByte, IndexInput::readByte );
+        test( Byte.MIN_VALUE, IndexOutput::writeByte, IndexInput::readByte );
     }
 
     @Test
@@ -101,7 +102,6 @@ public class PagedIndexInputTest
     {
         testByteArray( new byte[]{1, 3, 3, -1} );
         testByteArray( new byte[]{(byte) 8} );
-        testByteArray( new byte[]{} );
 
         byte[] bigAsPage = new byte[pc.pageSize()];
         Arrays.fill( bigAsPage, (byte) -1 );
@@ -201,14 +201,14 @@ public class PagedIndexInputTest
                 while ( true )
                 {
                     long actual = in.getFilePointer();
-                    assert currentPosition == actual : String.format("Expected position to be %d, got %d", currentPosition, actual);
-                    assert currentPosition <= fileLen : String.format("Expected position to be less than file length of %d, got %d", fileLen, currentPosition);
+                    assert currentPosition == actual : String.format( "Expected position to be %d, got %d", currentPosition, actual );
+                    assert currentPosition <= fileLen :
+                            String.format( "Expected position to be less than file length of %d, got %d", fileLen, currentPosition );
                     in.readByte();
                     currentPosition++;
-
                 }
             }
-            catch(EOFException e)
+            catch ( EOFException e )
             {
                 // Expected
             }
@@ -220,6 +220,7 @@ public class PagedIndexInputTest
     private <T> void testRandomAccess( T val, long pos, ThrowingBiFunction<RandomAccessInput,Long,T,IOException> read,
             ThrowingBiConsumer<IndexOutput,T,IOException> write ) throws IOException
     {
+        long len = pos + valueSize( val, write );
         ThrowingBiConsumer<IndexOutput,T,IOException> writeWrap = ( o, v ) ->
         {
             o.writeBytes( new byte[(int) pos], (int) pos );
@@ -227,7 +228,21 @@ public class PagedIndexInputTest
         };
         ThrowingFunction<IndexInput,T,IOException> readWrap = i -> read.apply( (RandomAccessInput) i, pos );
 
-        test( val, writeWrap, readWrap, Object::equals, 0 );
+        // Test regular input
+        test( val, writeWrap, readWrap, Object::equals, 0, 0, len );
+
+        // Test sliced input
+        test( val, writeWrap, readWrap, Object::equals, 0, 1, len);
+        test( val, writeWrap, readWrap, Object::equals, 0, pc.pageSize() - 1, len);
+        test( val, writeWrap, readWrap, Object::equals, 0, pc.pageSize(), len);
+        test( val, writeWrap, readWrap, Object::equals, 0, pc.pageSize(), len);
+    }
+
+    private <T> int valueSize( T val, ThrowingBiConsumer<IndexOutput,T,IOException> write ) throws IOException
+    {
+        RAMOutputStream t = new RAMOutputStream();
+        write.accept( t, val );
+        return (int) t.getFilePointer();
     }
 
     private void testByteArray( byte[] val ) throws IOException
@@ -254,7 +269,7 @@ public class PagedIndexInputTest
             i.readBytes( actual, readOffset, val.length );
             return Arrays.copyOfRange( actual, readOffset, readOffset + val.length );
         };
-        test( val, write, read, Arrays::equals );
+        test( val, write, read, Arrays::equals, val.length );
     }
 
     @Before
@@ -269,45 +284,74 @@ public class PagedIndexInputTest
 
     private <T> void test( T val, ThrowingBiConsumer<IndexOutput,T,IOException> write, ThrowingFunction<IndexInput,T,IOException> read ) throws IOException
     {
-        test( val, write, read, Object::equals );
+        test( val, write, read, Object::equals, valueSize( val, write ) );
     }
 
     private <T> void test( T val, ThrowingBiConsumer<IndexOutput,T,IOException> write, ThrowingFunction<IndexInput,T,IOException> read,
-            BiFunction<T,T,Boolean> equals ) throws IOException
+            BiFunction<T,T,Boolean> equals, long valueSize ) throws IOException
     {
         // Test multiple offsets at the beginning on a page
         for ( int offset = 0; offset < 3; offset++ )
         {
-            test( val, write, read, equals, offset );
+            testRegularAndSliced( val, write, read, equals, offset, valueSize );
         }
+
         // Test multiple offsets at page boundary
         for ( int offset = pc.pageSize() - 16; offset < pc.pageSize() + 1; offset++ )
         {
-            test( val, write, read, equals, offset );
+            testRegularAndSliced( val, write, read, equals, offset, valueSize );
         }
     }
 
-    private <T> void test( T val, ThrowingBiConsumer<IndexOutput,T,IOException> write, ThrowingFunction<IndexInput,T,IOException> read,
-            BiFunction<T,T,Boolean> equals, int offset ) throws IOException
+    private <T> void testRegularAndSliced( T val, ThrowingBiConsumer<IndexOutput,T,IOException> write, ThrowingFunction<IndexInput,T,IOException> read,
+            BiFunction<T,T,Boolean> equals, int offset, long valueSize ) throws IOException
     {
-        String fileName = testFileName( "offset" + offset );
+        // Test regular input
+        test( val, write, read, equals, offset, 0, 0 );
+
+        // Test reading the data back via sliced input
+        test( val, write, read, equals, offset, 0, offset + valueSize);
+        test( val, write, read, equals, offset, 1, offset + valueSize);
+        test( val, write, read, equals, offset, pc.pageSize() - 1, offset + valueSize);
+        test( val, write, read, equals, offset, pc.pageSize(), offset + valueSize);
+    }
+
+    private <T> void test( T val, ThrowingBiConsumer<IndexOutput,T,IOException> write, ThrowingFunction<IndexInput,T,IOException> read,
+            BiFunction<T,T,Boolean> equals, int offset, long sliceStart, long sliceLength ) throws IOException
+    {
+        String fileName = testFileName( String.format( "o=%d,s=%d,l=%d", offset, sliceStart, sliceLength ) );
 
         // Write the value
         try ( IndexOutput out = dir.createOutput( fileName, IOContext.DEFAULT ) )
         {
-            out.writeBytes( new byte[offset], offset );
+            out.writeBytes( new byte[(int) (offset + sliceStart)], (int) (offset + sliceStart) );
             write.accept( out, val );
         }
 
         // Read it back
         try ( IndexInput in = dir.openInput( fileName, IOContext.READ ) )
         {
-            in.seek( offset );
-            T actual = read.apply( in );
+            IndexInput target = in;
+            try
+            {
+                if ( sliceStart > 0 || sliceLength > 0 )
+                {
+                    target = in.slice( String.format( "slice s=%d,l=%d", sliceStart, sliceLength ), sliceStart, sliceLength );
+                }
+                target.seek( offset );
+                T actual = read.apply( target );
 
-            String expected = val instanceof byte[] ? Arrays.toString( (byte[]) val ) : val.toString();
-            String found = actual instanceof byte[] ? Arrays.toString( (byte[]) actual ) : actual.toString();
-            assert equals.apply( val, actual ) : String.format( "Expected %s, got %s, when offset by %d", expected, found, offset );
+                String expected = val instanceof byte[] ? Arrays.toString( (byte[]) val ) : val.toString();
+                String found = actual instanceof byte[] ? Arrays.toString( (byte[]) actual ) : actual.toString();
+                assert equals.apply( val, actual ) : String.format( "Expected %s, got %s, when offset by %d", expected, found, offset );
+            }
+            finally
+            {
+                if ( target != in )
+                {
+                    target.close();
+                }
+            }
         }
     }
 

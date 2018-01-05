@@ -34,7 +34,6 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -42,7 +41,6 @@ import java.util.zip.ZipOutputStream;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.unsafe.impl.internal.dragons.FeatureToggles;
 
@@ -103,9 +101,7 @@ public class PagedDirectory extends FSDirectory
     {
         ensureOpen();
         Path path = directory.resolve( name );
-        String resourceDescription = "PagedIndexInput(path=\"" + path.toString() + "\")";
-        PagedFile file = pageCache.map( path.toFile(), pageCache.pageSize(), StandardOpenOption.READ );
-        return new PagedIndexInput( resourceDescription, file, pageCache.getCachedFileSystem().getFileSize( path.toFile() ) );
+        return PagedIndexInput.newInstance( "PagedIndexInput(path=\"" + path.toString() + "\")", path, pageCache );
     }
 
     /**
