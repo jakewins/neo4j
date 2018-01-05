@@ -14,26 +14,25 @@ import org.neo4j.io.pagecache.PagedFile;
 public class PagedIndexInput extends IndexInput implements RandomAccessInput
 {
     private final long length;
-    private final long chunkSizeMask;
-    private final int chunkSizePower;
     private final int pageSize;
+    private final long lastPageId;
 
     private PagedFile file;
     private PageCursor cursor;
 
-    private long currentPage = 0;
-    private int pageOffset = 0;
+    private long currentPageId = 0;
+    private int currentPageOffset = 0;
 
     private final WeakIdentityMap<PagedIndexInput,Boolean> clones;
 
-    public static PagedIndexInput newInstance( String resourceDescription, PagedFile file, int chunkSizePower, boolean trackClones )
+    public static PagedIndexInput newInstance( String resourceDescription, PagedFile file, boolean trackClones )
             throws IOException
     {
         final WeakIdentityMap<PagedIndexInput,Boolean> clones = trackClones ? WeakIdentityMap.newConcurrentHashMap() : null;
-        return new PagedIndexInput(resourceDescription, file, chunkSizePower, clones);
+        return new PagedIndexInput(resourceDescription, file, clones);
     }
 
-    PagedIndexInput( String resourceDescription, PagedFile file, int chunkSizePower, WeakIdentityMap<PagedIndexInput,Boolean> clones )
+    PagedIndexInput( String resourceDescription, PagedFile file, WeakIdentityMap<PagedIndexInput,Boolean> clones )
             throws IOException
     {
         super(resourceDescription);
@@ -41,8 +40,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         this.cursor = file.io( 0, PagedFile.PF_SHARED_READ_LOCK );
         this.length = file.fileSize();
         this.pageSize = file.pageSize();
-        this.chunkSizePower = chunkSizePower;
-        this.chunkSizeMask = (1L << chunkSizePower) - 1L;
+        this.lastPageId = file.getLastPageId();
         this.clones = clones;
     }
 
@@ -59,7 +57,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public final byte readByte() throws IOException
     {
-        if ( !cursor.next( currentPage ) )
+        if ( !cursor.next( currentPageId ) )
         {
             throw new EOFException( "read past EOF: " + this );
         }
@@ -67,7 +65,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         byte val;
         do
         {
-            val = cursor.getByte( pageOffset );
+            val = cursor.getByte( currentPageOffset );
         }
         while ( cursor.shouldRetry() );
 
@@ -76,11 +74,11 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
             throw new EOFException( "read past EOF: " + this );
         }
 
-        pageOffset += 1;
-        if( pageOffset >= pageSize )
+        currentPageOffset += 1;
+        if( currentPageOffset >= pageSize )
         {
-            currentPage += 1;
-            pageOffset = 0;
+            currentPageId += 1;
+            currentPageOffset = 0;
         }
 
         return val;
@@ -135,7 +133,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     public long getFilePointer() {
         // TODO test!
         try {
-            return currentPage * cursor.getCurrentPageSize() + pageOffset;
+            return currentPageId * cursor.getCurrentPageSize() + currentPageOffset;
         } catch (NullPointerException npe) {
             throw new AlreadyClosedException("Already closed: " + this);
         }
@@ -144,28 +142,14 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public void seek(long pos) throws IOException {
         long newPageId = pageId( pos );
-        long newOffset = offset( pos );
+        int newOffset = offset( pos );
 
-        // TODO
-        throw new UnsupportedOperationException( );
-//        // we use >> here to preserve negative, so we will catch AIOOBE,
-//        // in case pos + offset overflows.
-//        final int bi = (int) (pos >> chunkSizePower);
-//        try {
-//            if (bi == curBufIndex) {
-//                curBuf.position((int) (pos & chunkSizeMask));
-//            } else {
-//                final ByteBuffer b = buffers[bi];
-//                b.position((int) (pos & chunkSizeMask));
-//                // write values, on exception all is unchanged
-//                this.curBufIndex = bi;
-//                this.curBuf = b;
-//            }
-//        } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
-//            throw new EOFException("seek past EOF: " + this);
-//        } catch (NullPointerException npe) {
-//            throw new AlreadyClosedException("Already closed: " + this);
-//        }
+        if(newPageId > lastPageId) {
+            throw new EOFException("seek past EOF: " + this);
+        }
+
+        currentPageId = newPageId;
+        currentPageOffset = newOffset;
     }
 
     // used only by random access methods to handle reads across boundaries

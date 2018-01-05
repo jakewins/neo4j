@@ -79,7 +79,7 @@ public class PagedDirectory extends BaseDirectory
         super(FSLockFactory.getDefault());
         this.pageCache = pageCache;
         this.fs = pageCache.getCachedFileSystem();
-        this.directory = path.toRealPath();
+        this.directory = path;
         this.chunkSizePower = 31 - Integer.numberOfLeadingZeros(DEFAULT_MAX_CHUNK_SIZE);
         assert this.chunkSizePower >= 0 && this.chunkSizePower <= 30;
     }
@@ -92,7 +92,7 @@ public class PagedDirectory extends BaseDirectory
         Path path = directory.resolve( name );
         String resourceDescription = "MMapIndexInput(path=\"" + path.toString() + "\")";
         PagedFile file = pageCache.map( path.toFile(), pageCache.pageSize(), StandardOpenOption.READ );
-        return PagedIndexInput.newInstance( resourceDescription, file, chunkSizePower, true );
+        return PagedIndexInput.newInstance( resourceDescription, file, true );
     }
 
 
