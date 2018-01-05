@@ -69,17 +69,8 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         }
         while ( cursor.shouldRetry() );
 
-        if ( cursor.checkAndClearBoundsFlag() )
-        {
-            throw new EOFException( "read past EOF: " + this );
-        }
-
-        currentPageOffset += 1;
-        if( currentPageOffset >= pageSize )
-        {
-            currentPageId += 1;
-            currentPageOffset = 0;
-        }
+        boundsCheck();
+        incrementPageOffset( 1 );
 
         return val;
     }
@@ -101,33 +92,48 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     // TODO: Implemented optimized readLong, readInt, readShort
 
     @Override
-    public final void readBytes(byte[] b, int offset, int len) throws IOException {
-        // TODO
-        throw new UnsupportedOperationException( "TODO" );
-//        try {
-//
-//            curBuf.get(b, offset, len);
-//        } catch (BufferUnderflowException e) {
-//            int curAvail = curBuf.remaining();
-//            while (len > curAvail) {
-//                curBuf.get(b, offset, curAvail);
-//                len -= curAvail;
-//                offset += curAvail;
-//                curBufIndex++;
-//                if (curBufIndex >= buffers.length) {
-//                    throw new EOFException("read past EOF: " + this);
-//                }
-//                curBuf = buffers[curBufIndex];
-//                curBuf.position(0);
-//                curAvail = curBuf.remaining();
-//            }
-//            curBuf.get(b, offset, len);
-//        } catch (NullPointerException npe) {
-//            throw new AlreadyClosedException("Already closed: " + this);
-//        }
+    public final void readBytes(final byte[] b, final int offset, final int len) throws IOException {
+        int bytesRead = 0;
+
+        while(bytesRead < len)
+        {
+            if ( !cursor.next( currentPageId ) )
+            {
+                throw new EOFException( "read past EOF: " + this );
+            }
+
+            int toRead = Math.min( len - bytesRead, pageSize - currentPageOffset );
+            do
+            {
+                cursor.setOffset( currentPageOffset );
+                cursor.getBytes( b, offset + bytesRead, toRead );
+            }
+            while ( cursor.shouldRetry() );
+
+            boundsCheck();
+            incrementPageOffset( toRead );
+            bytesRead += toRead;
+        }
     }
 
-    // TODO: Optimized versions of readInt, readShort, readLong
+    private void boundsCheck() throws EOFException
+    {
+        if ( cursor.checkAndClearBoundsFlag() )
+        {
+            throw new EOFException( "read past EOF: " + this );
+        }
+    }
+
+    private void incrementPageOffset( int byOffset )
+    {
+        currentPageOffset += byOffset;
+        if( currentPageOffset >= pageSize )
+        {
+            assert currentPageOffset == pageSize : "Should never read past page boundary.";
+            currentPageId += 1;
+            currentPageOffset = 0;
+        }
+    }
 
     @Override
     public long getFilePointer() {
