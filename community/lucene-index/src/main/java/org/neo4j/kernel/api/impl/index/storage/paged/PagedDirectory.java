@@ -7,7 +7,6 @@ import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.NRTCachingDirectory;
-import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.IOUtils;
 
 import java.io.File;
@@ -69,19 +68,11 @@ public class PagedDirectory extends BaseDirectory
     }
     private final Path directory; // The underlying filesystem directory
 
-    /**
-     * Default max chunk size.
-     */
-    private static final int DEFAULT_MAX_CHUNK_SIZE = Constants.JRE_IS_64BIT ? (1 << 30) : (1 << 28);
-    private final int chunkSizePower;
-
     public PagedDirectory(Path path, PageCache pageCache) throws IOException {
         super(FSLockFactory.getDefault());
         this.pageCache = pageCache;
         this.fs = pageCache.getCachedFileSystem();
         this.directory = path;
-        this.chunkSizePower = 31 - Integer.numberOfLeadingZeros(DEFAULT_MAX_CHUNK_SIZE);
-        assert this.chunkSizePower >= 0 && this.chunkSizePower <= 30;
     }
 
     /** Creates an IndexInput for the file with the given name. */
@@ -152,8 +143,7 @@ public class PagedDirectory extends BaseDirectory
     public void renameFile(String source, String dest) throws IOException {
         ensureOpen();
         Files.move(directory.resolve(source), directory.resolve(dest), StandardCopyOption.ATOMIC_MOVE);
-        // TODO: should we move directory fsync to a separate 'syncMetadata' method?
-        // for example, to improve listCommits(), IndexFileDeleter could also call that after deleting segments_Ns
+        // TODO: move to FS?
         IOUtils.fsync(directory, true);
     }
 
@@ -170,6 +160,7 @@ public class PagedDirectory extends BaseDirectory
     }
 
     private void fsync(String name) throws IOException {
+        // TODO: Add fsync to fs instead?
         IOUtils.fsync(directory.resolve(name), false);
     }
 }

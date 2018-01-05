@@ -96,11 +96,21 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     @Override
+    public short readShort() throws IOException
+    {
+        short val = readShort( currentPageId, currentPageOffset );
+        incrementPageOffset( 2 );
+        return val;
+    }
+
+    @Override
     public short readShort( long pos ) throws IOException
     {
-        long pageId = pageId( pos );
-        int pageOffset = pageOffset( pos );
+        return readShort( pageId( pos ), pageOffset( pos ) );
+    }
 
+    private short readShort( long pageId, int pageOffset ) throws IOException
+    {
         // Cross-page read?
         if ( pageSize - pageOffset < 2 )
         {
@@ -110,7 +120,8 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
             {
                 currentPageId = pageId;
                 currentPageOffset = pageOffset;
-                return readShort();
+                // Delegate to parent, which reads byte-by-byte
+                return super.readShort();
             }
             finally
             {
@@ -138,11 +149,21 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     @Override
+    public int readInt() throws IOException
+    {
+        int val = readInt( currentPageId, currentPageOffset );
+        incrementPageOffset( 4 );
+        return val;
+    }
+
+    @Override
     public int readInt( long pos ) throws IOException
     {
-        long pageId = pageId( pos );
-        int pageOffset = pageOffset( pos );
+        return readInt( pageId( pos ), pageOffset( pos ) );
+    }
 
+    private int readInt( long pageId, int pageOffset ) throws IOException
+    {
         // Cross-page read?
         if ( pageSize - pageOffset < 4 )
         {
@@ -152,7 +173,8 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
             {
                 currentPageId = pageId;
                 currentPageOffset = pageOffset;
-                return readInt();
+                // Delegate to parent, which reads byte-by-byte
+                return super.readInt();
             }
             finally
             {
@@ -180,11 +202,21 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     @Override
+    public long readLong() throws IOException
+    {
+        long val = readLong( currentPageId, currentPageOffset );
+        incrementPageOffset( 8 );
+        return val;
+    }
+
+    @Override
     public long readLong( long pos ) throws IOException
     {
-        long pageId = pageId( pos );
-        int pageOffset = pageOffset( pos );
+        return readLong( pageId( pos ), pageOffset( pos ) );
+    }
 
+    private long readLong( long pageId, int pageOffset ) throws IOException
+    {
         // Cross-page read?
         if ( pageSize - pageOffset < 8 )
         {
@@ -194,7 +226,8 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
             {
                 currentPageId = pageId;
                 currentPageOffset = pageOffset;
-                return readLong();
+                // Delegate to parent, which reads byte-by-byte
+                return super.readLong();
             }
             finally
             {
@@ -220,8 +253,6 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
         return val;
     }
-
-    // TODO: Implemented optimized readLong, readInt, readShort
 
     @Override
     public final void readBytes( final byte[] b, final int offset, final int len ) throws IOException
@@ -262,16 +293,15 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         currentPageOffset += byOffset;
         if ( currentPageOffset >= pageSize )
         {
-            assert currentPageOffset == pageSize : "Should never read past page boundary.";
             currentPageId += 1;
-            currentPageOffset = 0;
+            currentPageOffset -= pageSize;
+            assert currentPageOffset <= pageSize : "Should never read past two page boundaries";
         }
     }
 
     @Override
     public long getFilePointer()
     {
-        // TODO test!
         try
         {
             return currentPageId * cursor.getCurrentPageSize() + currentPageOffset;
@@ -295,21 +325,6 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
         currentPageId = newPageId;
         currentPageOffset = newOffset;
-    }
-
-    // used only by random access methods to handle reads across boundaries
-    private void setPos( long pos, int bi ) throws IOException
-    {
-//        try {
-//            final ByteBuffer b = buffers[bi];
-//            b.position((int) (pos & chunkSizeMask));
-//            this.curBufIndex = bi;
-//            this.curBuf = b;
-//        } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException aioobe) {
-//            throw new EOFException("seek past EOF: " + this);
-//        } catch (NullPointerException npe) {
-//            throw new AlreadyClosedException("Already closed: " + this);
-//        }
     }
 
     @Override
