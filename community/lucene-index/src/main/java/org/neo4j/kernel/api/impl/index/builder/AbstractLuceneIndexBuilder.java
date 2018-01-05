@@ -37,13 +37,14 @@ import org.neo4j.kernel.impl.factory.OperationalMode;
  */
 public abstract class AbstractLuceneIndexBuilder<T extends AbstractLuceneIndexBuilder<T>>
 {
-    protected LuceneIndexStorageBuilder storageBuilder = LuceneIndexStorageBuilder.create();
+    protected LuceneIndexStorageBuilder storageBuilder;
     private final Config config;
     private OperationalMode operationalMode = OperationalMode.single;
 
     public AbstractLuceneIndexBuilder( Config config )
     {
         this.config = Objects.requireNonNull( config );
+        storageBuilder = LuceneIndexStorageBuilder.create( null );
     }
 
     /**

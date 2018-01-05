@@ -1,9 +1,27 @@
+/*
+ * Copyright (c) 2002-2018 "Neo Technology,"
+ * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.neo4j.kernel.api.impl.index.storage.paged;
 
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.RandomAccessInput;
-import org.apache.lucene.util.WeakIdentityMap;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -13,33 +31,32 @@ import org.neo4j.io.pagecache.PagedFile;
 
 public class PagedIndexInput extends IndexInput implements RandomAccessInput
 {
-    private final long length;
+    private final long fileSize;
     private final int pageSize;
     private final long lastPageId;
+    private final int lastPageSize;
 
     private PagedFile file;
     private PageCursor cursor;
 
-    private long currentPageId = 0;
-    private int currentPageOffset = 0;
+    private long currentPageId;
+    private int currentPageOffset;
 
-    private final WeakIdentityMap<PagedIndexInput,Boolean> clones;
-
-    public static PagedIndexInput newInstance( String resourceDescription, PagedFile file, boolean trackClones ) throws IOException
-    {
-        final WeakIdentityMap<PagedIndexInput,Boolean> clones = trackClones ? WeakIdentityMap.newConcurrentHashMap() : null;
-        return new PagedIndexInput( resourceDescription, file, clones );
-    }
-
-    PagedIndexInput( String resourceDescription, PagedFile file, WeakIdentityMap<PagedIndexInput,Boolean> clones ) throws IOException
+    public PagedIndexInput( String resourceDescription, PagedFile file, long fileSize ) throws IOException
     {
         super( resourceDescription );
         this.file = file;
-        this.cursor = file.io( 0, PagedFile.PF_SHARED_READ_LOCK );
-        this.length = file.fileSize();
+        this.fileSize = fileSize;
         this.pageSize = file.pageSize();
         this.lastPageId = file.getLastPageId();
-        this.clones = clones;
+        this.lastPageSize = calcLastPageSize(fileSize, this.pageSize);
+        this.cursor = file.io( 0, PagedFile.PF_SHARED_READ_LOCK );
+    }
+
+    private static int calcLastPageSize(long fileSize, int pageSize)
+    {
+        int size = (int) (fileSize % pageSize);
+        return size == 0 ? pageSize : size;
     }
 
     private long pageId( long position )
@@ -55,10 +72,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public final byte readByte() throws IOException
     {
-        if ( !cursor.next( currentPageId ) )
-        {
-            throw new EOFException( "read past EOF: " + this );
-        }
+        moveCursorToPageAndAssertInBounds(currentPageId, currentPageOffset);
 
         byte val;
         do
@@ -78,10 +92,8 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     {
         long pageId = pageId( pos );
         int pageOffset = pageOffset( pos );
-        if ( !cursor.next( pageId ) )
-        {
-            throw new EOFException( "read past EOF: " + this );
-        }
+
+        moveCursorToPageAndAssertInBounds( pageId, pageOffset );
 
         byte val;
         do
@@ -131,10 +143,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         }
 
         // Regular read
-        if ( !cursor.next( pageId ) )
-        {
-            throw new EOFException( "read past EOF: " + this );
-        }
+        moveCursorToPageAndAssertInBounds( pageId, pageOffset );
 
         short val;
         do
@@ -184,10 +193,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         }
 
         // Regular read
-        if ( !cursor.next( pageId ) )
-        {
-            throw new EOFException( "read past EOF: " + this );
-        }
+        moveCursorToPageAndAssertInBounds( pageId, pageOffset );
 
         int val;
         do
@@ -237,10 +243,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         }
 
         // Regular read
-        if ( !cursor.next( pageId ) )
-        {
-            throw new EOFException( "read past EOF: " + this );
-        }
+        moveCursorToPageAndAssertInBounds( pageId, pageOffset );
 
         long val;
         do
@@ -261,10 +264,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
         while ( bytesRead < len )
         {
-            if ( !cursor.next( currentPageId ) )
-            {
-                throw new EOFException( "read past EOF: " + this );
-            }
+            moveCursorToPageAndAssertInBounds( currentPageId, currentPageOffset );
 
             int toRead = Math.min( len - bytesRead, pageSize - currentPageOffset );
             do
@@ -277,25 +277,6 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
             boundsCheck();
             incrementPageOffset( toRead );
             bytesRead += toRead;
-        }
-    }
-
-    private void boundsCheck() throws EOFException
-    {
-        if ( cursor.checkAndClearBoundsFlag() )
-        {
-            throw new EOFException( "read past EOF: " + this );
-        }
-    }
-
-    private void incrementPageOffset( int byOffset )
-    {
-        currentPageOffset += byOffset;
-        if ( currentPageOffset >= pageSize )
-        {
-            currentPageId += 1;
-            currentPageOffset -= pageSize;
-            assert currentPageOffset <= pageSize : "Should never read past two page boundaries";
         }
     }
 
@@ -318,7 +299,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         long newPageId = pageId( pos );
         int newOffset = pageOffset( pos );
 
-        if ( newPageId > lastPageId )
+        if ( isEOF( newPageId, newOffset ) )
         {
             throw new EOFException( "seek past EOF: " + this );
         }
@@ -327,10 +308,46 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         currentPageOffset = newOffset;
     }
 
+
+    private void boundsCheck() throws EOFException
+    {
+        if ( cursor.checkAndClearBoundsFlag() )
+        {
+            throw new EOFException( "read past EOF: " + this );
+        }
+    }
+
+    private void incrementPageOffset( int byOffset )
+    {
+        currentPageOffset += byOffset;
+        if ( currentPageOffset >= pageSize )
+        {
+            currentPageId += 1;
+            currentPageOffset -= pageSize;
+            assert currentPageOffset <= pageSize : "Should never read past two page boundaries";
+        }
+    }
+
+    private void moveCursorToPageAndAssertInBounds(long pageId, int offsetInPage) throws IOException
+    {
+        if ( !cursor.next( pageId ) || isEOF( pageId, offsetInPage ) )
+        {
+            throw new EOFException( "read past EOF: " + this );
+        }
+    }
+
+    private boolean isEOF( long pageId, int offsetInPage )
+    {
+        boolean isBeforeLastPage = pageId > lastPageId;
+        boolean isLastPage = pageId == lastPageId;
+        boolean offsetOutsidePage = offsetInPage >= lastPageSize;
+        return isBeforeLastPage || (isLastPage && offsetOutsidePage);
+    }
+
     @Override
     public final long length()
     {
-        return length;
+        return fileSize;
     }
 
     @Override
@@ -346,10 +363,10 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public final PagedIndexInput slice( String sliceDescription, long offset, long length )
     {
-        if ( offset < 0 || length < 0 || offset + length > this.length )
+        if ( offset < 0 || length < 0 || offset + length > this.fileSize )
         {
             throw new IllegalArgumentException(
-                    "slice() " + sliceDescription + " out of bounds: offset=" + offset + ",length=" + length + ",fileLength=" + this.length + ": " + this );
+                    "slice() " + sliceDescription + " out of bounds: offset=" + offset + ",length=" + length + ",fileLength=" + this.fileSize + ": " + this );
         }
 
         // See BufferedIndexInput

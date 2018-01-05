@@ -54,13 +54,12 @@ public interface DirectoryFactory extends FileSystemAbstraction.ThirdPartyFileSy
     @Override
     void close();
 
-    final class PersistentDirectoryFactory implements DirectoryFactory {
-        private final int MAX_MERGE_SIZE_MB =
-                FeatureToggles.getInteger( DirectoryFactory.class, "max_merge_size_mb", 5 );
-        private final int MAX_CACHED_MB =
-                FeatureToggles.getInteger( DirectoryFactory.class, "max_cached_mb", 50 );
-        private final String PERSISTENT_FACTORY_IMPL =
-                FeatureToggles.getString( DirectoryFactory.class, "factory", "paged" ); // TODO set back to niofs as default
+    final class PersistentDirectoryFactory implements DirectoryFactory
+    {
+        private final int MAX_MERGE_SIZE_MB = FeatureToggles.getInteger( DirectoryFactory.class, "max_merge_size_mb", 5 );
+        private final int MAX_CACHED_MB = FeatureToggles.getInteger( DirectoryFactory.class, "max_cached_mb", 50 );
+        private final String PERSISTENT_FACTORY_IMPL = FeatureToggles.getString( DirectoryFactory.class, "factory", "paged" );
+                // TODO set back to niofs as default
 
         private final PageCache pageCache;
 
@@ -75,7 +74,8 @@ public interface DirectoryFactory extends FileSystemAbstraction.ThirdPartyFileSy
         {
             dir.mkdirs();
             Directory directory;
-            switch(PERSISTENT_FACTORY_IMPL) {
+            switch ( PERSISTENT_FACTORY_IMPL )
+            {
             case "heap":
                 directory = FSDirectory.open( dir.toPath() );
                 break;

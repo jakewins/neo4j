@@ -88,7 +88,7 @@ public class NativeLuceneFusionSchemaIndexProviderFactory
         NativeSchemaNumberIndexProvider nativeProvider =
                 new NativeSchemaNumberIndexProvider( pageCache, fs, childDirectoryStructure, monitor, recoveryCleanupWorkCollector, readOnly );
         LuceneSchemaIndexProvider luceneProvider = LuceneSchemaIndexProviderFactory.create( fs, childDirectoryStructure, monitor, config,
-                operationalMode );
+                operationalMode, pageCache );
         boolean useNativeIndex = config.get( GraphDatabaseSettings.enable_native_schema_index );
         int priority = useNativeIndex ? PRIORITY : 0;
         return new FusionSchemaIndexProvider( nativeProvider,

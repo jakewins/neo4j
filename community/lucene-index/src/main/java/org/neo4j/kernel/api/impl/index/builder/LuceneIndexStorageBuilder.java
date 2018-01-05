@@ -39,7 +39,7 @@ public class LuceneIndexStorageBuilder
     private PartitionedIndexStorage indexStorage;
     private boolean archiveFailed;
 
-    private LuceneIndexStorageBuilder(DirectoryFactory defaultDirectoryFactory)
+    private LuceneIndexStorageBuilder( DirectoryFactory defaultDirectoryFactory )
     {
         this.directoryFactory = defaultDirectoryFactory;
     }
@@ -49,9 +49,9 @@ public class LuceneIndexStorageBuilder
      *
      * @return index builder
      */
-    public static LuceneIndexStorageBuilder create(DirectoryFactory defaultDirectoryFactory)
+    public static LuceneIndexStorageBuilder create( DirectoryFactory defaultDirectoryFactory )
     {
-        return new LuceneIndexStorageBuilder(defaultDirectoryFactory);
+        return new LuceneIndexStorageBuilder( defaultDirectoryFactory );
     }
 
     /**

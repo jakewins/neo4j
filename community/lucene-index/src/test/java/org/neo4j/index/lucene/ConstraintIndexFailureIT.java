@@ -30,8 +30,10 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.schema.UnableToValidateConstraintException;
 import org.neo4j.kernel.api.impl.index.builder.LuceneIndexStorageBuilder;
+import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -52,6 +54,8 @@ public class ConstraintIndexFailureIT
     public final TestDirectory storeDir = TestDirectory.testDirectory();
     @Rule
     public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
 
     @Test
     public void shouldFailToValidateConstraintsIfUnderlyingIndexIsFailed() throws Exception
@@ -112,7 +116,9 @@ public class ConstraintIndexFailureIT
     {
         File luceneIndexDirectory = subProviderDirectoryStructure( storeDir.directory() )
                 .forProvider( PROVIDER_DESCRIPTOR ).directoryForIndex( 1 );
-        PartitionedIndexStorage indexStorage = LuceneIndexStorageBuilder.create()
+        DirectoryFactory.PersistentDirectoryFactory dirFactory =
+                new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule ) );
+        PartitionedIndexStorage indexStorage = LuceneIndexStorageBuilder.create( dirFactory )
                 .withFileSystem( fileSystemRule.get() )
                 .withIndexFolder( luceneIndexDirectory )
                 .build();
