@@ -37,6 +37,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.impl.index.storage.paged.PagedDirectory;
 import org.neo4j.unsafe.impl.internal.dragons.FeatureToggles;
 
 import static java.lang.Math.min;
@@ -52,21 +54,41 @@ public interface DirectoryFactory extends FileSystemAbstraction.ThirdPartyFileSy
     @Override
     void close();
 
-    DirectoryFactory PERSISTENT = new DirectoryFactory()
-    {
+    final class PersistentDirectoryFactory implements DirectoryFactory {
         private final int MAX_MERGE_SIZE_MB =
                 FeatureToggles.getInteger( DirectoryFactory.class, "max_merge_size_mb", 5 );
         private final int MAX_CACHED_MB =
                 FeatureToggles.getInteger( DirectoryFactory.class, "max_cached_mb", 50 );
-        private final boolean USE_DEFAULT_DIRECTORY_FACTORY =
-                FeatureToggles.flag( DirectoryFactory.class, "default_directory_factory", true );
+        private final String PERSISTENT_FACTORY_IMPL =
+                FeatureToggles.getString( DirectoryFactory.class, "factory", "paged" ); // TODO set back to niofs as default
+
+        private final PageCache pageCache;
+
+        public PersistentDirectoryFactory( PageCache pageCache )
+        {
+            this.pageCache = pageCache;
+        }
 
         @SuppressWarnings( "ResultOfMethodCallIgnored" )
         @Override
         public Directory open( File dir ) throws IOException
         {
             dir.mkdirs();
-            FSDirectory directory = USE_DEFAULT_DIRECTORY_FACTORY ? FSDirectory.open( dir.toPath() ) : new NIOFSDirectory( dir.toPath() );
+            Directory directory;
+            switch(PERSISTENT_FACTORY_IMPL) {
+            case "heap":
+                directory = FSDirectory.open( dir.toPath() );
+                break;
+            case "paged":
+                directory = new PagedDirectory( dir.toPath(), pageCache );
+                break;
+            case "niofs":
+                directory = new NIOFSDirectory( dir.toPath() );
+                break;
+            default:
+                System.err.printf( "WARN: Unknown index IO implementation '%s', using default.\n", PERSISTENT_FACTORY_IMPL );
+                directory = new NIOFSDirectory( dir.toPath() );
+            }
             return new NRTCachingDirectory( directory, MAX_MERGE_SIZE_MB, MAX_CACHED_MB );
         }
 
@@ -81,7 +103,7 @@ public interface DirectoryFactory extends FileSystemAbstraction.ThirdPartyFileSy
         {
             // do nothing
         }
-    };
+    }
 
     final class InMemoryDirectoryFactory implements DirectoryFactory
     {

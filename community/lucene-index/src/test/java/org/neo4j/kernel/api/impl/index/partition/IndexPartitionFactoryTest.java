@@ -32,15 +32,18 @@ import java.io.IOException;
 
 import org.neo4j.kernel.api.impl.index.IndexWriterConfigs;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
 
 public class IndexPartitionFactoryTest
 {
-
     @Rule
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
+
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
@@ -49,7 +52,7 @@ public class IndexPartitionFactoryTest
     @Before
     public void setUp() throws IOException
     {
-        directory = DirectoryFactory.PERSISTENT.open( testDirectory.directory() );
+        directory = new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache() ).open( testDirectory.directory() );
     }
 
     @Test
@@ -92,7 +95,7 @@ public class IndexPartitionFactoryTest
         File location = testDirectory.directory();
         try ( AbstractIndexPartition ignored =
                       new WritableIndexPartitionFactory( IndexWriterConfigs::standard )
-                              .createPartition( location, DirectoryFactory.PERSISTENT.open( location ) ) )
+                              .createPartition( location, new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache() ).open( location ) ) )
         {
             // empty
         }

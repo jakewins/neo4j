@@ -39,6 +39,7 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.factory.OperationalMode;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -53,6 +54,8 @@ public class LuceneSchemaIndexProviderTest
     public ExpectedException expectedException = ExpectedException.none();
     @Rule
     public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
     @Rule
     public final TestDirectory testDir = TestDirectory.testDirectory( getClass() );
 
@@ -82,7 +85,7 @@ public class LuceneSchemaIndexProviderTest
     @Test
     public void shouldCreateReadOnlyAccessorInReadOnlyMode() throws Exception
     {
-        DirectoryFactory directoryFactory = DirectoryFactory.PERSISTENT;
+        DirectoryFactory directoryFactory = new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule ) );
         createEmptySchemaIndex( directoryFactory );
 
         Config readOnlyConfig = Config.defaults( GraphDatabaseSettings.read_only, Settings.TRUE );

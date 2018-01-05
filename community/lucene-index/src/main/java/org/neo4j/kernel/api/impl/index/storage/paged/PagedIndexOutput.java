@@ -8,10 +8,11 @@ import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 
-// Clone of FSIndexOutput
-// TODO: Use page cache instead..
+// TODO: Use page cache instead?
 class PagedIndexOutput extends OutputStreamIndexOutput
 {
+    // TODO: This is a clone of FSIndexOutput; note the comment on the malloc on write,
+    //       might be worth testing and potentially replicating in our regular IO code?
     /**
      * The maximum chunk size is 8192 bytes, because file channel mallocs
      * a native buffer outside of stack if the write buffer size is larger.

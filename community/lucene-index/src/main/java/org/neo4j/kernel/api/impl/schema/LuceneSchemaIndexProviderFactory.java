@@ -23,6 +23,7 @@ import java.io.File;
 
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.LoggingMonitor;
@@ -57,6 +58,8 @@ public class LuceneSchemaIndexProviderFactory extends
         LogService getLogService();
 
         FileSystemAbstraction fileSystem();
+
+        PageCache pageCache();
     }
 
     public LuceneSchemaIndexProviderFactory()
@@ -75,21 +78,21 @@ public class LuceneSchemaIndexProviderFactory extends
         monitors.addMonitorListener( new LoggingMonitor( log ), KEY );
         SchemaIndexProvider.Monitor monitor = monitors.newMonitor( SchemaIndexProvider.Monitor.class, KEY );
         OperationalMode operationalMode = context.databaseInfo().operationalMode;
-        return create( fileSystemAbstraction, storeDir, monitor, config, operationalMode );
+        return create( fileSystemAbstraction, storeDir, monitor, config, operationalMode, dependencies.pageCache() );
     }
 
     public static LuceneSchemaIndexProvider create( FileSystemAbstraction fileSystemAbstraction, File storeDir,
-            SchemaIndexProvider.Monitor monitor, Config config, OperationalMode operationalMode )
+            SchemaIndexProvider.Monitor monitor, Config config, OperationalMode operationalMode, PageCache pageCache )
     {
-        return create( fileSystemAbstraction, directoriesByProviderKey( storeDir ), monitor, config, operationalMode );
+        return create( fileSystemAbstraction, directoriesByProviderKey( storeDir ), monitor, config, operationalMode, pageCache );
     }
 
     public static LuceneSchemaIndexProvider create( FileSystemAbstraction fileSystemAbstraction,
             IndexDirectoryStructure.Factory directoryStructure, SchemaIndexProvider.Monitor monitor, Config config,
-            OperationalMode operationalMode )
+            OperationalMode operationalMode, PageCache pageCache )
     {
         boolean ephemeral = config.get( GraphDatabaseFacadeFactory.Configuration.ephemeral );
-        DirectoryFactory directoryFactory = directoryFactory( ephemeral, fileSystemAbstraction );
+        DirectoryFactory directoryFactory = directoryFactory( ephemeral, fileSystemAbstraction, pageCache );
         return new LuceneSchemaIndexProvider( fileSystemAbstraction, directoryFactory, directoryStructure, monitor, config,
                 operationalMode );
     }

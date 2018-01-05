@@ -51,6 +51,7 @@ import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.test.Randoms;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.values.storable.Value;
@@ -71,6 +72,8 @@ public class LuceneSchemaIndexUniquenessVerificationIT
     public TestDirectory testDir = TestDirectory.testDirectory();
     @Rule
     public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
 
     private final int nodesToCreate = DOCS_PER_PARTITION * 2 + 1;
 
@@ -88,7 +91,7 @@ public class LuceneSchemaIndexUniquenessVerificationIT
                 .withFileSystem( fileSystemRule.get() )
                 .withIndexRootFolder( new File( testDir.directory( "uniquenessVerification" ), "index" ) )
                 .withWriterConfig( configFactory )
-                .withDirectoryFactory( DirectoryFactory.PERSISTENT )
+                .withDirectoryFactory( new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule.get() ) ) )
                 .build();
 
         index.create();

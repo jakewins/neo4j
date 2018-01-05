@@ -57,8 +57,7 @@ public class LuceneSchemaIndexProvider extends SchemaIndexProvider
     private final Monitor monitor;
 
     public LuceneSchemaIndexProvider( FileSystemAbstraction fileSystem, DirectoryFactory directoryFactory,
-            IndexDirectoryStructure.Factory directoryStructureFactory, Monitor monitor, Config config,
-            OperationalMode operationalMode )
+            IndexDirectoryStructure.Factory directoryStructureFactory, Monitor monitor, Config config, OperationalMode operationalMode )
     {
         super( LuceneSchemaIndexProviderFactory.PROVIDER_DESCRIPTOR, PRIORITY, directoryStructureFactory );
         this.monitor = monitor;

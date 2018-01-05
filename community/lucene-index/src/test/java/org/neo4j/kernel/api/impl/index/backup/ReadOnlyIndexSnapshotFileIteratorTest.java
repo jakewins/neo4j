@@ -38,6 +38,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.impl.index.IndexWriterConfigs;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.stream.Collectors.toSet;
@@ -49,6 +50,9 @@ public class ReadOnlyIndexSnapshotFileIteratorTest
     @Rule
     public final TestDirectory testDir = TestDirectory.testDirectory();
 
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
+
     protected File indexDir;
     protected Directory dir;
 
@@ -56,7 +60,7 @@ public class ReadOnlyIndexSnapshotFileIteratorTest
     public void setUp() throws IOException
     {
         indexDir = testDir.directory();
-        dir = DirectoryFactory.PERSISTENT.open( indexDir );
+        dir = new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache() ).open( indexDir );
     }
 
     @After

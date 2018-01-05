@@ -34,6 +34,7 @@ import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
 import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -44,17 +45,21 @@ public class ReadOnlyLuceneSchemaIndexTest
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final ExpectedException expectedException = ExpectedException.none();
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    private final PageCacheRule pageCacheRule = new PageCacheRule();
 
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( testDirectory )
-            .around( expectedException ).around( fileSystemRule );
+            .around( expectedException ).around( fileSystemRule ).around( pageCacheRule );
 
     private ReadOnlyDatabaseSchemaIndex luceneSchemaIndex;
 
     @Before
     public void setUp()
     {
-        PartitionedIndexStorage indexStorage = new PartitionedIndexStorage( DirectoryFactory.PERSISTENT,
+        DirectoryFactory.PersistentDirectoryFactory dirFactory =
+                new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule ) );
+        PartitionedIndexStorage indexStorage = new PartitionedIndexStorage(
+                dirFactory,
                 fileSystemRule.get(), testDirectory.directory(), false );
         Config config = Config.defaults();
         IndexSamplingConfig samplingConfig = new IndexSamplingConfig( config );

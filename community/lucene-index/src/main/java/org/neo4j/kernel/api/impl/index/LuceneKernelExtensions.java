@@ -20,6 +20,7 @@
 package org.neo4j.kernel.api.impl.index;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 
 public class LuceneKernelExtensions
@@ -28,10 +29,10 @@ public class LuceneKernelExtensions
     {
     }
 
-    public static DirectoryFactory directoryFactory( boolean ephemeral, FileSystemAbstraction fileSystem )
+    public static DirectoryFactory directoryFactory( boolean ephemeral, FileSystemAbstraction fileSystem, PageCache pageCache )
     {
         return fileSystem.getOrCreateThirdPartyFileSystem( DirectoryFactory.class,
-                clazz -> ephemeral ? new DirectoryFactory.InMemoryDirectoryFactory() : DirectoryFactory.PERSISTENT );
+                clazz -> ephemeral ? new DirectoryFactory.InMemoryDirectoryFactory() : new DirectoryFactory.PersistentDirectoryFactory( pageCache ) );
     }
 
 }
