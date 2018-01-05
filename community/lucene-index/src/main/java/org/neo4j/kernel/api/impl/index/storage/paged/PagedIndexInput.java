@@ -25,17 +25,15 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
     private final WeakIdentityMap<PagedIndexInput,Boolean> clones;
 
-    public static PagedIndexInput newInstance( String resourceDescription, PagedFile file, boolean trackClones )
-            throws IOException
+    public static PagedIndexInput newInstance( String resourceDescription, PagedFile file, boolean trackClones ) throws IOException
     {
         final WeakIdentityMap<PagedIndexInput,Boolean> clones = trackClones ? WeakIdentityMap.newConcurrentHashMap() : null;
-        return new PagedIndexInput(resourceDescription, file, clones);
+        return new PagedIndexInput( resourceDescription, file, clones );
     }
 
-    PagedIndexInput( String resourceDescription, PagedFile file, WeakIdentityMap<PagedIndexInput,Boolean> clones )
-            throws IOException
+    PagedIndexInput( String resourceDescription, PagedFile file, WeakIdentityMap<PagedIndexInput,Boolean> clones ) throws IOException
     {
-        super(resourceDescription);
+        super( resourceDescription );
         this.file = file;
         this.cursor = file.io( 0, PagedFile.PF_SHARED_READ_LOCK );
         this.length = file.fileSize();
@@ -49,7 +47,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         return position / pageSize;
     }
 
-    private int offset( long position )
+    private int pageOffset( long position )
     {
         return (int) (position % pageSize);
     }
@@ -76,26 +74,161 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     @Override
-    public byte readByte(long pos) throws IOException {
-        // TODO
-        throw new UnsupportedOperationException( "TODO" );
-//        try {
-//            final int bi = (int) (pos >> chunkSizePower);
-//            return buffers[bi].get((int) (pos & chunkSizeMask));
-//        } catch (IndexOutOfBoundsException ioobe) {
-//            throw new EOFException("seek past EOF: " + this);
-//        } catch (NullPointerException npe) {
-//            throw new AlreadyClosedException("Already closed: " + this);
-//        }
+    public byte readByte( long pos ) throws IOException
+    {
+        long pageId = pageId( pos );
+        int pageOffset = pageOffset( pos );
+        if ( !cursor.next( pageId ) )
+        {
+            throw new EOFException( "read past EOF: " + this );
+        }
+
+        byte val;
+        do
+        {
+            val = cursor.getByte( pageOffset );
+        }
+        while ( cursor.shouldRetry() );
+
+        boundsCheck();
+
+        return val;
+    }
+
+    @Override
+    public short readShort( long pos ) throws IOException
+    {
+        long pageId = pageId( pos );
+        int pageOffset = pageOffset( pos );
+
+        // Cross-page read?
+        if ( pageSize - pageOffset < 2 )
+        {
+            long originalPageId = currentPageId;
+            int originalPageOffset = currentPageOffset;
+            try
+            {
+                currentPageId = pageId;
+                currentPageOffset = pageOffset;
+                return readShort();
+            }
+            finally
+            {
+                currentPageId = originalPageId;
+                currentPageOffset = originalPageOffset;
+            }
+        }
+
+        // Regular read
+        if ( !cursor.next( pageId ) )
+        {
+            throw new EOFException( "read past EOF: " + this );
+        }
+
+        short val;
+        do
+        {
+            val = cursor.getShort( pageOffset );
+        }
+        while ( cursor.shouldRetry() );
+
+        boundsCheck();
+
+        return val;
+    }
+
+    @Override
+    public int readInt( long pos ) throws IOException
+    {
+        long pageId = pageId( pos );
+        int pageOffset = pageOffset( pos );
+
+        // Cross-page read?
+        if ( pageSize - pageOffset < 4 )
+        {
+            long originalPageId = currentPageId;
+            int originalPageOffset = currentPageOffset;
+            try
+            {
+                currentPageId = pageId;
+                currentPageOffset = pageOffset;
+                return readInt();
+            }
+            finally
+            {
+                currentPageId = originalPageId;
+                currentPageOffset = originalPageOffset;
+            }
+        }
+
+        // Regular read
+        if ( !cursor.next( pageId ) )
+        {
+            throw new EOFException( "read past EOF: " + this );
+        }
+
+        int val;
+        do
+        {
+            val = cursor.getInt( pageOffset );
+        }
+        while ( cursor.shouldRetry() );
+
+        boundsCheck();
+
+        return val;
+    }
+
+    @Override
+    public long readLong( long pos ) throws IOException
+    {
+        long pageId = pageId( pos );
+        int pageOffset = pageOffset( pos );
+
+        // Cross-page read?
+        if ( pageSize - pageOffset < 8 )
+        {
+            long originalPageId = currentPageId;
+            int originalPageOffset = currentPageOffset;
+            try
+            {
+                currentPageId = pageId;
+                currentPageOffset = pageOffset;
+                return readLong();
+            }
+            finally
+            {
+                currentPageId = originalPageId;
+                currentPageOffset = originalPageOffset;
+            }
+        }
+
+        // Regular read
+        if ( !cursor.next( pageId ) )
+        {
+            throw new EOFException( "read past EOF: " + this );
+        }
+
+        long val;
+        do
+        {
+            val = cursor.getLong( pageOffset );
+        }
+        while ( cursor.shouldRetry() );
+
+        boundsCheck();
+
+        return val;
     }
 
     // TODO: Implemented optimized readLong, readInt, readShort
 
     @Override
-    public final void readBytes(final byte[] b, final int offset, final int len) throws IOException {
+    public final void readBytes( final byte[] b, final int offset, final int len ) throws IOException
+    {
         int bytesRead = 0;
 
-        while(bytesRead < len)
+        while ( bytesRead < len )
         {
             if ( !cursor.next( currentPageId ) )
             {
@@ -127,7 +260,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     private void incrementPageOffset( int byOffset )
     {
         currentPageOffset += byOffset;
-        if( currentPageOffset >= pageSize )
+        if ( currentPageOffset >= pageSize )
         {
             assert currentPageOffset == pageSize : "Should never read past page boundary.";
             currentPageId += 1;
@@ -136,22 +269,28 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     @Override
-    public long getFilePointer() {
+    public long getFilePointer()
+    {
         // TODO test!
-        try {
+        try
+        {
             return currentPageId * cursor.getCurrentPageSize() + currentPageOffset;
-        } catch (NullPointerException npe) {
-            throw new AlreadyClosedException("Already closed: " + this);
+        }
+        catch ( NullPointerException npe )
+        {
+            throw new AlreadyClosedException( "Already closed: " + this );
         }
     }
 
     @Override
-    public void seek(long pos) throws IOException {
+    public void seek( long pos ) throws IOException
+    {
         long newPageId = pageId( pos );
-        int newOffset = offset( pos );
+        int newOffset = pageOffset( pos );
 
-        if(newPageId > lastPageId) {
-            throw new EOFException("seek past EOF: " + this);
+        if ( newPageId > lastPageId )
+        {
+            throw new EOFException( "seek past EOF: " + this );
         }
 
         currentPageId = newPageId;
@@ -159,7 +298,8 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     // used only by random access methods to handle reads across boundaries
-    private void setPos(long pos, int bi) throws IOException {
+    private void setPos( long pos, int bi ) throws IOException
+    {
 //        try {
 //            final ByteBuffer b = buffers[bi];
 //            b.position((int) (pos & chunkSizeMask));
@@ -173,40 +313,14 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     @Override
-    public short readShort(long pos) throws IOException {
-        // TODO!
-        throw new UnsupportedOperationException( ".." );
-    }
-
-    @Override
-    public int readInt(long pos) throws IOException {
-        // TODO!
-        throw new UnsupportedOperationException( ".." );
-    }
-
-    @Override
-    public long readLong(long pos) throws IOException {
-        // TODO!
-        throw new UnsupportedOperationException( ".." );
-//        final int bi = (int) (pos >> chunkSizePower);
-//        try {
-//            return buffers[bi].getLong((int) (pos & chunkSizeMask));
-//        } catch (IndexOutOfBoundsException ioobe) {
-//            // either it's a boundary, or read past EOF, fall back:
-//            setPos(pos, bi);
-//            return readLong();
-//        } catch (NullPointerException npe) {
-//            throw new AlreadyClosedException("Already closed: " + this);
-//        }
-    }
-
-    @Override
-    public final long length() {
+    public final long length()
+    {
         return length;
     }
 
     @Override
-    public final PagedIndexInput clone() {
+    public final PagedIndexInput clone()
+    {
         // See BufferedIndexInput
         throw new UnsupportedOperationException( "Not implemented" );
     }
@@ -215,9 +329,12 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
      * Creates a slice of this index input, with the given description, offset, and length. The slice is seeked to the beginning.
      */
     @Override
-    public final PagedIndexInput slice(String sliceDescription, long offset, long length) {
-        if (offset < 0 || length < 0 || offset+length > this.length) {
-            throw new IllegalArgumentException("slice() " + sliceDescription + " out of bounds: offset=" + offset + ",length=" + length + ",fileLength="  + this.length + ": "  + this);
+    public final PagedIndexInput slice( String sliceDescription, long offset, long length )
+    {
+        if ( offset < 0 || length < 0 || offset + length > this.length )
+        {
+            throw new IllegalArgumentException(
+                    "slice() " + sliceDescription + " out of bounds: offset=" + offset + ",length=" + length + ",fileLength=" + this.length + ": " + this );
         }
 
         // See BufferedIndexInput
@@ -225,7 +342,8 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     @Override
-    public final void close() throws IOException {
+    public final void close() throws IOException
+    {
         try
         {
             file.close();

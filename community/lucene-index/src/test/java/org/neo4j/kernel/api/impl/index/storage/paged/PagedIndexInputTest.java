@@ -4,6 +4,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
+import org.apache.lucene.store.RandomAccessInput;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -15,6 +16,7 @@ import java.util.Arrays;
 import java.util.function.BiFunction;
 
 import org.neo4j.function.ThrowingBiConsumer;
+import org.neo4j.function.ThrowingBiFunction;
 import org.neo4j.function.ThrowingFunction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.PageCacheRule;
@@ -88,6 +90,84 @@ public class PagedIndexInputTest
         byte[] bigAsPagePlusOne = new byte[pc.pageSize() + 1];
         Arrays.fill( bigAsPagePlusOne, (byte)-1 );
         testByteArray( bigAsPagePlusOne );
+    }
+
+    @Test
+    public void shouldRandomAccessReadAndWriteByte() throws Exception
+    {
+        testRandomAccess( (byte)7, IndexOutput::writeByte, RandomAccessInput::readByte );
+        testRandomAccess( (byte)0, IndexOutput::writeByte, RandomAccessInput::readByte );
+        testRandomAccess( (byte)-1, IndexOutput::writeByte, RandomAccessInput::readByte );
+        testRandomAccess( Byte.MAX_VALUE, IndexOutput::writeByte, RandomAccessInput::readByte );
+        testRandomAccess( Byte.MIN_VALUE, IndexOutput::writeByte, RandomAccessInput::readByte );
+    }
+
+    @Test
+    public void shouldRandomAccessReadAndWriteShort() throws Exception
+    {
+        testRandomAccess( (short)7, IndexOutput::writeShort, RandomAccessInput::readShort );
+        testRandomAccess( (short)0, IndexOutput::writeShort, RandomAccessInput::readShort );
+        testRandomAccess( (short)-1, IndexOutput::writeShort, RandomAccessInput::readShort );
+        testRandomAccess( Short.MAX_VALUE, IndexOutput::writeShort, RandomAccessInput::readShort );
+        testRandomAccess( Short.MIN_VALUE, IndexOutput::writeShort, RandomAccessInput::readShort );
+    }
+
+    @Test
+    public void shouldRandomAccessReadAndWriteInt() throws Exception
+    {
+        testRandomAccess( 7, IndexOutput::writeInt, RandomAccessInput::readInt );
+        testRandomAccess( 0, IndexOutput::writeInt, RandomAccessInput::readInt );
+        testRandomAccess( -1, IndexOutput::writeInt, RandomAccessInput::readInt );
+        testRandomAccess( Integer.MAX_VALUE, IndexOutput::writeInt, RandomAccessInput::readInt );
+        testRandomAccess( Integer.MIN_VALUE, IndexOutput::writeInt, RandomAccessInput::readInt );
+    }
+
+    @Test
+    public void shouldRandomAccessReadAndWriteLong() throws Exception
+    {
+        testRandomAccess( 7L, IndexOutput::writeLong, RandomAccessInput::readLong );
+        testRandomAccess( 0L, IndexOutput::writeLong, RandomAccessInput::readLong );
+        testRandomAccess( -1L, IndexOutput::writeLong, RandomAccessInput::readLong );
+        testRandomAccess( Long.MAX_VALUE, IndexOutput::writeLong, RandomAccessInput::readLong );
+        testRandomAccess( Long.MIN_VALUE, IndexOutput::writeLong, RandomAccessInput::readLong );
+    }
+
+    private <T> void testRandomAccess( T val, ThrowingBiConsumer<IndexOutput,T,IOException> write, ThrowingBiFunction<RandomAccessInput,Long,T,IOException> read ) throws IOException
+    {
+        testRandomAccess(val, 0, read, write);
+        testRandomAccess(val, 1, read, write);
+        testRandomAccess(val, 3, read, write);
+        testRandomAccess(val, 4, read, write);
+        testRandomAccess(val, 7, read, write);
+        testRandomAccess(val, 8, read, write);
+        testRandomAccess(val, 9, read, write);
+        testRandomAccess(val, pc.pageSize() - 8, read, write);
+        testRandomAccess(val, pc.pageSize() - 7, read, write);
+        testRandomAccess(val, pc.pageSize() - 5, read, write);
+        testRandomAccess(val, pc.pageSize() - 4, read, write);
+        testRandomAccess(val, pc.pageSize() - 3, read, write);
+        testRandomAccess(val, pc.pageSize() - 2, read, write);
+        testRandomAccess(val, pc.pageSize() - 1, read, write);
+        testRandomAccess(val, pc.pageSize(), read, write);
+        testRandomAccess(val, pc.pageSize() + 8, read, write);
+        testRandomAccess(val, pc.pageSize() + 7, read, write);
+        testRandomAccess(val, pc.pageSize() + 5, read, write);
+        testRandomAccess(val, pc.pageSize() + 4, read, write);
+        testRandomAccess(val, pc.pageSize() + 3, read, write);
+        testRandomAccess(val, pc.pageSize() + 2, read, write);
+        testRandomAccess(val, pc.pageSize() + 1, read, write);
+    }
+
+    private <T> void testRandomAccess( T val, long pos, ThrowingBiFunction<RandomAccessInput,Long,T,IOException> read,
+            ThrowingBiConsumer<IndexOutput,T,IOException> write ) throws IOException
+    {
+        ThrowingBiConsumer<IndexOutput,T,IOException> writeWrap = (o, v) -> {
+            o.writeBytes( new byte[(int)pos], (int)pos );
+            write.accept( o, v );
+        };
+        ThrowingFunction<IndexInput,T,IOException> readWrap = (i) -> read.apply((RandomAccessInput)i, pos);
+
+        test(val, writeWrap, readWrap, Object::equals, 0);
     }
 
     private void testByteArray( byte[] val ) throws IOException
