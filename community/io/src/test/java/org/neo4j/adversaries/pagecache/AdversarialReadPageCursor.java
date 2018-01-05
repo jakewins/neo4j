@@ -106,7 +106,7 @@ class AdversarialReadPageCursor extends DelegatingPageCursor
             return value;
         }
 
-        private void inconsistently( byte[] data )
+        private void inconsistently( byte[] data, int arrayOffset, int length )
         {
             if ( currentReadIsPreparingInconsistent )
             {
@@ -114,7 +114,9 @@ class AdversarialReadPageCursor extends DelegatingPageCursor
             }
             else if ( currentReadIsInconsistent )
             {
-                ThreadLocalRandom.current().nextBytes( data );
+                byte[] gunk = new byte[length];
+                ThreadLocalRandom.current().nextBytes( gunk );
+                System.arraycopy( gunk, 0, data, arrayOffset, length );
                 inconsistentReadHistory.add( Arrays.copyOf( data, data.length ) );
             }
         }
@@ -196,9 +198,9 @@ class AdversarialReadPageCursor extends DelegatingPageCursor
         return state.inconsistently( value, delegate );
     }
 
-    private void inconsistently( byte[] data )
+    private void inconsistently( byte[] data, int arrayOffset, int length )
     {
-        state.inconsistently( data );
+        state.inconsistently( data, arrayOffset, length );
     }
 
     @Override
@@ -271,14 +273,14 @@ class AdversarialReadPageCursor extends DelegatingPageCursor
     public void getBytes( byte[] data )
     {
         delegate.getBytes( data );
-        inconsistently( data );
+        inconsistently( data, 0, data.length );
     }
 
     @Override
     public void getBytes( byte[] data, int arrayOffset, int length )
     {
         delegate.getBytes( data, arrayOffset, length );
-        inconsistently( data );
+        inconsistently( data, arrayOffset, length );
     }
 
     @Override
