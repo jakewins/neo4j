@@ -58,8 +58,8 @@ public interface DirectoryFactory extends FileSystemAbstraction.ThirdPartyFileSy
     {
         private final int MAX_MERGE_SIZE_MB = FeatureToggles.getInteger( DirectoryFactory.class, "max_merge_size_mb", 5 );
         private final int MAX_CACHED_MB = FeatureToggles.getInteger( DirectoryFactory.class, "max_cached_mb", 50 );
+        // TODO set back to niofs as default
         private final String PERSISTENT_FACTORY_IMPL = FeatureToggles.getString( DirectoryFactory.class, "factory", "paged" );
-                // TODO set back to niofs as default
 
         private final PageCache pageCache;
 

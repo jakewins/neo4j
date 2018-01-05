@@ -50,18 +50,13 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     private long currentPageId;
     private int currentPageOffset;
 
-    public static PagedIndexInput newInstance( String resourceDescription, PagedFile pagedFile, long startPosition, long size,
-            ThrowingAction<IOException> onClose ) throws IOException
-    {
-        return new PagedIndexInput( resourceDescription, pagedFile, startPosition, size, onClose );
-    }
-
-    PagedIndexInput( String resourceDescription, PagedFile pagedFile, long startPosition, long size, ThrowingAction<IOException> onClose ) throws IOException
+    PagedIndexInput( String resourceDescription, PagedFile pagedFile, long startPosition, int pageSize, long size, ThrowingAction<IOException> onClose )
+            throws IOException
     {
         super( resourceDescription );
         this.onClose = onClose;
         this.pagedfile = pagedFile;
-        this.pageSize = pagedFile.pageSize();
+        this.pageSize = pageSize;
         this.inputSize = size;
         this.startPosition = startPosition;
         this.currentPageId = pageId( 0 );
@@ -303,19 +298,6 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     }
 
     @Override
-    public long getFilePointer()
-    {
-        try
-        {
-            return (currentPageId * cursor.getCurrentPageSize() + currentPageOffset) - startPosition;
-        }
-        catch ( NullPointerException npe )
-        {
-            throw new AlreadyClosedException( "Already closed: " + this );
-        }
-    }
-
-    @Override
     public void seek( long pos ) throws IOException
     {
         long newPageId = pageId( pos );
@@ -328,6 +310,19 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
         currentPageId = newPageId;
         currentPageOffset = newOffset;
+    }
+
+    @Override
+    public long getFilePointer()
+    {
+        try
+        {
+            return (currentPageId * pageSize + currentPageOffset) - startPosition;
+        }
+        catch ( NullPointerException npe )
+        {
+            throw new AlreadyClosedException( "Already closed: " + this );
+        }
     }
 
     private void boundsCheck() throws EOFException
@@ -395,7 +390,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
         try
         {
-            return newInstance( sliceDescription, pagedfile, startPosition + offset, length, null );
+            return new PagedIndexInput( sliceDescription, pagedfile, startPosition + offset, pageSize, length, null );
         }
         catch ( IOException e )
         {
