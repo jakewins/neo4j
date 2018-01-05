@@ -87,11 +87,11 @@ public class LuceneSchemaIndexUniquenessVerificationIT
         System.setProperty( "luceneSchemaIndex.maxPartitionSize", String.valueOf( DOCS_PER_PARTITION ) );
 
         Factory<IndexWriterConfig> configFactory = new TestConfigFactory();
-        index = LuceneSchemaIndexBuilder.create( descriptor, Config.defaults() )
+        index = LuceneSchemaIndexBuilder.create( descriptor, Config.defaults(),
+                new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule.get() ) ) )
                 .withFileSystem( fileSystemRule.get() )
                 .withIndexRootFolder( new File( testDir.directory( "uniquenessVerification" ), "index" ) )
                 .withWriterConfig( configFactory )
-                .withDirectoryFactory( new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule.get() ) ) )
                 .build();
 
         index.create();

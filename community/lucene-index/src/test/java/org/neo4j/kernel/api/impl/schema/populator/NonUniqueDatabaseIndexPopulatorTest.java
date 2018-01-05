@@ -46,6 +46,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.IndexSample;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -59,6 +60,8 @@ public class NonUniqueDatabaseIndexPopulatorTest
     public final TestDirectory testDir = TestDirectory.testDirectory();
     @Rule
     public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
 
     private final DirectoryFactory dirFactory = new DirectoryFactory.InMemoryDirectoryFactory();
 
@@ -73,7 +76,8 @@ public class NonUniqueDatabaseIndexPopulatorTest
         PartitionedIndexStorage indexStorage = new PartitionedIndexStorage( dirFactory, fileSystemRule.get(), folder, false );
 
         IndexDescriptor descriptor = IndexDescriptorFactory.forSchema( labelSchemaDescriptor );
-        index = LuceneSchemaIndexBuilder.create( descriptor, Config.defaults() )
+        index = LuceneSchemaIndexBuilder.create( descriptor, Config.defaults(),
+                new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule.get() ) ) )
                                         .withIndexStorage( indexStorage )
                                         .build();
     }

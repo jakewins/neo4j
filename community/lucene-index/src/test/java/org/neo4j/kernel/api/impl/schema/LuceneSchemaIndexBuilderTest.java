@@ -23,11 +23,13 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.factory.OperationalMode;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -40,13 +42,16 @@ public class LuceneSchemaIndexBuilderTest
     public final TestDirectory testDir = TestDirectory.testDirectory();
     @Rule
     public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
 
     private final IndexDescriptor descriptor = IndexDescriptorFactory.forLabel( 0, 0 );
 
     @Test
     public void readOnlyIndexCreation() throws Exception
     {
-        try ( SchemaIndex schemaIndex = LuceneSchemaIndexBuilder.create( descriptor, getReadOnlyConfig() )
+        try ( SchemaIndex schemaIndex = LuceneSchemaIndexBuilder.create( descriptor, getReadOnlyConfig(),
+                new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule ) ))
                 .withFileSystem( fileSystemRule.get() )
                 .withOperationalMode( OperationalMode.single )
                 .withIndexRootFolder( testDir.directory( "a" ) )
@@ -59,7 +64,8 @@ public class LuceneSchemaIndexBuilderTest
     @Test
     public void writableIndexCreation() throws Exception
     {
-        try ( SchemaIndex schemaIndex = LuceneSchemaIndexBuilder.create( descriptor, getDefaultConfig() )
+        try ( SchemaIndex schemaIndex = LuceneSchemaIndexBuilder.create( descriptor, getDefaultConfig(),
+                new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule ) ))
                 .withFileSystem( fileSystemRule.get() )
                 .withOperationalMode( OperationalMode.single )
                 .withIndexRootFolder( testDir.directory( "b" ) )

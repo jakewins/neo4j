@@ -96,9 +96,8 @@ public class DatabaseCompositeIndexAccessorTest
         return Arrays.asList(
                 arg( dirFactory1 ->
                 {
-                    SchemaIndex index = LuceneSchemaIndexBuilder.create( indexDescriptor, config )
+                    SchemaIndex index = LuceneSchemaIndexBuilder.create( indexDescriptor, config, dirFactory1 )
                             .withFileSystem( fileSystemRule.get() )
-                            .withDirectoryFactory( dirFactory1 )
                             .withIndexRootFolder( new File( dir, "1" ) )
                             .build();
 
@@ -108,9 +107,8 @@ public class DatabaseCompositeIndexAccessorTest
                 } ),
                 arg( dirFactory1 ->
                 {
-                    SchemaIndex index = LuceneSchemaIndexBuilder.create( uniqueIndexDescriptor, config )
+                    SchemaIndex index = LuceneSchemaIndexBuilder.create( uniqueIndexDescriptor, config, dirFactory1 )
                             .withFileSystem( fileSystemRule.get() )
-                            .withDirectoryFactory( dirFactory1 )
                             .withIndexRootFolder( new File( dir, "testIndex" ) )
                             .build();
 

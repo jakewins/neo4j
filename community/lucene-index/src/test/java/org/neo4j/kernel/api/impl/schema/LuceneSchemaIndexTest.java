@@ -138,10 +138,9 @@ public class LuceneSchemaIndexTest
 
     private SchemaIndex newSchemaIndex()
     {
-        LuceneSchemaIndexBuilder builder = LuceneSchemaIndexBuilder.create( descriptor, Config.defaults() );
+        LuceneSchemaIndexBuilder builder = LuceneSchemaIndexBuilder.create( descriptor, Config.defaults(), dirFactory );
         return builder
                 .withIndexRootFolder( new File( testDir.directory( "index" ), "testIndex" ) )
-                .withDirectoryFactory( dirFactory )
                 .withFileSystem( fs.get() )
                 .build();
     }

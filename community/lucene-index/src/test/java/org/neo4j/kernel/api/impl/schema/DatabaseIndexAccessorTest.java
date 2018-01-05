@@ -97,7 +97,7 @@ public class DatabaseIndexAccessorTest
         return Arrays.asList(
                 arg( GENERAL_INDEX, dirFactory1 ->
                 {
-                    SchemaIndex index = LuceneSchemaIndexBuilder.create( GENERAL_INDEX, CONFIG )
+                    SchemaIndex index = LuceneSchemaIndexBuilder.create( GENERAL_INDEX, CONFIG, dirFactory1 )
                             .withFileSystem( fileSystemRule.get() )
                             .withDirectoryFactory( dirFactory1 )
                             .withIndexRootFolder( new File( dir, "1" ) )
@@ -109,7 +109,7 @@ public class DatabaseIndexAccessorTest
                 } ),
                 arg( UNIQUE_INDEX, dirFactory1 ->
                 {
-                    SchemaIndex index = LuceneSchemaIndexBuilder.create( UNIQUE_INDEX, CONFIG )
+                    SchemaIndex index = LuceneSchemaIndexBuilder.create( UNIQUE_INDEX, CONFIG, dirFactory1)
                             .withFileSystem( fileSystemRule.get() )
                             .withDirectoryFactory( dirFactory1 )
                             .withIndexRootFolder( new File( dir, "testIndex" ) )

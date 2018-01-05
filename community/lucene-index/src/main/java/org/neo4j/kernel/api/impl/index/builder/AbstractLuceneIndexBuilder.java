@@ -41,10 +41,10 @@ public abstract class AbstractLuceneIndexBuilder<T extends AbstractLuceneIndexBu
     private final Config config;
     private OperationalMode operationalMode = OperationalMode.single;
 
-    public AbstractLuceneIndexBuilder( Config config )
+    public AbstractLuceneIndexBuilder( Config config, DirectoryFactory defaultDirectoryFactory )
     {
         this.config = Objects.requireNonNull( config );
-        storageBuilder = LuceneIndexStorageBuilder.create( null );
+        storageBuilder = LuceneIndexStorageBuilder.create( defaultDirectoryFactory );
     }
 
     /**
@@ -55,6 +55,10 @@ public abstract class AbstractLuceneIndexBuilder<T extends AbstractLuceneIndexBu
      */
     public T withIndexStorage( PartitionedIndexStorage indexStorage )
     {
+        // TODO: I don't understand this; indexStorage has a directoryFactory,
+        // but it is also mandatory to specify a directory factory directly in the field
+        // in this class. Is there a use case where we would want to mix two different
+        // directory factory implementations, or why the duplication?
         storageBuilder.withIndexStorage( indexStorage );
         return (T) this;
     }

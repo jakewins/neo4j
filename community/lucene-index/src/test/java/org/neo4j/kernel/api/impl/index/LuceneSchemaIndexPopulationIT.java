@@ -33,6 +33,7 @@ import java.util.List;
 
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
+import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.impl.schema.LuceneIndexAccessor;
 import org.neo4j.kernel.api.impl.schema.LuceneSchemaIndexBuilder;
 import org.neo4j.kernel.api.impl.schema.SchemaIndex;
@@ -46,6 +47,7 @@ import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.IndexSample;
 import org.neo4j.storageengine.api.schema.IndexSampler;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.values.storable.Values;
@@ -61,6 +63,8 @@ public class LuceneSchemaIndexPopulationIT
     public TestDirectory testDir = TestDirectory.testDirectory();
     @Rule
     public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
 
     private final int affectedNodes;
     private final IndexDescriptor descriptor = IndexDescriptorFactory.uniqueForLabel( 0, 0 );
@@ -91,7 +95,10 @@ public class LuceneSchemaIndexPopulationIT
     @Test
     public void partitionedIndexPopulation() throws Exception
     {
-        try ( SchemaIndex uniqueIndex = LuceneSchemaIndexBuilder.create( descriptor, Config.defaults() )
+        DirectoryFactory.PersistentDirectoryFactory dirFactory =
+                new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache( fileSystemRule ) );
+        try ( SchemaIndex uniqueIndex = LuceneSchemaIndexBuilder.create( descriptor, Config.defaults(),
+                dirFactory )
                 .withFileSystem( fileSystemRule.get() )
                 .withIndexRootFolder( new File( testDir.directory( "partitionIndex" + affectedNodes ), "uniqueIndex" + affectedNodes ) )
                 .build() )

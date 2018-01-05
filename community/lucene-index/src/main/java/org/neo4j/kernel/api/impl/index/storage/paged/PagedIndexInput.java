@@ -24,13 +24,10 @@ import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.RandomAccessInput;
 
 import java.io.EOFException;
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 
-import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.function.ThrowingAction;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
@@ -46,36 +43,23 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     private final long endPageId;
     private final int endPageOffset;
 
-    private final PageCache pageCache;
-    private final File file;
+    private final ThrowingAction<IOException> onClose;
     private PagedFile pagedfile;
     private PageCursor cursor;
 
     private long currentPageId;
     private int currentPageOffset;
 
-    public static PagedIndexInput newInstance( String resourceDescription, Path path, PageCache pageCache ) throws IOException
+    public static PagedIndexInput newInstance( String resourceDescription, PagedFile pagedFile, long startPosition, long size,
+            ThrowingAction<IOException> onClose ) throws IOException
     {
-        File fileToOpen = path.toFile();
-        return newInstance( resourceDescription, pageCache, fileToOpen, 0, pageCache.getCachedFileSystem().getFileSize( fileToOpen ) );
+        return new PagedIndexInput( resourceDescription, pagedFile, startPosition, size, onClose );
     }
 
-    private static PagedIndexInput newInstance( String resourceDescription, PageCache pageCache, File file, long startPosition, long size )
-            throws IOException
-    {
-        // We rely on the reference counting in the page cache, associating one PagedFile with each input pointing to that
-        // same file; we may want to optimize this on some level? Not sure if we've spent any cycles on #map() of the same file.
-        PagedFile pagedFile = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.READ );
-        PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK );
-
-        return new PagedIndexInput( resourceDescription, file, pageCache, pagedFile, cursor, startPosition, size );
-    }
-
-    PagedIndexInput( String resourceDescription, File file, PageCache pageCache, PagedFile pagedFile, PageCursor cursor, long startPosition, long size ) throws IOException
+    PagedIndexInput( String resourceDescription, PagedFile pagedFile, long startPosition, long size, ThrowingAction<IOException> onClose ) throws IOException
     {
         super( resourceDescription );
-        this.file = file;
-        this.pageCache = pageCache;
+        this.onClose = onClose;
         this.pagedfile = pagedFile;
         this.pageSize = pagedFile.pageSize();
         this.inputSize = size;
@@ -84,12 +68,13 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         this.currentPageOffset = pageOffset( 0 );
         this.endPageId = pageId( startPosition + size );
         this.endPageOffset = calcLastPageOffset( startPosition + size, pageSize );
-        this.cursor = cursor;
+        this.cursor = pagedFile.io( currentPageId, PagedFile.PF_SHARED_READ_LOCK );
     }
 
     private static int calcLastPageOffset( long fileSize, int pageSize )
     {
-        if(fileSize == 0) {
+        if ( fileSize == 0 )
+        {
             return 0;
         }
         int size = (int) (fileSize % pageSize);
@@ -322,7 +307,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     {
         try
         {
-            return currentPageId * cursor.getCurrentPageSize() + currentPageOffset;
+            return (currentPageId * cursor.getCurrentPageSize() + currentPageOffset) - startPosition;
         }
         catch ( NullPointerException npe )
         {
@@ -389,8 +374,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public final PagedIndexInput clone()
     {
-        // See BufferedIndexInput
-        throw new UnsupportedOperationException( "Not implemented" );
+        return slice( "clone", 0, length() );
     }
 
     /**
@@ -399,6 +383,10 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public final PagedIndexInput slice( String sliceDescription, long offset, long length )
     {
+        // Implementation notes:
+        // This is used for both slice() and clone()
+        // Lucene does not close these derivative inputs; it only closes the original one.
+        // Hence, all resource cleanup needs to happen in the original PagedIndexInput.
         if ( offset < 0 || length < 0 || offset + length > this.inputSize )
         {
             throw new IllegalArgumentException(
@@ -407,7 +395,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
         try
         {
-            return newInstance( sliceDescription, pageCache, file, startPosition + offset, length );
+            return newInstance( sliceDescription, pagedfile, startPosition + offset, length, null );
         }
         catch ( IOException e )
         {
@@ -419,6 +407,11 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public final void close() throws IOException
     {
+        // TODO: This isn't good enough.
+        // Lucene extensively uses #clone() and #slice(), and does not close those inputs;
+        // it only closes the original parent input. Hence, all children we create need to be tracked
+        // so we can close their associated cursors when the parent is closed. Lucene does this with
+        // a WeakIdentityHashmap, see ByteBufferIndexInput.
         try
         {
             cursor.close();
@@ -427,13 +420,9 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         {
             cursor = null;
         }
-        try
+        if ( onClose != null )
         {
-            pagedfile.close();
-        }
-        finally
-        {
-            pagedfile = null;
+            onClose.apply();
         }
     }
 }

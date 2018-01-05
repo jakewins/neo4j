@@ -22,7 +22,6 @@ package org.neo4j.kernel.api.impl.index.partition;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -47,12 +46,9 @@ public class IndexPartitionFactoryTest
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    private Directory directory;
-
-    @Before
-    public void setUp() throws IOException
+    public Directory directory() throws IOException
     {
-        directory = new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache() ).open( testDirectory.directory() );
+        return new DirectoryFactory.PersistentDirectoryFactory( pageCacheRule.getPageCache() ).open( testDirectory.directory() );
     }
 
     @Test
@@ -60,7 +56,7 @@ public class IndexPartitionFactoryTest
     {
         prepareIndex();
         try ( AbstractIndexPartition indexPartition =
-                      new ReadOnlyIndexPartitionFactory().createPartition( testDirectory.directory(), directory ) )
+                      new ReadOnlyIndexPartitionFactory().createPartition( testDirectory.directory(), directory() ) )
         {
             expectedException.expect( UnsupportedOperationException.class );
 
@@ -73,7 +69,7 @@ public class IndexPartitionFactoryTest
     {
         try ( AbstractIndexPartition indexPartition =
                       new WritableIndexPartitionFactory( IndexWriterConfigs::standard )
-                              .createPartition( testDirectory.directory(), directory ) )
+                              .createPartition( testDirectory.directory(), directory() ) )
         {
 
             try ( IndexWriter indexWriter = indexPartition.getIndexWriter() )
