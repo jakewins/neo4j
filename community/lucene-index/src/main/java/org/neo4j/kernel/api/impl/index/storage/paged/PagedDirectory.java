@@ -104,10 +104,10 @@ public class PagedDirectory extends FSDirectory
         ensureOpen();
         File file = directory.resolve( name ).toFile();
         PagedFile pagedFile = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.READ );
-        long length = pageCache.getCachedFileSystem().getFileSize( file );
+        long size = pageCache.getCachedFileSystem().getFileSize( file );
         return new PagedIndexInput(
                 "PagedIndexInput(path=\"" + directory.resolve( name ).toString() + "\")",
-                pagedFile, 0, pagedFile.pageSize(), length, pagedFile::close );
+                pagedFile, 0, size );
     }
 
     /**

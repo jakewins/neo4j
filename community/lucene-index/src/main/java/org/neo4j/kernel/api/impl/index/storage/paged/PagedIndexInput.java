@@ -27,35 +27,52 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
-import org.neo4j.function.ThrowingAction;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 public class PagedIndexInput extends IndexInput implements RandomAccessInput
 {
+    /** Tracks open resources across cloned inputs, see {@link InputResources}. */
+    final InputResources resources;
+
+    /** Star of the show */
+    PageCursor cursor;
+
+    /**
+     * The logical size of this input. Same as file size if this is a root input,
+     * but can be anything <= file size if this is a clone
+     */
     private final long inputSize;
+
+    /** Fast access to pagedFile.pageSize() */
     private final int pageSize;
 
-    // Used when this input is a slice of the full input, pointing to the logical
-    // start point of the input
+    /**
+     * Logical start position in the file, 0 for root inputs, anything <= file size for
+     * clones and slices
+     */
     private final long startPosition;
 
+    /** Last page this input can access - last actual page for roots, any page for clones */
     private final long endPageId;
-    private final int endPageOffset;
 
-    private final ThrowingAction<IOException> onClose;
-    private PagedFile pagedfile;
-    private PageCursor cursor;
+    /** Final offset in last page this input can access - last actual offset for root, any offset for clones */
+    private final int endPageOffset;
 
     private long currentPageId;
     private int currentPageOffset;
 
-    PagedIndexInput( String resourceDescription, PagedFile pagedFile, long startPosition, int pageSize, long size, ThrowingAction<IOException> onClose )
-            throws IOException
+    PagedIndexInput( String resourceDescription, PagedFile pagedFile, long startPosition, long size ) throws IOException
+    {
+        this( new InputResources.RootInputResources( pagedFile ), resourceDescription, startPosition, pagedFile.pageSize(), size );
+    }
+
+    PagedIndexInput( InputResources resources, String resourceDescription, long startPosition, int pageSize, long size ) throws IOException
     {
         super( resourceDescription );
-        this.onClose = onClose;
-        this.pagedfile = pagedFile;
+
+        // Note: This constructor does not set cloneRoot, meaning it can only be used by other constructors that
+        // then set cloneRoot, otherwise the resulting object will be broken.
         this.pageSize = pageSize;
         this.inputSize = size;
         this.startPosition = startPosition;
@@ -63,7 +80,9 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
         this.currentPageOffset = pageOffset( 0 );
         this.endPageId = pageId( startPosition + size );
         this.endPageOffset = calcLastPageOffset( startPosition + size, pageSize );
-        this.cursor = pagedFile.io( currentPageId, PagedFile.PF_SHARED_READ_LOCK );
+
+        this.resources = resources;
+        this.cursor = resources.openCursor( currentPageId, this );
     }
 
     private static int calcLastPageOffset( long fileSize, int pageSize )
@@ -380,8 +399,8 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     {
         // Implementation notes:
         // This is used for both slice() and clone()
-        // Lucene does not close these derivative inputs; it only closes the original one.
-        // Hence, all resource cleanup needs to happen in the original PagedIndexInput.
+        // Lucene does not close these child inputs; it only closes the root one.
+        // See PagedIndexInputCloningTest for details.
         if ( offset < 0 || length < 0 || offset + length > this.inputSize )
         {
             throw new IllegalArgumentException(
@@ -390,7 +409,7 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
 
         try
         {
-            return new PagedIndexInput( sliceDescription, pagedfile, startPosition + offset, pageSize, length, null );
+            return new PagedIndexInput( resources.cloneResources(), sliceDescription, startPosition + offset, pageSize, length );
         }
         catch ( IOException e )
         {
@@ -402,22 +421,6 @@ public class PagedIndexInput extends IndexInput implements RandomAccessInput
     @Override
     public final void close() throws IOException
     {
-        // TODO: This isn't good enough.
-        // Lucene extensively uses #clone() and #slice(), and does not close those inputs;
-        // it only closes the original parent input. Hence, all children we create need to be tracked
-        // so we can close their associated cursors when the parent is closed. Lucene does this with
-        // a WeakIdentityHashmap, see ByteBufferIndexInput.
-        try
-        {
-            cursor.close();
-        }
-        finally
-        {
-            cursor = null;
-        }
-        if ( onClose != null )
-        {
-            onClose.apply();
-        }
+        resources.close( this );
     }
 }
