@@ -69,7 +69,6 @@ public class ApplyTransactionsCommand extends ArgsCommand
     {
         DependencyResolver dependencyResolver = to.get().getDependencyResolver();
         TransactionIdStore txIdStore = dependencyResolver.resolveDependency( TransactionIdStore.class );
-        Config config = dependencyResolver.resolveDependency( Config.class );
         long fromTx = txIdStore.getLastCommittedTransaction().transactionId();
         long toTx;
         if ( args.orphans().isEmpty() )
@@ -91,12 +90,12 @@ public class ApplyTransactionsCommand extends ArgsCommand
             toTx = Long.parseLong( whereTo );
         }
 
-        long lastApplied = applyTransactions( from, to.get(), config, fromTx, toTx, out );
+        long lastApplied = applyTransactions( from, to.get(), fromTx, toTx, out );
         out.println( "Applied transactions up to and including " + lastApplied );
     }
 
-    private long applyTransactions( File fromPath, GraphDatabaseAPI toDb, Config toConfig,
-            long fromTxExclusive, long toTxInclusive, PrintStream out )
+    public long applyTransactions( File fromPath, GraphDatabaseAPI toDb, long fromTxExclusive, long toTxInclusive,
+            PrintStream out )
             throws IOException, TransactionFailureException
     {
         DependencyResolver resolver = toDb.getDependencyResolver();
